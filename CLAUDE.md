@@ -2,9 +2,9 @@
 
 Aplicación de gestión de escritorio para **productores locales de distinta índole**: **WPF ·
 .NET 8** (`net8.0-windows`), instalación local en LAN, una sola organización por instalación.
-Arranca desde el scaffold **ASO Genérico** con su armazón completo y sus dos módulos de ejemplo
-(Finanzas e Inventario). Los módulos específicos de los productores **todavía no existen**: se
-construyen encima con la receta de "Cómo se agrega un submódulo".
+Arranca desde el scaffold **ASO Genérico** con su armazón completo y tres módulos heredados
+(Finanzas, Inventario y Materia Prima). Los módulos específicos de los productores **todavía no
+existen**: se construyen encima con la receta de "Cómo se agrega un submódulo".
 
 ## Origen de este proyecto (2026-09-11)
 
@@ -29,17 +29,28 @@ cubren los cuatro patrones que vale la pena tener a la vista al construir el pri
 
 - **CRUD simple** — `Proveedor`.
 - **Documento con líneas** — `FacturaProveedor`, `EntradaInventario`/`SalidaInventario`.
-- **Documento con máquina de estados** — `CuentasPorPagarService`, `BancoService`,
+- **Documento con máquina de estados** — `CuentasPorPagarService`, `MovimientosService`,
   `EntradasInventarioService`/`SalidasInventarioService`.
 - **Contenedor de dos padrones** — `CuentasPorPagarViewModel` (facturas + proveedores),
-  `BancoViewModel` (movimientos + cuentas).
+  `MovimientosViewModel` (movimientos + cuentas).
 - Y, solo en Inventario: **existencia derivada** (kardex calculado, no tecleado) y **grilla de
   líneas editable** (`Controls/PuenteDeDatos.cs`), que no tenía ningún otro módulo del scaffold.
 
-La migración de EF Core también se reinició: `Migrations/` de este proyecto empieza (y por ahora
-termina) en una única migración `Baseline`, generada contra el modelo ya recortado — no había
-una migración limpia que heredar una vez que se quitaron las tablas de los tres módulos
-eliminados.
+La migración de EF Core también se reinició: `Migrations/` de este proyecto empieza en una única
+migración `Baseline`, generada contra el modelo ya recortado — no había una migración limpia que
+heredar una vez que se quitaron las tablas de los tres módulos eliminados.
+
+### Sumado después de la copia (2026-09-11)
+
+- **El submódulo Finanzas · Banco se renombró a Movimientos** (clave `Finanzas.Movimientos`):
+  `BancoViewModel` → `MovimientosViewModel`, `BancoView` → `MovimientosView`, `BancoService` →
+  `MovimientosService`, la clase de permisos `Permisos.Banco` → `Permisos.Movimientos`. Las
+  entidades `CuentaBancaria`/`MovimientoBanco` y el nombre del icono (`Iconos.Banco`) NO
+  cambiaron: son el dato, no la pantalla.
+- **Se agregó el módulo Materia Prima** (`Existencias`, `Recepciones`, `Salidas`), traído de
+  **ASO_RTR** (su módulo `MateriaPrima`: `Custodia`/`Recepciones`/`Despachos`, para custodiar
+  botellas de un tercero) y despojado de todo lo propio de esa planta — ver la sección "Materia
+  Prima" más abajo para qué cambió y por qué.
 
 ## Cómo ejecutar
 
@@ -59,19 +70,20 @@ Es escritorio, no web (no hay dev server / puerto). `dotnet run` dentro de
 - **Autorización en capas**: hoy solo la capa 1 (RBAC por permiso de comando) y la 3
   (segregación de funciones: aprobador ≠ solicitante, en `PeticionService`) están completas. La
   autorización se comprueba en el `CanExecute` de los comandos y, para las transiciones propias
-  de un documento, dentro del servicio de dominio (`CuentasPorPagarService`, `BancoService`
+  de un documento, dentro del servicio de dominio (`CuentasPorPagarService`, `MovimientosService`
   exigen `ISesionActual` por constructor). El CRUD genérico (`CrudViewModelBase`) todavía escribe
   directo contra el `IDataSource` sin repetir la comprobación — hueco puntual heredado, ver
   "Próximo paso sugerido".
 
 ## Estructura de módulos
 
-Hoy hay **dos módulos de negocio de ejemplo**: **Finanzas** (Cuentas por Pagar, Banco y
-Proveedores) e **Inventario** (Almacén, Entradas y Salidas), más **cuatro módulos fijados** sin
-submódulos: **Inicio**, **Peticiones** (bandeja de solicitudes de cambio), **Administración**
-(usuarios con sus permisos, y los datos de la propia organización) y **Configuración**
-(apariencia, cuenta propia, preferencias de la máquina — anclada al pie del sidebar, fuera de su
-`ScrollViewer`, porque no es trabajo del día).
+Hoy hay **tres módulos de negocio heredados del scaffold**: **Finanzas** (Cuentas por Pagar,
+Movimientos y Proveedores), **Inventario** (Almacén, Entradas y Salidas) y **Materia Prima**
+(Existencias, Recepciones y Salidas), más **cuatro módulos fijados** sin submódulos: **Inicio**,
+**Peticiones** (bandeja de solicitudes de cambio), **Administración** (usuarios con sus permisos,
+y los datos de la propia organización) y **Configuración** (apariencia, cuenta propia,
+preferencias de la máquina — anclada al pie del sidebar, fuera de su `ScrollViewer`, porque no es
+trabajo del día).
 
 - `Navigation/ModuloCatalogo.cs` — **fuente única** de la estructura (clave, nombre, descripción,
   icono, submódulos). Sidebar, Inicio, dashboard y enrutado leen de aquí.
@@ -80,7 +92,7 @@ submódulos: **Inicio**, **Peticiones** (bandeja de solicitudes de cambio), **Ad
 - `Views/InicioView` — lanzador con una tarjeta por módulo.
 - `Views/ModuloDashboardView` — resumen del módulo: indicadores + tarjeta por submódulo. Los
   valores los calcula `ModuloDashboardViewModel.CalcularIndicadores` (un `switch` por clave de
-  módulo) — hoy con los casos `"Finanzas"` e `"Inventario"`.
+  módulo) — hoy con los casos `"Finanzas"`, `"Inventario"` y `"MateriaPrima"`.
 - `Views/SubmoduloView` — submódulo en construcción, para cuando se agregue uno nuevo al catálogo
   antes de tener su pantalla real.
 - Framework CRUD reutilizable (`CrudViewModelBase`, `CrudEditorViewModelBase`, `CrudEditorWindow`,
@@ -121,10 +133,14 @@ Arquetipos a copiar:
 - **Finanzas · Cuentas por Pagar** — `Models/Proveedor.cs` (CRUD simple),
   `Models/FacturaProveedor.cs` (documento con líneas), `Services/CuentasPorPagarService.cs`
   (documento con máquina de estados), `ViewModels/CuentasPorPagarViewModel.cs` (contenedor de dos
-  padrones).
+  padrones, junto con `MovimientosViewModel` de Finanzas · Movimientos).
 - **Inventario** — kardex derivado (`InventarioService.ExistenciasPorArticulo`), documento con
   líneas editables en vivo (`ViewModels/EntradasViewModel.cs` + `Controls/PuenteDeDatos.cs`), y
   acoplamiento entre módulos (`EntradasInventarioService` exige `CuentasPorPagarService`).
+- **Materia Prima** — mismo patrón que Inventario (existencia derivada, documento con líneas
+  editables) pero **desacoplado de Finanzas**: `RecepcionesMateriaPrimaService` no depende de
+  `CuentasPorPagarService`, así que sirve de ejemplo de un módulo de existencias que no genera
+  deuda al recibir.
 
 ## Inventario
 
@@ -171,14 +187,59 @@ llega) y **Salidas** (boletos de salida). Las decisiones que no se deducen del c
   silencio. Lo usan las dos grillas de líneas (Entradas, Salidas) para ocultar la columna de
   precios en un ajuste y para llegar al comando de quitar línea.
 
+## Materia Prima (2026-09-11)
+
+Tres submódulos: **Existencias** (catálogo de tipos con su existencia calculada — CRUD, mismo
+arquetipo que Almacén), **Recepciones** (lo que entra) y **Salidas** (lo que sale). Viene del
+módulo `MateriaPrima` de **ASO_RTR** (`Custodia`/`Recepciones`/`Despachos`, para llevar la
+custodia de botellas de un tercero, Dusa), traído a este scaffold y despojado de todo lo
+específico de esa planta:
+
+- **`Custodia` → `Existencias`, `Despachos` → `Salidas`** (los nombres que pidió este proyecto);
+  `Recepciones` se conservó igual.
+- **`TipoBotella` (del módulo Catálogo de ASO_RTR, no traído) se reemplazó por
+  `Models/TipoMateriaPrima.cs`**, un catálogo simple (Id, Nombre, UnidadMedida, Activo) que vive
+  DENTRO de este módulo — no hay módulo Catálogo aparte. Es la misma idea que `Articulo`, pero sin
+  la especificidad de paletas y patrón de paletizado.
+- **Se fueron las columnas de paletizado y el acoplamiento con Operaciones**
+  (`BotellasPorPaletaSnapshot`, `CantidadPaletas`, la dependencia con `CustodiaProduccionService`
+  de ASO_RTR): la cantidad de cada línea es un `decimal` genérico
+  (`RecepcionMateriaPrimaLinea.Cantidad`/`SalidaMateriaPrimaLinea.Cantidad`), sin conversión de
+  unidades. Tampoco se trajeron los campos específicos de transporte (`Gandolero`, `Placa`,
+  `NumeroOrdenEntrega` → `Referencia` genérica) ni el placeholder de facturación a Dusa
+  (`FacturaDusaReferencia`/`FacturaDusaFecha`).
+- **La existencia se deriva igual que en Inventario.**
+  `MateriaPrimaService.ExistenciasPorTipo()` suma las líneas de recepciones registradas y resta
+  las de salidas registradas, sin contar documentos anulados — mismo patrón que
+  `InventarioService.ExistenciasPorArticulo()`, con `TipoMateriaPrimaId` en vez de `ArticuloId`.
+  `SalidasMateriaPrimaService.Validar` revisa esa existencia EN VIVO antes de dejar salir algo, y
+  `RecepcionesMateriaPrimaService.Anular` revisa que deshacer una recepción no la deje en
+  negativo — calco de las reglas equivalentes de Inventario.
+- **No genera cuenta por pagar en Finanzas.** A diferencia de `EntradaInventario`,
+  `RecepcionesMateriaPrimaService` no depende de `CuentasPorPagarService`: este módulo no asume
+  que lo recibido se compró (puede ser aporte de un socio, cosecha propia, maquila, etc.). Si el
+  negocio real de los productores sí compra la materia prima, esa dependencia se agrega siguiendo
+  el ejemplo de `EntradasInventarioService`.
+- **Sin campo de destino en Salidas**, a propósito: `SalidaMateriaPrima` no tiene el equivalente
+  de `SalidaInventario.Destino` — es lo primero que hay que decidir con el negocio real (a quién o
+  a dónde va la materia prima) y agregar cuando se conozca.
+- **Los correlativos** (`REC-000123`, `SMP-000123`) siguen el mismo mecanismo que Inventario: el
+  servicio asigna "el último + 1" al registrar, con el índice único `(OrganizacionId, Numero)`
+  como red.
+- **Reutiliza `Controls/PuenteDeDatos.cs`** para las dos grillas de líneas (Recepciones, Salidas),
+  igual que Inventario.
+
 ## Persistencia
 
 Las entidades de dominio persisten en **SQL Server vía EF Core Migrations**.
 
-- **Migraciones** en `ASO_PRODUCS.Desktop/Migrations/`, una sola: `Baseline`, generada contra el
-  modelo recortado (`Organizacion`, `Usuario`, `PermisoUsuario`, `PeticionCambio`, `Proveedor`,
+- **Migraciones** en `ASO_PRODUCS.Desktop/Migrations/`: `Baseline` (generada contra el modelo
+  recortado: `Organizacion`, `Usuario`, `PermisoUsuario`, `PeticionCambio`, `Proveedor`,
   `FacturaProveedor`+`FacturaProveedorLinea`, `CuentaBancaria`, `MovimientoBanco`, `Articulo`,
-  `EntradaInventario`+`EntradaInventarioLinea`, `SalidaInventario`+`SalidaInventarioLinea`).
+  `EntradaInventario`+`EntradaInventarioLinea`, `SalidaInventario`+`SalidaInventarioLinea`)
+  seguida de `AgregarMateriaPrima` (`TipoMateriaPrima`,
+  `RecepcionMateriaPrima`+`RecepcionMateriaPrimaLinea`,
+  `SalidaMateriaPrima`+`SalidaMateriaPrimaLinea`).
 - **La cadena de conexión vive solo en `appsettings.local.json`** (por máquina, en `.gitignore`);
   la de `appsettings.json` (clave `ConnectionStrings:AsoProductoresDb`) apunta a LocalDB con un
   `.mdf` en `App_Data`.
@@ -214,8 +275,8 @@ Cuatro roles genéricos (`Models/Rol.cs`), cada uno con un conjunto base en
 
 | Rol | Alcance |
 |---|---|
-| **Operador** | El día a día: crea/edita proveedores y facturas; mantiene el catálogo de artículos y registra entradas y salidas de almacén. No mueve dinero, no anula ni borra nada |
-| **Supervisor** | Todo lo de Operador, más registrar pagos (dispara el asiento en Banco), administrar cuentas bancarias, anular documentos de almacén, eliminar, y resolver peticiones de su dominio |
+| **Operador** | El día a día: crea/edita proveedores y facturas; mantiene los catálogos de artículos y de tipos de materia prima; registra entradas/salidas de almacén y recepciones/salidas de materia prima. No mueve dinero, no anula ni borra nada |
+| **Supervisor** | Todo lo de Operador, más registrar pagos (dispara el asiento en Movimientos), administrar cuentas bancarias, anular documentos de almacén y de materia prima, eliminar, y resolver peticiones de su dominio |
 | **AdministradorOrganizacion** | Todo dentro de la organización, salvo crear usuarios Desarrollador |
 | **Desarrollador** | Todos los permisos, y es el único que reparte su propio rol |
 
@@ -308,22 +369,27 @@ de revisar y cambiar; no son bugs:
 4. **Nombre del producto / razón social**: "ASO Productores" (títulos de ventana, sidebar, login,
    `%AppData%`) y "Empresa" en `Company` del `.csproj` son placeholders. Si cambia el nombre
    visible, la carpeta de `%AppData%` cambia con él y las preferencias guardadas se pierden.
-5. **Módulos de negocio**: hoy solo están los dos de ejemplo (Finanzas, Inventario). Los módulos
-   de los productores locales se agregan con la receta de "Cómo se agrega un submódulo", usando Finanzas para los
-   cuatro patrones del framework e Inventario para un módulo construido de cero contra este
-   armazón (kardex derivado, documento con líneas editables, acoplamiento entre módulos).
-6. **`Solicitables` vacío**: no hay ninguna petición de cambio configurada todavía — ver
-   "Peticiones de cambio" arriba. Los dos candidatos naturales ya existen:
-   `EntradasInventario.Anular` y `SalidasInventario.Anular`, que hoy un Operador simplemente no
-   ve.
-7. **Pantalla de datos de la organización**: `Administración · Organización` solo pide nombre y
+5. **Módulos de negocio**: hoy solo están los tres heredados del scaffold (Finanzas, Inventario,
+   Materia Prima). Los módulos de los productores locales se agregan con la receta de "Cómo se
+   agrega un submódulo", usando Finanzas para los cuatro patrones del framework, Inventario para
+   un módulo construido de cero contra este armazón, y Materia Prima para un módulo de existencias
+   desacoplado de Finanzas.
+6. **Materia Prima sin destino ni origen real**: `SalidaMateriaPrima` no dice a quién o a dónde va
+   la materia prima, y `RecepcionMateriaPrima` no dice de quién viene ni si hay que pagarle — ver
+   "Materia Prima" arriba. Definir con el negocio real si hace falta alguno de los dos.
+7. **`Solicitables` vacío**: no hay ninguna petición de cambio configurada todavía — ver
+   "Peticiones de cambio" arriba. Los candidatos naturales ya existen: `EntradasInventario.Anular`,
+   `SalidasInventario.Anular`, `RecepcionesMateriaPrima.Anular` y `SalidasMateriaPrima.Anular`, que
+   hoy un Operador simplemente no ve.
+8. **Pantalla de datos de la organización**: `Administración · Organización` solo pide nombre y
    código; si el negocio real necesita más datos de la organización (dirección, RIF, etc.),
    agregarlos ahí.
 
 ## Próximo paso sugerido
 
-1. **Definir los módulos específicos de los productores locales** y construir el primero; Finanzas e
-   Inventario ya dejan los cuatro patrones y el almacén del que tirarán los demás.
+1. **Definir los módulos específicos de los productores locales** y construir el primero;
+   Finanzas, Inventario y Materia Prima ya dejan los patrones y los almacenes de los que tirarán
+   los demás.
 2. **Decidir los roles reales** del negocio y reemplazar los cuatro genéricos.
 3. **Elegir el color de marca y el logo real** y actualizar lo descrito en "Marca".
 4. **Llevar la comprobación de permisos a los servicios de dominio** de cada módulo nuevo desde

@@ -3,10 +3,10 @@
 Aplicación de gestión de escritorio para **productores locales de distinta índole**. Arranca
 desde el scaffold **ASO Genérico**: el armazón técnico y estético de **ASO** (autenticación,
 roles y permisos, aislamiento multi-organización, framework CRUD/MVVM, tema claro/oscuro,
-peticiones de cambio) más dos módulos de ejemplo — **Finanzas** (Cuentas por Pagar y Banco) e
-**Inventario** — que sirven de plantilla viva para construir los módulos propios de los
-productores. Ver `CLAUDE.md` para el detalle completo de qué trae, cómo está organizado y cómo se
-agrega un módulo nuevo.
+peticiones de cambio) más tres módulos heredados — **Finanzas** (Cuentas por Pagar, Movimientos y
+Proveedores), **Inventario** y **Materia Prima** — que sirven de plantilla viva para construir los
+módulos propios de los productores. Ver `CLAUDE.md` para el detalle completo de qué trae, cómo
+está organizado y cómo se agrega un módulo nuevo.
 
 ## Requisitos
 
@@ -62,8 +62,9 @@ ASO_PRODUCS/
 
 | Módulo | Submódulos | Estado |
 |---|---|---|
-| Finanzas | Cuentas por Pagar · Banco · Proveedores | heredado del scaffold, funcional |
+| Finanzas | Cuentas por Pagar · Movimientos · Proveedores | heredado del scaffold, funcional |
 | Inventario | Almacén · Entradas · Salidas | heredado del scaffold, funcional |
+| Materia Prima | Existencias · Recepciones · Salidas | heredado de ASO_RTR, funcional |
 | *Módulos de productores* | — | por definir |
 
 Además hay **cuatro secciones fijas** según el rol: **Inicio**, **Peticiones** (bandeja de
@@ -77,6 +78,9 @@ teclea**, se calcula de lo que entró menos lo que salió. Registrar una entrada
 sola su cuenta por pagar en Finanzas, y las salidas se emiten como boleto con destino, quién
 retira y quién autoriza.
 
+**Materia Prima** sigue el mismo patrón de existencia calculada, pero sin tocar Finanzas: sus
+recepciones no generan cuenta por pagar, porque el módulo no asume que lo recibido se compró.
+
 Los módulos propios de los productores se agregan siguiendo la receta de "Cómo se agrega un
 submódulo" en `CLAUDE.md`, usando Finanzas e Inventario como arquetipo.
 
@@ -87,8 +91,8 @@ Cuatro roles genéricos heredados del scaffold, todavía sin atar a ningún pues
 
 | Rol | Qué puede |
 |---|---|
-| **Operador** | El día a día: registra facturas de proveedor y da de alta proveedores; mantiene el catálogo del almacén y registra entradas y salidas. No mueve dinero, no anula ni borra nada: para eso levanta una petición |
-| **Supervisor** | Todo lo de Operador, más registrar pagos (que asientan el movimiento en el libro de banco), administrar cuentas bancarias, y anular entradas y salidas de almacén. Resuelve peticiones de su dominio |
+| **Operador** | El día a día: registra facturas de proveedor y da de alta proveedores; mantiene los catálogos del almacén y de materia prima, y registra entradas/salidas de ambos. No mueve dinero, no anula ni borra nada: para eso levanta una petición |
+| **Supervisor** | Todo lo de Operador, más registrar pagos (que asientan el movimiento en el libro), administrar cuentas bancarias, y anular documentos de almacén y de materia prima. Resuelve peticiones de su dominio |
 | **Administrador de organización** | Todo dentro de la organización. Lo único que no puede es crear otros usuarios Desarrollador |
 | **Desarrollador** | Todo, y es el único que puede crear otros usuarios Desarrollador |
 

@@ -54,7 +54,7 @@ public sealed class EntradasViewModel : PantallaCrudViewModel<EntradaInventario,
 
         // La misma cadena de dependencias que arma Cuentas por Pagar, más un eslabón: la entrada
         // necesita al servicio de Finanzas para dejar la deuda, y ése necesita al de Banco.
-        var banco = new BancoService(DataSourceFactory.CrearMovimientosBanco(),
+        var banco = new MovimientosService(DataSourceFactory.CrearMovimientosBanco(),
                                      DataSourceFactory.CrearCuentasBancarias(), sesion);
 
         _servicio = new EntradasInventarioService(entradas, _proveedores, facturas, _inventario,

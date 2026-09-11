@@ -52,6 +52,20 @@
     <views:SalidaEditorView />
   </DataTemplate>
 
+  <!-- Materia Prima -->
+
+  <DataTemplate DataType="{x:Type vm:TipoMateriaPrimaEditorViewModel}">
+    <views:TipoMateriaPrimaEditorView />
+  </DataTemplate>
+
+  <DataTemplate DataType="{x:Type vm:RecepcionMateriaPrimaEditorViewModel}">
+    <views:RecepcionMateriaPrimaEditorView />
+  </DataTemplate>
+
+  <DataTemplate DataType="{x:Type vm:SalidaMateriaPrimaEditorViewModel}">
+    <views:SalidaMateriaPrimaEditorView />
+  </DataTemplate>
+
   <!-- Armazón -->
 
   <DataTemplate DataType="{x:Type vm:UsuarioEditorViewModel}">

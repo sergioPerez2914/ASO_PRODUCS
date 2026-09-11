@@ -142,6 +142,7 @@ public sealed class ModuloDashboardViewModel : ViewModelBase, IRecargable
     {
         "Finanzas" => CalcularFinanzas(),
         "Inventario" => CalcularInventario(),
+        "MateriaPrima" => CalcularMateriaPrima(),
         _ => null
     };
 
@@ -162,7 +163,7 @@ public sealed class ModuloDashboardViewModel : ViewModelBase, IRecargable
         // propio call site.
         var sesion = SesionActual.Instancia;
 
-        var banco = new BancoService(DataSourceFactory.CrearMovimientosBanco(),
+        var banco = new MovimientosService(DataSourceFactory.CrearMovimientosBanco(),
                                      DataSourceFactory.CrearCuentasBancarias(), sesion);
 
         var pagar = new CuentasPorPagarService(DataSourceFactory.CrearFacturasProveedor(), banco, sesion);
@@ -194,7 +195,7 @@ public sealed class ModuloDashboardViewModel : ViewModelBase, IRecargable
 
         var inventario = new InventarioService(DataSourceFactory.CrearArticulos(), entradas, salidas);
 
-        var banco = new BancoService(DataSourceFactory.CrearMovimientosBanco(),
+        var banco = new MovimientosService(DataSourceFactory.CrearMovimientosBanco(),
                                      DataSourceFactory.CrearCuentasBancarias(), sesion);
 
         var servicioEntradas = new EntradasInventarioService(
@@ -220,4 +221,27 @@ public sealed class ModuloDashboardViewModel : ViewModelBase, IRecargable
         ];
     }
 
+    private static IReadOnlyList<Indicador> CalcularMateriaPrima()
+    {
+        var sesion = SesionActual.Instancia;
+
+        var tipos = DataSourceFactory.CrearTiposMateriaPrima();
+        var recepciones = DataSourceFactory.CrearRecepcionesMateriaPrima();
+        var salidas = DataSourceFactory.CrearSalidasMateriaPrima();
+
+        var materiaPrima = new MateriaPrimaService(tipos, recepciones, salidas);
+        var servicioRecepciones = new RecepcionesMateriaPrimaService(recepciones, materiaPrima, sesion);
+        var servicioSalidas = new SalidasMateriaPrimaService(salidas, materiaPrima, sesion);
+
+        var sinExistencia = materiaPrima.TiposSinExistencia();
+
+        return
+        [
+            new Indicador("Sin existencia", $"{sinExistencia}", "tipos agotados",
+                SegunCuenta(sinExistencia, 3)),
+            new Indicador("Tipos", $"{materiaPrima.TotalTiposActivos()}", "activos en el catálogo"),
+            new Indicador("Recepciones este mes", $"{servicioRecepciones.DelMes().Count}",
+                $"{servicioSalidas.DelMes().Count} salidas en el mismo período")
+        ];
+    }
 }

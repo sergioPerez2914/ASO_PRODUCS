@@ -31,13 +31,13 @@ public sealed record AsientoBanco(int CuentaId, DateTime Fecha, string Referenci
 /// salida todavía, y un costo ya cubierto por una compra que se pagó por otra vía no puede
 /// contarse dos veces sin descuadrar el saldo para siempre.
 /// </summary>
-public sealed class BancoService
+public sealed class MovimientosService
 {
     private readonly IMovimientoBancoDataSource _movimientos;
     private readonly ICuentaBancariaDataSource _cuentas;
     private readonly ISesionActual _sesion;
 
-    public BancoService(IMovimientoBancoDataSource movimientos, ICuentaBancariaDataSource cuentas, ISesionActual sesion)
+    public MovimientosService(IMovimientoBancoDataSource movimientos, ICuentaBancariaDataSource cuentas, ISesionActual sesion)
     {
         _movimientos = movimientos;
         _cuentas = cuentas;
@@ -231,7 +231,7 @@ public sealed class BancoService
                                                                        string referencia,
                                                                        int usuarioId)
     {
-        if (!_sesion.Puede(Permisos.Banco.Transferir))
+        if (!_sesion.Puede(Permisos.Movimientos.Transferir))
             throw new InvalidOperationException("No tienes permiso para transferir entre cuentas.");
 
         if (cuentaOrigenId == cuentaDestinoId)
@@ -308,7 +308,7 @@ public sealed class BancoService
                     ? "Este movimiento ya está conciliado."
                     : "Un movimiento anulado no se concilia.");
 
-        if (!_sesion.Puede(Permisos.Banco.Conciliar))
+        if (!_sesion.Puede(Permisos.Movimientos.Conciliar))
             throw new InvalidOperationException("No tienes permiso para conciliar movimientos de banco.");
 
         var copia = movimiento.Clonar();
@@ -325,7 +325,7 @@ public sealed class BancoService
         if (!PuedeDesconciliar(movimiento))
             throw new InvalidOperationException("Solo se puede desconciliar un movimiento conciliado.");
 
-        if (!_sesion.Puede(Permisos.Banco.Conciliar))
+        if (!_sesion.Puede(Permisos.Movimientos.Conciliar))
             throw new InvalidOperationException("No tienes permiso para desconciliar movimientos de banco.");
 
         var copia = movimiento.Clonar();
@@ -345,7 +345,7 @@ public sealed class BancoService
         if (!PuedeAnular(movimiento))
             throw new InvalidOperationException("Este movimiento ya está anulado.");
 
-        if (!_sesion.Puede(Permisos.Banco.Anular))
+        if (!_sesion.Puede(Permisos.Movimientos.Anular))
             throw new InvalidOperationException("No tienes permiso para anular movimientos de banco.");
 
         if (string.IsNullOrWhiteSpace(motivo))

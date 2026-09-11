@@ -11,7 +11,7 @@ namespace ASO_PRODUCS.Desktop.ViewModels;
 
 /// <summary>
 /// El extracto de una cuenta: lo que entró, lo que salió y cómo quedó el saldo. Sub-listado de
-/// Finanzas · Banco; el encabezado y el conmutador los pone <see cref="BancoViewModel"/>.
+/// Finanzas · Movimientos; el encabezado y el conmutador los pone <see cref="MovimientosViewModel"/>.
 ///
 /// La mayoría de las filas no se teclean aquí: bajan solas desde la factura que se cobró, la que
 /// se pagó y la liquidación que se pagó. Lo que sí se registra a mano es lo que no tiene
@@ -22,7 +22,7 @@ public sealed class MovimientosBancoCrudViewModel : CrudViewModelBase<Movimiento
     private const string FiltroTodos = "Todos";
 
     private readonly ICuentaBancariaDataSource _cuentas;
-    private readonly BancoService _servicio;
+    private readonly MovimientosService _servicio;
     private readonly IServicioDialogo _dialogos;
     private readonly ISesionActual _sesionActual;
 
@@ -30,7 +30,7 @@ public sealed class MovimientosBancoCrudViewModel : CrudViewModelBase<Movimiento
 
     public MovimientosBancoCrudViewModel(IMovimientoBancoDataSource movimientos,
                                          ICuentaBancariaDataSource cuentas,
-                                         BancoService servicio,
+                                         MovimientosService servicio,
                                          IServicioDialogo dialogos,
                                          ISesionActual sesion)
         : base(movimientos, dialogos, sesion)
@@ -50,16 +50,16 @@ public sealed class MovimientosBancoCrudViewModel : CrudViewModelBase<Movimiento
         });
 
         ConciliarCommand = new RelayCommand(Conciliar,
-            () => SelectedItem is { } m && _servicio.PuedeConciliar(m) && _sesionActual.Puede(Permisos.Banco.Conciliar));
+            () => SelectedItem is { } m && _servicio.PuedeConciliar(m) && _sesionActual.Puede(Permisos.Movimientos.Conciliar));
 
         DesconciliarCommand = new RelayCommand(Desconciliar,
-            () => SelectedItem is { } m && _servicio.PuedeDesconciliar(m) && _sesionActual.Puede(Permisos.Banco.Conciliar));
+            () => SelectedItem is { } m && _servicio.PuedeDesconciliar(m) && _sesionActual.Puede(Permisos.Movimientos.Conciliar));
 
         AnularCommand = new RelayCommand(Anular,
-            () => SelectedItem is { } m && _servicio.PuedeAnular(m) && _sesionActual.Puede(Permisos.Banco.Anular));
+            () => SelectedItem is { } m && _servicio.PuedeAnular(m) && _sesionActual.Puede(Permisos.Movimientos.Anular));
 
         TransferirCommand = new RelayCommand(Transferir,
-            () => _sesionActual.Puede(Permisos.Banco.Transferir));
+            () => _sesionActual.Puede(Permisos.Movimientos.Transferir));
 
         CalcularSaldoCorrido();
     }
@@ -147,7 +147,7 @@ public sealed class MovimientosBancoCrudViewModel : CrudViewModelBase<Movimiento
     public string SaldoConciliadoTexto => SaldoConciliado.ToString("N2");
     public string DiferenciaTexto => DiferenciaConciliacion.ToString("N2");
 
-    protected override string ModuloPermiso => "Banco";
+    protected override string ModuloPermiso => "Movimientos";
 
     protected override bool CoincideBusqueda(MovimientoBanco item, string texto) =>
         item.Concepto.Contains(texto, StringComparison.OrdinalIgnoreCase)
@@ -321,15 +321,15 @@ public sealed class MovimientosBancoCrudViewModel : CrudViewModelBase<Movimiento
 }
 
 /// <summary>
-/// El catálogo de cuentas del centro. Sub-listado de Finanzas · Banco.
+/// El catálogo de cuentas del centro. Sub-listado de Finanzas · Movimientos.
 /// </summary>
 public sealed class CuentasBancariasCrudViewModel : CrudViewModelBase<CuentaBancaria, int>
 {
-    private readonly BancoService _servicio;
+    private readonly MovimientosService _servicio;
     private readonly IServicioDialogo _dialogos;
 
     public CuentasBancariasCrudViewModel(ICuentaBancariaDataSource cuentas,
-                                         BancoService servicio,
+                                         MovimientosService servicio,
                                          IServicioDialogo dialogos,
                                          ISesionActual sesion)
         : base(cuentas, dialogos, sesion)
@@ -405,31 +405,31 @@ public sealed class CuentasBancariasCrudViewModel : CrudViewModelBase<CuentaBanc
 }
 
 /// <summary>
-/// Finanzas · Banco: el libro de entradas y salidas del centro y el catálogo de cuentas, en una
+/// Finanzas · Movimientos: el libro de entradas y salidas del centro y el catálogo de cuentas, en una
 /// pantalla conmutable, con el mismo patrón que Cuentas por Pagar.
 ///
 /// <b>El sistema no se conecta con ningún banco.</b> Es un libro interno: dice cuánto dinero
 /// entró y salió por la aplicación, y la marca de conciliado es lo que sirve para cuadrarlo
 /// contra el extracto que traiga el banco en papel.
 /// </summary>
-public sealed class BancoViewModel : PantallaViewModelBase
+public sealed class MovimientosViewModel : PantallaViewModelBase
 {
     public const string VistaMovimientos = "Movimientos";
     public const string VistaCuentas = "Cuentas";
 
-    public BancoViewModel(Modulo modulo, Submodulo submodulo)
+    public MovimientosViewModel(Modulo modulo, Submodulo submodulo)
         : this(modulo, submodulo, new ServicioDialogo(), SesionActual.Instancia)
     {
     }
 
-    private BancoViewModel(Modulo modulo,
+    private MovimientosViewModel(Modulo modulo,
                            Submodulo submodulo,
                            IServicioDialogo dialogos,
                            ISesionActual sesion)
         : base(modulo, submodulo)
     {
         var cuentas = DataSourceFactory.CrearCuentasBancarias();
-        var servicio = new BancoService(DataSourceFactory.CrearMovimientosBanco(), cuentas, sesion);
+        var servicio = new MovimientosService(DataSourceFactory.CrearMovimientosBanco(), cuentas, sesion);
 
         Movimientos = new MovimientosBancoCrudViewModel(
             DataSourceFactory.CrearMovimientosBanco(), cuentas, servicio, dialogos, sesion);

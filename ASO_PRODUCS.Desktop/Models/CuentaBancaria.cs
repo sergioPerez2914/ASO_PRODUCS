@@ -22,7 +22,7 @@ public enum TipoCuenta
 /// saber de qué bolsillo salió o entró cada unidad de dinero, y para poder cuadrarla después
 /// contra el extracto que traiga el banco en papel.
 ///
-/// <b>No guarda el saldo.</b> Lo calcula <see cref="Services.BancoService.SaldoDeLibro"/> a
+/// <b>No guarda el saldo.</b> Lo calcula <see cref="Services.MovimientosService.SaldoDeLibro"/> a
 /// partir de <see cref="SaldoInicial"/> más los movimientos. Guardarlo aparte es la vía rápida
 /// para que un día no coincida con sus propios movimientos.
 /// </summary>

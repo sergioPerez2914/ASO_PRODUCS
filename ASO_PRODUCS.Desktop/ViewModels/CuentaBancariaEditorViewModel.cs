@@ -7,12 +7,12 @@ namespace ASO_PRODUCS.Desktop.ViewModels;
 
 /// <summary>
 /// Alta/edición de una cuenta del centro. La validación de fondo (nombre repetido) la hace
-/// <see cref="BancoService.ValidarCuenta"/>: el editor se la pide y muestra lo que devuelva.
+/// <see cref="MovimientosService.ValidarCuenta"/>: el editor se la pide y muestra lo que devuelva.
 /// </summary>
 public sealed class CuentaBancariaEditorViewModel : CrudEditorViewModelBase<CuentaBancaria>
 {
     private readonly CuentaBancaria _original;
-    private readonly BancoService _servicio;
+    private readonly MovimientosService _servicio;
 
     /// <summary>
     /// El saldo inicial solo se pide al dar de alta la cuenta. Después queda de solo lectura:
@@ -22,7 +22,7 @@ public sealed class CuentaBancariaEditorViewModel : CrudEditorViewModelBase<Cuen
     /// </summary>
     public bool PuedeEditarSaldoInicial => _original.Id == 0;
 
-    public CuentaBancariaEditorViewModel(CuentaBancaria original, BancoService servicio)
+    public CuentaBancariaEditorViewModel(CuentaBancaria original, MovimientosService servicio)
     {
         _original = original;
         _servicio = servicio;

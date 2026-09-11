@@ -12,14 +12,14 @@ namespace ASO_PRODUCS.Desktop.Services;
 public sealed class CuentasPorPagarService
 {
     private readonly IFacturaProveedorDataSource _facturas;
-    private readonly BancoService _banco;
+    private readonly MovimientosService _banco;
     private readonly ISesionActual _sesion;
 
     /// <summary>
-    /// El <see cref="BancoService"/> es obligatorio: pagar la factura y anotar la salida en el
+    /// El <see cref="MovimientosService"/> es obligatorio: pagar la factura y anotar la salida en el
     /// libro son la misma operación (ver <see cref="RegistrarPago"/>).
     /// </summary>
-    public CuentasPorPagarService(IFacturaProveedorDataSource facturas, BancoService banco, ISesionActual sesion)
+    public CuentasPorPagarService(IFacturaProveedorDataSource facturas, MovimientosService banco, ISesionActual sesion)
     {
         _facturas = facturas;
         _banco = banco;
@@ -92,7 +92,7 @@ public sealed class CuentasPorPagarService
     ///
     /// No vuelve a comprobar el permiso: lo exigió quien llama, con el permiso de SU documento
     /// (<see cref="Permisos.EntradasInventario.Crear"/>). Es el mismo criterio con el que
-    /// <see cref="BancoService"/> no repite el chequeo de <c>Finanzas.Pagar</c> al asentar un pago.
+    /// <see cref="MovimientosService"/> no repite el chequeo de <c>Finanzas.Pagar</c> al asentar un pago.
     /// </summary>
     public FacturaProveedor Crear(FacturaProveedor factura, int usuarioId)
     {

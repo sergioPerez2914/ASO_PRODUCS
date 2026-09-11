@@ -9,10 +9,10 @@
        de MainWindow.xaml.cs y esta lista. Si falta la plantilla se nota al instante: el area
        de contenido muestra el nombre del tipo del ViewModel en vez de la pantalla. -->
 
-  <!-- Plantilla de ejemplo (Finanzas · Cuentas por Pagar y Banco) -->
+  <!-- Plantilla de ejemplo (Finanzas · Cuentas por Pagar y Movimientos) -->
 
-  <DataTemplate DataType="{x:Type vm:BancoViewModel}">
-    <views:BancoView />
+  <DataTemplate DataType="{x:Type vm:MovimientosViewModel}">
+    <views:MovimientosView />
   </DataTemplate>
 
   <DataTemplate DataType="{x:Type vm:CuentasPorPagarViewModel}">
@@ -35,6 +35,20 @@
 
   <DataTemplate DataType="{x:Type vm:SalidasViewModel}">
     <views:SalidasView />
+  </DataTemplate>
+
+  <!-- Materia Prima · Existencias, Recepciones y Salidas -->
+
+  <DataTemplate DataType="{x:Type vm:ExistenciasMateriaPrimaViewModel}">
+    <views:ExistenciasMateriaPrimaView />
+  </DataTemplate>
+
+  <DataTemplate DataType="{x:Type vm:RecepcionesMateriaPrimaViewModel}">
+    <views:RecepcionesMateriaPrimaView />
+  </DataTemplate>
+
+  <DataTemplate DataType="{x:Type vm:SalidasMateriaPrimaViewModel}">
+    <views:SalidasMateriaPrimaView />
   </DataTemplate>
 
   <!-- Armazón -->

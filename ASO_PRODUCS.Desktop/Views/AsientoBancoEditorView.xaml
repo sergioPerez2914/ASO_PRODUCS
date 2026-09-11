@@ -55,7 +55,7 @@
 
       <TextBlock TextWrapping="Wrap" FontSize="{StaticResource FsCaption}" Margin="0,8,0,0"
                  Foreground="{DynamicResource TextMutedBrush}"
-                 Text="La fecha valor es el día en que el dinero se movió, que no siempre es hoy. El movimiento queda en Finanzas · Banco y desde ahí se concilia contra el extracto." />
+                 Text="La fecha valor es el día en que el dinero se movió, que no siempre es hoy. El movimiento queda en Finanzas · Movimientos y desde ahí se concilia contra el extracto." />
     </StackPanel>
   </StackPanel>
 </UserControl>

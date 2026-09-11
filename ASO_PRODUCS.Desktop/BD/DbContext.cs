@@ -27,6 +27,11 @@ public class AsoProductoresDbContext : DbContext
     public DbSet<EntradaInventario> EntradasInventario { get; set; }
     public DbSet<SalidaInventario> SalidasInventario { get; set; }
 
+    // ---- Materia Prima: existencias, recepciones y salidas ----
+    public DbSet<TipoMateriaPrima> TiposMateriaPrima { get; set; }
+    public DbSet<RecepcionMateriaPrima> RecepcionesMateriaPrima { get; set; }
+    public DbSet<SalidaMateriaPrima> SalidasMateriaPrima { get; set; }
+
     /// <summary>
     /// Organización sobre la que trabaja ESTE contexto. Se toma del ámbito al construirlo y no
     /// cambia después: cada método de las fuentes Sql abre su propio contexto, así que un cambio
@@ -326,6 +331,83 @@ public class AsoProductoresDbContext : DbContext
 
                 linea.Ignore(x => x.CantidadTexto);
                 linea.Ignore(x => x.ArticuloTexto);
+            });
+        });
+
+        // ---- Materia Prima ----
+
+        modelBuilder.Entity<TipoMateriaPrima>(entity =>
+        {
+            entity.HasKey(t => t.Id);
+            entity.Property(t => t.Nombre).IsRequired().HasMaxLength(150);
+            entity.Property(t => t.UnidadMedida).HasMaxLength(30);
+
+            // Existencia NO se persiste: es la suma de recepciones menos salidas, la rellena
+            // MateriaPrimaService.
+            entity.Ignore(t => t.Existencia);
+            entity.Ignore(t => t.SinExistencia);
+            entity.Ignore(t => t.EstadoTexto);
+            entity.Ignore(t => t.ExistenciaTexto);
+        });
+
+        modelBuilder.Entity<RecepcionMateriaPrima>(entity =>
+        {
+            entity.HasKey(r => r.Id);
+            entity.Property(r => r.Numero).IsRequired().HasMaxLength(20);
+            entity.Property(r => r.Referencia).HasMaxLength(60);
+            entity.Property(r => r.Observaciones).HasMaxLength(500);
+            entity.Property(r => r.MotivoAnulacion).HasMaxLength(500);
+            entity.Property(r => r.CreadoPorNombre).HasMaxLength(150);
+
+            // El correlativo se calcula como "el último + 1" antes de escribir; este índice es
+            // la red que convierte una carrera entre dos puestos en un error, no en un duplicado.
+            entity.HasIndex(r => new { r.OrganizacionId, r.Numero }).IsUnique();
+
+            entity.Ignore(r => r.CuentaEnExistencia);
+            entity.Ignore(r => r.EstadoTexto);
+            entity.Ignore(r => r.FechaTexto);
+            entity.Ignore(r => r.CantidadLineas);
+            entity.Ignore(r => r.TotalCantidad);
+
+            entity.OwnsMany(r => r.Lineas, linea =>
+            {
+                linea.WithOwner().HasForeignKey("RecepcionMateriaPrimaId");
+                linea.Property<int>("Id");
+                linea.HasKey("Id");
+                linea.Property(x => x.TipoMateriaPrimaNombre).HasMaxLength(150);
+                linea.Property(x => x.UnidadMedidaSnapshot).HasMaxLength(30);
+                linea.Property(x => x.Cantidad).HasColumnType("decimal(18,2)");
+
+                linea.Ignore(x => x.CantidadTexto);
+            });
+        });
+
+        modelBuilder.Entity<SalidaMateriaPrima>(entity =>
+        {
+            entity.HasKey(s => s.Id);
+            entity.Property(s => s.Numero).IsRequired().HasMaxLength(20);
+            entity.Property(s => s.Observaciones).HasMaxLength(500);
+            entity.Property(s => s.AutorizadoPorNombre).HasMaxLength(150);
+            entity.Property(s => s.MotivoAnulacion).HasMaxLength(500);
+
+            entity.HasIndex(s => new { s.OrganizacionId, s.Numero }).IsUnique();
+
+            entity.Ignore(s => s.CuentaEnExistencia);
+            entity.Ignore(s => s.EstadoTexto);
+            entity.Ignore(s => s.FechaTexto);
+            entity.Ignore(s => s.CantidadLineas);
+            entity.Ignore(s => s.TotalCantidad);
+
+            entity.OwnsMany(s => s.Lineas, linea =>
+            {
+                linea.WithOwner().HasForeignKey("SalidaMateriaPrimaId");
+                linea.Property<int>("Id");
+                linea.HasKey("Id");
+                linea.Property(x => x.TipoMateriaPrimaNombre).HasMaxLength(150);
+                linea.Property(x => x.UnidadMedidaSnapshot).HasMaxLength(30);
+                linea.Property(x => x.Cantidad).HasColumnType("decimal(18,2)");
+
+                linea.Ignore(x => x.CantidadTexto);
             });
         });
 

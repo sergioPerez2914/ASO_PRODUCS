@@ -15,8 +15,8 @@ namespace ASO_PRODUCS.Desktop.Services;
 /// "todos", de modo que un rol total no se queda corto por olvido.
 ///
 /// PROVISIONAL: los 4 roles son genéricos (ver <see cref="Rol"/>) y los conjuntos base solo
-/// cubren los dos módulos de ejemplo que existen hoy (Finanzas, Inventario). Ajustar en cuanto
-/// el negocio real tenga sus propios módulos y roles.
+/// cubren los módulos heredados del scaffold (Finanzas, Inventario, Materia Prima). Ajustar en
+/// cuanto el negocio real tenga sus propios módulos y roles.
 /// </summary>
 public static class MatrizPermisos
 {
@@ -63,11 +63,14 @@ public static class MatrizPermisos
         Permisos.Ver(ModuloCatalogo.Peticiones.Clave),
         Permisos.Ver(ModuloCatalogo.Configuracion.Clave),
         Permisos.Ver("Finanzas.CuentasPorPagar"),
-        Permisos.Ver("Finanzas.Banco"),
+        Permisos.Ver("Finanzas.Movimientos"),
         Permisos.Ver("Finanzas.Proveedores"),
         Permisos.Ver("Inventario.Almacen"),
         Permisos.Ver("Inventario.Entradas"),
         Permisos.Ver("Inventario.Salidas"),
+        Permisos.Ver("MateriaPrima.Existencias"),
+        Permisos.Ver("MateriaPrima.Recepciones"),
+        Permisos.Ver("MateriaPrima.Salidas"),
 
         Permisos.Proveedores.Crear,
         Permisos.Proveedores.Editar,
@@ -81,14 +84,22 @@ public static class MatrizPermisos
         Permisos.EntradasInventario.Crear,
         Permisos.SalidasInventario.Crear,
 
+        Permisos.TiposMateriaPrima.Crear,
+        Permisos.TiposMateriaPrima.Editar,
+
+        Permisos.RecepcionesMateriaPrima.Crear,
+        Permisos.SalidasMateriaPrima.Crear,
+
         Permisos.Peticiones.Solicitar
 
         // Fuera a propósito:
-        // - Finanzas.Pagar / Banco.*: mover dinero es de Supervisor.
+        // - Finanzas.Pagar / Movimientos.*: mover dinero es de Supervisor.
         // - Proveedores.Eliminar / FacturasProveedor.Eliminar / Articulos.Eliminar: borrar es
         //   de Supervisor.
         // - EntradasInventario.Anular / SalidasInventario.Anular: deshacer un documento del
         //   almacén es de Supervisor, igual que deshacer uno de Finanzas.
+        // - RecepcionesMateriaPrima.Anular / SalidasMateriaPrima.Anular /
+        //   TiposMateriaPrima.Eliminar: mismo criterio que Inventario.
     ];
 
     /// <summary>
@@ -105,11 +116,11 @@ public static class MatrizPermisos
             Permisos.Finanzas.Pagar,
             Permisos.Finanzas.Anular,
 
-            Permisos.Banco.Crear,
-            Permisos.Banco.Editar,
-            Permisos.Banco.Eliminar,
-            Permisos.Banco.Conciliar,
-            Permisos.Banco.Transferir,
+            Permisos.Movimientos.Crear,
+            Permisos.Movimientos.Editar,
+            Permisos.Movimientos.Eliminar,
+            Permisos.Movimientos.Conciliar,
+            Permisos.Movimientos.Transferir,
 
             Permisos.CuentasBancarias.Crear,
             Permisos.CuentasBancarias.Editar,
@@ -119,10 +130,14 @@ public static class MatrizPermisos
             Permisos.EntradasInventario.Anular,
             Permisos.SalidasInventario.Anular,
 
+            Permisos.TiposMateriaPrima.Eliminar,
+            Permisos.RecepcionesMateriaPrima.Anular,
+            Permisos.SalidasMateriaPrima.Anular,
+
             Permisos.Peticiones.Resolver
 
             // Fuera a propósito:
-            // - Banco.Anular: deshacer un movimiento ya asentado queda un nivel más arriba.
+            // - Movimientos.Anular: deshacer un movimiento ya asentado queda un nivel más arriba.
         ]).ToHashSet();
 
     private static readonly HashSet<string> _administrador =

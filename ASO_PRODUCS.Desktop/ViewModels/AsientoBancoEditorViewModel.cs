@@ -74,7 +74,7 @@ public sealed class AsientoBancoEditorViewModel : CrudEditorViewModelBase
     public bool NoHayCuentas => !HayCuentas;
 
     public string AvisoSinCuentas =>
-        "No hay cuentas activas. Dé de alta una en Finanzas · Banco, pestaña Cuentas.";
+        "No hay cuentas activas. Dé de alta una en Finanzas · Movimientos, pestaña Cuentas.";
 
     private CuentaBancaria? _cuentaSeleccionada;
     public CuentaBancaria? CuentaSeleccionada

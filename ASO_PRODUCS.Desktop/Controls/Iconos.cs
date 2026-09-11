@@ -38,6 +38,7 @@ public static class Iconos
     public const string Almacen =          "";     // warehouse U+ECD4
     public const string Entradas =         "";     // tray-arrow-down U+E010
     public const string Salidas =          "";     // tray-arrow-up U+EE52
+    public const string MateriaPrima =     "";     // truck U+E4B4
 
     public const string Administracion =   "";     // shield-check U+E40C
     public const string Configuracion =    "";     // gear U+E270

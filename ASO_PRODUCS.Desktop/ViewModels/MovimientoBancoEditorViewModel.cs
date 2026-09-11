@@ -15,11 +15,11 @@ namespace ASO_PRODUCS.Desktop.ViewModels;
 public sealed class MovimientoBancoEditorViewModel : CrudEditorViewModelBase<MovimientoBanco>
 {
     private readonly MovimientoBanco _original;
-    private readonly BancoService _servicio;
+    private readonly MovimientosService _servicio;
 
     public MovimientoBancoEditorViewModel(MovimientoBanco original,
                                           IReadOnlyList<CuentaBancaria> cuentas,
-                                          BancoService servicio)
+                                          MovimientosService servicio)
     {
         _original = original;
         _servicio = servicio;
@@ -47,7 +47,7 @@ public sealed class MovimientoBancoEditorViewModel : CrudEditorViewModelBase<Mov
     /// Las categorías que tiene sentido teclear. Falta a propósito la que solo produce el
     /// sistema —pago a proveedor—: ofrecerla invitaría a duplicar a mano un asiento que ya baja
     /// solo desde su documento, y el saldo contaría el mismo dinero dos veces. Transferencia
-    /// tampoco: nace de <see cref="BancoService.Transferir"/>, no de este editor.
+    /// tampoco: nace de <see cref="MovimientosService.Transferir"/>, no de este editor.
     /// </summary>
     public IReadOnlyList<CategoriaMovimiento> Categorias { get; } =
     [

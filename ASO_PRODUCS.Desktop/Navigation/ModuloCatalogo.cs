@@ -30,11 +30,10 @@ public sealed record Modulo(
 /// dashboards y el enrutado de MainWindow leen de aquí, así que agregar o renombrar un
 /// submódulo se hace en un solo lugar.
 ///
-/// PROVISIONAL: este es el scaffold genérico de ASO, sin negocio real todavía. Por ahora solo
-/// trae dos módulos de ejemplo — Finanzas (Cuentas por Pagar y Banco) e Inventario — como
-/// plantilla viva de los patrones del framework (ver "Cómo se agrega un submódulo" en
-/// CLAUDE.md). Los módulos reales del negocio que adopte este scaffold se agregan aquí
-/// siguiendo esa receta.
+/// PROVISIONAL: trae los módulos heredados del scaffold — Finanzas (Cuentas por Pagar,
+/// Movimientos y Proveedores), Inventario y Materia Prima — como plantilla viva de los patrones
+/// del framework (ver "Cómo se agrega un submódulo" en CLAUDE.md). Los módulos propios de los
+/// productores se agregan aquí siguiendo esa receta.
 /// </summary>
 public static class ModuloCatalogo
 {
@@ -67,7 +66,7 @@ public static class ModuloCatalogo
             [
                 new Submodulo("Finanzas.CuentasPorPagar", "Cuentas por Pagar",
                     "Obligaciones con proveedores y su vencimiento.", Iconos.CuentasPorPagar),
-                new Submodulo("Finanzas.Banco", "Banco",
+                new Submodulo("Finanzas.Movimientos", "Movimientos",
                     "Estado de la cuenta según lo cobrado y pagado en la aplicación.", Iconos.Banco),
                 new Submodulo("Finanzas.Proveedores", "Proveedores",
                     "Maestro de proveedores de la organización.", Iconos.Proveedor)
@@ -85,6 +84,20 @@ public static class ModuloCatalogo
                     "Historial de entradas y registro de lo que llega al almacén.", Iconos.Entradas),
                 new Submodulo("Inventario.Salidas", "Salidas",
                     "Historial de salidas y emisión de boletos de salida.", Iconos.Salidas)
+            ]),
+
+        new Modulo(
+            "MateriaPrima",
+            "Materia Prima",
+            "Existencia, recepción y salida de la materia prima de los productores.",
+            Iconos.MateriaPrima,
+            [
+                new Submodulo("MateriaPrima.Existencias", "Existencias",
+                    "Cuánto hay de cada tipo de materia prima, de un vistazo.", Iconos.Almacen),
+                new Submodulo("MateriaPrima.Recepciones", "Recepciones",
+                    "Historial de recepciones y registro de lo que llega.", Iconos.Entradas),
+                new Submodulo("MateriaPrima.Salidas", "Salidas",
+                    "Historial de salidas y registro de lo que se despacha.", Iconos.Salidas)
             ]),
     ];
 

@@ -10,10 +10,9 @@ namespace ASO_PRODUCS.Desktop.Services;
 /// Los permisos de navegacion llevan el prefijo <c>Ver.</c> y su sufijo es la clave del
 /// submodulo en <c>Navigation/ModuloCatalogo.cs</c>, para que no puedan desincronizarse.
 ///
-/// PROVISIONAL: este es el scaffold genérico de ASO. Solo trae los permisos del armazón
-/// (usuarios, peticiones, organización) y los de los dos módulos de ejemplo (Finanzas ·
-/// Cuentas por Pagar y Banco, e Inventario). Cada módulo de negocio nuevo agrega su propia
-/// clase aquí siguiendo el mismo patrón — ver la receta en CLAUDE.md.
+/// PROVISIONAL: trae los permisos del armazón (usuarios, peticiones, organización) y los de los
+/// módulos heredados del scaffold (Finanzas, Inventario, Materia Prima). Cada módulo de negocio
+/// nuevo agrega su propia clase aquí siguiendo el mismo patrón — ver la receta en CLAUDE.md.
 /// </summary>
 public static class Permisos
 {
@@ -47,7 +46,7 @@ public static class Permisos
     /// piden permiso propio — ya lo guarda <see cref="Finanzas.Pagar"/>, y exigir otro más
     /// dejaría pagar la factura sin que el dinero apareciera en el libro.
     /// </summary>
-    public static class Banco
+    public static class Movimientos
     {
         public const string Crear = "Banco.Crear";
         public const string Editar = "Banco.Editar";
@@ -92,6 +91,29 @@ public static class Permisos
     {
         public const string Crear = "SalidasInventario.Crear";
         public const string Anular = "SalidasInventario.Anular";
+    }
+
+    /// <summary>Catálogo de tipos de materia prima (Materia Prima · Existencias).</summary>
+    public static class TiposMateriaPrima
+    {
+        public const string Crear = "TiposMateriaPrima.Crear";
+        public const string Editar = "TiposMateriaPrima.Editar";
+        public const string Eliminar = "TiposMateriaPrima.Eliminar";
+    }
+
+    /// <summary>Recepciones de materia prima. No hay "Editar" ni "Eliminar": una recepción es un
+    /// documento, y un documento no se corrige ni se borra, se anula.</summary>
+    public static class RecepcionesMateriaPrima
+    {
+        public const string Crear = "RecepcionesMateriaPrima.Crear";
+        public const string Anular = "RecepcionesMateriaPrima.Anular";
+    }
+
+    /// <summary>Salidas de materia prima. Mismo criterio que las recepciones.</summary>
+    public static class SalidasMateriaPrima
+    {
+        public const string Crear = "SalidasMateriaPrima.Crear";
+        public const string Anular = "SalidasMateriaPrima.Anular";
     }
 
     public static class Peticiones

@@ -19,7 +19,7 @@ public sealed class FacturasProveedorCrudViewModel : CrudViewModelBase<FacturaPr
     private readonly IServicioDialogo _dialogos;
     private readonly ISesionActual _sesionActual;
     private readonly CuentasPorPagarService _servicio;
-    private readonly BancoService _banco;
+    private readonly MovimientosService _banco;
 
     private string _filtroEstado = FiltroTodas;
 
@@ -32,7 +32,7 @@ public sealed class FacturasProveedorCrudViewModel : CrudViewModelBase<FacturaPr
         _proveedores = proveedores;
         _dialogos = dialogos;
         _sesionActual = sesion;
-        _banco = new BancoService(DataSourceFactory.CrearMovimientosBanco(),
+        _banco = new MovimientosService(DataSourceFactory.CrearMovimientosBanco(),
                                   DataSourceFactory.CrearCuentasBancarias(), sesion);
         _servicio = new CuentasPorPagarService(facturas, _banco, sesion);
 

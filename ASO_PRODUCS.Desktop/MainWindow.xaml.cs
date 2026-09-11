@@ -157,12 +157,16 @@ public partial class MainWindow : Window
         new Dictionary<string, Func<Modulo, Submodulo, IPantalla>>
         {
             ["Finanzas.CuentasPorPagar"] = (m, s) => new CuentasPorPagarViewModel(m, s),
-            ["Finanzas.Banco"] = (m, s) => new BancoViewModel(m, s),
+            ["Finanzas.Movimientos"] = (m, s) => new MovimientosViewModel(m, s),
             ["Finanzas.Proveedores"] = (m, s) => new ProveedoresViewModel(m, s),
 
             ["Inventario.Almacen"] = (m, s) => new AlmacenViewModel(m, s),
             ["Inventario.Entradas"] = (m, s) => new EntradasViewModel(m, s),
             ["Inventario.Salidas"] = (m, s) => new SalidasViewModel(m, s),
+
+            ["MateriaPrima.Existencias"] = (m, s) => new ExistenciasMateriaPrimaViewModel(m, s),
+            ["MateriaPrima.Recepciones"] = (m, s) => new RecepcionesMateriaPrimaViewModel(m, s),
+            ["MateriaPrima.Salidas"] = (m, s) => new SalidasMateriaPrimaViewModel(m, s),
         };
 
     private object CrearVistaModulo(Modulo modulo)

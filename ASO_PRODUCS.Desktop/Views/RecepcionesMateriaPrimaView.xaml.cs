@@ -2,9 +2,9 @@ using System.Windows.Controls;
 
 namespace ASO_PRODUCS.Desktop.Views;
 
-public partial class BancoView : UserControl
+public partial class RecepcionesMateriaPrimaView : UserControl
 {
-    public BancoView()
+    public RecepcionesMateriaPrimaView()
     {
         InitializeComponent();
     }

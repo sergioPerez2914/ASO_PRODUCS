@@ -13,7 +13,7 @@ namespace ASO_PRODUCS.Desktop.ViewModels;
 /// admiten que alguien haga la primera y se olvide de la segunda, y el disponible total del
 /// centro cambiaría sin que nadie hubiera gastado nada.
 ///
-/// El par lo escribe <see cref="Services.BancoService.Transferir"/>, que también los enlaza.
+/// El par lo escribe <see cref="Services.MovimientosService.Transferir"/>, que también los enlaza.
 /// </summary>
 public sealed class TransferenciaEditorViewModel : CrudEditorViewModelBase
 {
