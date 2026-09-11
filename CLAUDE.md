@@ -3,8 +3,9 @@
 Aplicación de gestión de escritorio para **productores locales de distinta índole**: **WPF ·
 .NET 8** (`net8.0-windows`), instalación local en LAN, una sola organización por instalación.
 Arranca desde el scaffold **ASO Genérico** con su armazón completo y tres módulos heredados
-(Finanzas, Inventario y Materia Prima). Los módulos específicos de los productores **todavía no
-existen**: se construyen encima con la receta de "Cómo se agrega un submódulo".
+(Finanzas, Inventario y Materia Prima). Sobre ese armazón ya se construyó, con la receta de "Cómo
+se agrega un submódulo", un cuarto módulo — **Procesos** (Producción y Despacho) — con Finanzas
+ganando además Clientes y Cuentas por Cobrar; ver la sección "Procesos" más abajo.
 
 ## Origen de este proyecto (2026-09-11)
 
@@ -51,6 +52,9 @@ heredar una vez que se quitaron las tablas de los tres módulos eliminados.
   **ASO_RTR** (su módulo `MateriaPrima`: `Custodia`/`Recepciones`/`Despachos`, para custodiar
   botellas de un tercero) y despojado de todo lo propio de esa planta — ver la sección "Materia
   Prima" más abajo para qué cambió y por qué.
+- **Se agregó el módulo Procesos** (`Producción`, `Despacho`), construido de cero para este
+  proyecto (a diferencia de Materia Prima, no viene de ningún scaffold anterior), y con él
+  `Finanzas · Clientes` y `Finanzas · Cuentas por Cobrar` — ver la sección "Procesos" más abajo.
 
 ## Cómo ejecutar
 
@@ -77,9 +81,11 @@ Es escritorio, no web (no hay dev server / puerto). `dotnet run` dentro de
 
 ## Estructura de módulos
 
-Hoy hay **tres módulos de negocio heredados del scaffold**: **Finanzas** (Cuentas por Pagar,
-Movimientos y Proveedores), **Inventario** (Almacén, Entradas y Salidas) y **Materia Prima**
-(Existencias, Recepciones y Salidas), más **cuatro módulos fijados** sin submódulos: **Inicio**,
+Hoy hay **cuatro módulos de negocio**: los tres heredados del scaffold — **Finanzas** (Cuentas por
+Pagar, Cuentas por Cobrar, Movimientos, Proveedores y Clientes), **Inventario** (Almacén, Entradas
+y Salidas) y **Materia Prima** (Existencias, Recepciones y Salidas) — más **Procesos** (Producción
+y Despacho), agregado después con la receta de "Cómo se agrega un submódulo" (ver la sección
+"Procesos" más abajo). A esto se suman **cuatro módulos fijados** sin submódulos: **Inicio**,
 **Peticiones** (bandeja de solicitudes de cambio), **Administración** (usuarios con sus permisos,
 y los datos de la propia organización) y **Configuración** (apariencia, cuenta propia,
 preferencias de la máquina — anclada al pie del sidebar, fuera de su `ScrollViewer`, porque no es
@@ -92,7 +98,7 @@ trabajo del día).
 - `Views/InicioView` — lanzador con una tarjeta por módulo.
 - `Views/ModuloDashboardView` — resumen del módulo: indicadores + tarjeta por submódulo. Los
   valores los calcula `ModuloDashboardViewModel.CalcularIndicadores` (un `switch` por clave de
-  módulo) — hoy con los casos `"Finanzas"`, `"Inventario"` y `"MateriaPrima"`.
+  módulo) — hoy con los casos `"Finanzas"`, `"Inventario"`, `"MateriaPrima"` y `"Procesos"`.
 - `Views/SubmoduloView` — submódulo en construcción, para cuando se agregue uno nuevo al catálogo
   antes de tener su pantalla real.
 - Framework CRUD reutilizable (`CrudViewModelBase`, `CrudEditorViewModelBase`, `CrudEditorWindow`,
@@ -141,6 +147,13 @@ Arquetipos a copiar:
   editables) pero **desacoplado de Finanzas**: `RecepcionesMateriaPrimaService` no depende de
   `CuentasPorPagarService`, así que sirve de ejemplo de un módulo de existencias que no genera
   deuda al recibir.
+- **Procesos · Producción** — un patrón que ningún otro módulo tenía: agregado de DOS niveles
+  (`ProcesoProduccion.LineasIniciales` + `Etapas`, cada etapa con sus propias líneas) cuyo consumo
+  puede venir indistintamente de dos padrones de existencia (`OrigenMaterial.MateriaPrima`/
+  `Articulo`) y que, al guardarse, dispara una salida real y numerada en el módulo que
+  corresponda (`ProcesosProduccionService.ConstruirSalidas` + `RegistrarSinPermiso` de
+  `SalidasMateriaPrimaService`/`SalidasInventarioService`) — el ejemplo a copiar para un documento
+  que necesita escribir en más de un módulo existente a la vez.
 
 ## Inventario
 
@@ -229,6 +242,56 @@ específico de esa planta:
 - **Reutiliza `Controls/PuenteDeDatos.cs`** para las dos grillas de líneas (Recepciones, Salidas),
   igual que Inventario.
 
+## Procesos (2026-09-11)
+
+Dos submódulos: **Producción** (fabricación de producto terminado a partir de materia prima y/o
+artículos de inventario) y **Despacho** (catálogo de `Producto` con existencia derivada + los
+despachos que la consumen). A diferencia de Materia Prima, este módulo no viene de ningún scaffold
+anterior: se construyó de cero contra este armazón.
+
+- **`ProcesoProduccion` es un agregado de DOS niveles**: `LineasIniciales` (lo que se consume al
+  iniciar) y `Etapas` (una lista de `EtapaProcesoProduccion`, cada una con sus propias `Lineas`).
+  El nombre de cada etapa sale de `EtapaProduccion`, un catálogo reutilizable de la organización
+  (Id, Nombre, Orden, Activo) — su comentario de cabecera da "lavado, cuajado, prensado, salado,
+  maduración" como ejemplo, que sugiere elaboración de queso, aunque el modelo en sí es genérico.
+  Las etapas se agregan de a una mientras el proceso sigue `EnProceso`
+  (`ProcesosProduccionService.AgregarEtapa`); no se editan ni se quitan después.
+- **Cada línea de consumo (inicial o de etapa) declara su `OrigenMaterial`** (`MateriaPrima` o
+  `Articulo`). `ProcesosProduccionService.ConstruirSalidas` arma, agrupando por origen, una
+  `SalidaMateriaPrima` y/o una `SalidaInventario` reales y numeradas, enlazadas al proceso
+  (`ProcesoProduccionId`/`Numero`) — nunca las inventa: pasan por
+  `SalidasMateriaPrimaService.RegistrarSinPermiso`/`SalidasInventarioService.RegistrarSinPermiso`
+  sin repetir el permiso, que ya lo exigió `ProcesosProduccion.Crear`/`AgregarEtapa`.
+- **Máquina de estados `EnProceso → Terminado`, con `Anulado` alcanzable desde cualquiera de los
+  dos.** `Terminar` registra `CantidadProducida`, que puede diferir de `CantidadPlaneada` por una
+  merma — no se valida contra la planeada, es justo el dato que interesa. Anular un proceso ya
+  `Terminado` revisa EN VIVO que devolver la existencia del producto no la deje en negativo (si ya
+  se despachó lo que produjo).
+- **Las salidas de materia prima/inventario que generó un proceso NUNCA se revierten al
+  anularlo**, haya llegado a `Terminado` o no: representan material que físicamente salió del
+  almacén. Devolver material no usado es una Entrada/Recepción de tipo `Ajuste` nueva, igual que ya
+  resuelve Inventario.
+- **La existencia de `Producto` se deriva igual que en Materia Prima e Inventario**:
+  `ProductosService.ExistenciasPorProducto()` suma lo producido por procesos `Terminado` y resta lo
+  despachado, sin contar documentos anulados — mismo patrón, con la particularidad de que lo que
+  "entra" es un proceso de este mismo módulo, no un documento de otro.
+- **Un despacho tipo `Venta` exige cliente, lleva precio por línea y genera su cuenta por cobrar
+  automáticamente**: `DespachosService` exige `CuentasPorCobrarService` por constructor, igual que
+  `EntradasInventarioService` exige `CuentasPorPagarService`. Un `Ajuste` se salta ese paso porque
+  no hay a quién cobrarle — mismo criterio que `TipoEntrada.Ajuste` en Inventario. La factura se
+  escribe **antes** que el despacho, por el motivo de siempre: es la operación que puede rechazar.
+- **Anular un despacho ya no se permite si su factura fue cobrada**: el dinero ya entró al banco,
+  y deshacerlo es cosa de Movimientos, no del almacén — calco de la regla de Inventario con una
+  factura ya pagada.
+- **Nace `Finanzas · Clientes` y `Finanzas · Cuentas por Cobrar`**, acoplados a Despacho y no como
+  módulo independiente: `CuentasPorCobrarService` es un calco de `CuentasPorPagarService` con
+  Cliente en vez de Proveedor, y `Finanzas.Cobrar` es un permiso nuevo (Supervisor) paralelo a
+  `Finanzas.Pagar`.
+- **Los correlativos** (`PRO-000123` los procesos, `DES-000123` los despachos) siguen el mismo
+  mecanismo que el resto de los módulos: el servicio asigna "el último + 1" al iniciar/registrar,
+  con el índice único `(OrganizacionId, Numero)` como red.
+- **Dos migraciones EF**: `AgregarProcesos`, `AgregarClientesYCuentasPorCobrar`.
+
 ## Persistencia
 
 Las entidades de dominio persisten en **SQL Server vía EF Core Migrations**.
@@ -239,7 +302,10 @@ Las entidades de dominio persisten en **SQL Server vía EF Core Migrations**.
   `EntradaInventario`+`EntradaInventarioLinea`, `SalidaInventario`+`SalidaInventarioLinea`)
   seguida de `AgregarMateriaPrima` (`TipoMateriaPrima`,
   `RecepcionMateriaPrima`+`RecepcionMateriaPrimaLinea`,
-  `SalidaMateriaPrima`+`SalidaMateriaPrimaLinea`).
+  `SalidaMateriaPrima`+`SalidaMateriaPrimaLinea`), `AgregarProcesos` (`EtapaProduccion`,
+  `ProcesoProduccion` con sus `LineasIniciales`/`Etapas`, `Producto`) y
+  `AgregarClientesYCuentasPorCobrar` (`Cliente`, `FacturaCliente`+`FacturaClienteLinea`,
+  `Despacho`+`DespachoLinea`).
 - **La cadena de conexión vive solo en `appsettings.local.json`** (por máquina, en `.gitignore`);
   la de `appsettings.json` (clave `ConnectionStrings:AsoProductoresDb`) apunta a LocalDB con un
   `.mdf` en `App_Data`.
@@ -275,8 +341,8 @@ Cuatro roles genéricos (`Models/Rol.cs`), cada uno con un conjunto base en
 
 | Rol | Alcance |
 |---|---|
-| **Operador** | El día a día: crea/edita proveedores y facturas; mantiene los catálogos de artículos y de tipos de materia prima; registra entradas/salidas de almacén y recepciones/salidas de materia prima. No mueve dinero, no anula ni borra nada |
-| **Supervisor** | Todo lo de Operador, más registrar pagos (dispara el asiento en Movimientos), administrar cuentas bancarias, anular documentos de almacén y de materia prima, eliminar, y resolver peticiones de su dominio |
+| **Operador** | El día a día: crea/edita proveedores, clientes y facturas; mantiene los catálogos de artículos, tipos de materia prima, etapas de producción y productos; registra entradas/salidas de almacén, recepciones/salidas de materia prima, procesos de producción y despachos. No mueve dinero, no anula ni borra nada |
+| **Supervisor** | Todo lo de Operador, más registrar pagos y cobros (dispara el asiento en Movimientos), administrar cuentas bancarias, anular documentos de almacén, de materia prima, de producción y de despacho, eliminar, y resolver peticiones de su dominio |
 | **AdministradorOrganizacion** | Todo dentro de la organización, salvo crear usuarios Desarrollador |
 | **Desarrollador** | Todos los permisos, y es el único que reparte su propio rol |
 
@@ -369,27 +435,31 @@ de revisar y cambiar; no son bugs:
 4. **Nombre del producto / razón social**: "ASO Productores" (títulos de ventana, sidebar, login,
    `%AppData%`) y "Empresa" en `Company` del `.csproj` son placeholders. Si cambia el nombre
    visible, la carpeta de `%AppData%` cambia con él y las preferencias guardadas se pierden.
-5. **Módulos de negocio**: hoy solo están los tres heredados del scaffold (Finanzas, Inventario,
-   Materia Prima). Los módulos de los productores locales se agregan con la receta de "Cómo se
-   agrega un submódulo", usando Finanzas para los cuatro patrones del framework, Inventario para
-   un módulo construido de cero contra este armazón, y Materia Prima para un módulo de existencias
-   desacoplado de Finanzas.
+5. **Módulos de negocio**: además de los tres heredados del scaffold (Finanzas, Inventario,
+   Materia Prima), ya se agregó **Procesos** (Producción y Despacho) construido de cero con la
+   receta de "Cómo se agrega un submódulo" — ver la sección "Procesos" arriba. Sigue sin haber
+   certeza de que este sea el módulo definitivo que necesita el negocio real (roles, marca y
+   nombre siguen siendo placeholders); si hace falta otro módulo específico, Finanzas sirve para
+   los cuatro patrones del framework, Inventario para uno construido de cero, Materia Prima para
+   uno de existencias desacoplado de Finanzas, y Procesos para uno que dispara efectos en más de
+   un módulo existente a la vez.
 6. **Materia Prima sin destino ni origen real**: `SalidaMateriaPrima` no dice a quién o a dónde va
    la materia prima, y `RecepcionMateriaPrima` no dice de quién viene ni si hay que pagarle — ver
    "Materia Prima" arriba. Definir con el negocio real si hace falta alguno de los dos.
 7. **`Solicitables` vacío**: no hay ninguna petición de cambio configurada todavía — ver
    "Peticiones de cambio" arriba. Los candidatos naturales ya existen: `EntradasInventario.Anular`,
-   `SalidasInventario.Anular`, `RecepcionesMateriaPrima.Anular` y `SalidasMateriaPrima.Anular`, que
-   hoy un Operador simplemente no ve.
+   `SalidasInventario.Anular`, `RecepcionesMateriaPrima.Anular`, `SalidasMateriaPrima.Anular`,
+   `ProcesosProduccion.Anular` y `Despachos.Anular`, que hoy un Operador simplemente no ve.
 8. **Pantalla de datos de la organización**: `Administración · Organización` solo pide nombre y
    código; si el negocio real necesita más datos de la organización (dirección, RIF, etc.),
    agregarlos ahí.
 
 ## Próximo paso sugerido
 
-1. **Definir los módulos específicos de los productores locales** y construir el primero;
-   Finanzas, Inventario y Materia Prima ya dejan los patrones y los almacenes de los que tirarán
-   los demás.
+1. **Confirmar con el negocio real si Procesos (Producción/Despacho) es el módulo que hace
+   falta**, o si hay que ajustarlo o agregar otro específico de los productores locales; Finanzas,
+   Inventario, Materia Prima y ahora Procesos ya dejan los patrones y los almacenes de los que
+   tirarán los demás.
 2. **Decidir los roles reales** del negocio y reemplazar los cuatro genéricos.
 3. **Elegir el color de marca y el logo real** y actualizar lo descrito en "Marca".
 4. **Llevar la comprobación de permisos a los servicios de dominio** de cada módulo nuevo desde
