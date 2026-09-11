@@ -16,6 +16,8 @@ namespace ASO_PRODUCS.Desktop.ViewModels;
 public sealed class EtapasProduccionCrudViewModel : CrudViewModelBase<EtapaProduccion, int>
 {
     private readonly EtapasProduccionService _servicio;
+    private readonly IServicioDialogo _dialogos;
+    private readonly ISesionActual _sesion;
 
     public EtapasProduccionCrudViewModel(IEtapaProduccionDataSource etapas,
                                          EtapasProduccionService servicio,
@@ -24,7 +26,13 @@ public sealed class EtapasProduccionCrudViewModel : CrudViewModelBase<EtapaProdu
         : base(etapas, dialogos, sesion)
     {
         _servicio = servicio;
+        _dialogos = dialogos;
+        _sesion = sesion;
+
+        CargarSugeridosCommand = new RelayCommand(CargarSugeridos, () => _sesion.Puede($"{ModuloPermiso}.Crear"));
     }
+
+    public ICommand CargarSugeridosCommand { get; }
 
     public string Resumen => $"{_servicio.TotalActivas()} etapas activas";
 
@@ -41,6 +49,19 @@ public sealed class EtapasProduccionCrudViewModel : CrudViewModelBase<EtapaProdu
 
     protected override CrudEditorViewModelBase<EtapaProduccion> CrearEditor(EtapaProduccion item) =>
         new EtapaProduccionEditorViewModel(item, _servicio);
+
+    /// <summary>Precarga el catálogo sugerido para una planta láctea; no duplica lo que ya
+    /// exista, así que se puede pulsar más de una vez sin riesgo.</summary>
+    private void CargarSugeridos()
+    {
+        var creadas = _servicio.CargarSugeridas(CatalogoLacteoSugerido.EtapasProduccion);
+        Recargar();
+
+        _dialogos.Informar("Catálogo cargado",
+            creadas > 0
+                ? $"Se agregaron {creadas} etapas sugeridas."
+                : "Las etapas sugeridas ya estaban todas cargadas.");
+    }
 }
 
 /// <summary>Alta/edición de una etapa del catálogo.</summary>

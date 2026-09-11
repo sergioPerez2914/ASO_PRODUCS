@@ -50,6 +50,7 @@ public static class Iconos
     public const string Procesos =         ""; // gear-six (procesos de producción/despacho)
     public const string Produccion =       ""; // factory
     public const string Despacho =         ""; // package
+    public const string Reportes =         ""; // chart-bar
 
     public const string Administracion =   "";     // shield-check U+E40C
     public const string Configuracion =    "";     // gear U+E270

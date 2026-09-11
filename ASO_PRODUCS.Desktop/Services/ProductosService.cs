@@ -58,6 +58,30 @@ public sealed class ProductosService
         => !_procesos.GetAll().Any(p => p.ProductoId == producto.Id)
            && !_despachos.GetAll().Any(d => d.Lineas.Any(l => l.ProductoId == producto.Id));
 
+    /// <summary>
+    /// Da de alta, de una sola vez, los productos sugeridos que todavía no existan por nombre
+    /// (reutiliza <see cref="Validar"/>, que ya rechaza los repetidos). Pensado para precargar el
+    /// catálogo de una planta nueva; correrlo más de una vez no duplica nada. Devuelve cuántos se
+    /// crearon.
+    /// </summary>
+    public int CargarSugeridos(IEnumerable<(string Nombre, string UnidadMedida)> sugeridos)
+    {
+        var creados = 0;
+
+        foreach (var (nombre, unidadMedida) in sugeridos)
+        {
+            var candidato = new Producto { Nombre = nombre, UnidadMedida = unidadMedida, Activo = true };
+
+            if (!Validar(candidato, out _))
+                continue;
+
+            _productos.Add(candidato);
+            creados++;
+        }
+
+        return creados;
+    }
+
     // --- Existencia ---
 
     /// <summary>

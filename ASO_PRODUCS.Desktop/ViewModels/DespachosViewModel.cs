@@ -24,6 +24,8 @@ public sealed class ProductosCrudViewModel : CrudViewModelBase<Producto, int>
     private const string FiltroTodos = "Todos";
 
     private readonly ProductosService _servicio;
+    private readonly IServicioDialogo _dialogos;
+    private readonly ISesionActual _sesion;
 
     private string _filtro = FiltroTodos;
 
@@ -34,6 +36,8 @@ public sealed class ProductosCrudViewModel : CrudViewModelBase<Producto, int>
         : base(productos, dialogos, sesion)
     {
         _servicio = servicio;
+        _dialogos = dialogos;
+        _sesion = sesion;
 
         // La base ya pobló Items en su constructor, pero sin existencias: sin esto la primera
         // pintada saldría con todo en cero hasta la primera recarga.
@@ -45,9 +49,12 @@ public sealed class ProductosCrudViewModel : CrudViewModelBase<Producto, int>
             _filtro = filtro;
             ItemsView.Refresh();
         });
+
+        CargarSugeridosCommand = new RelayCommand(CargarSugeridos, () => _sesion.Puede($"{ModuloPermiso}.Crear"));
     }
 
     public ICommand CambiarFiltroCommand { get; }
+    public ICommand CargarSugeridosCommand { get; }
 
     public string Resumen =>
         $"{_servicio.TotalProductosActivos()} productos activos · {_servicio.ProductosSinExistencia()} sin existencia";
@@ -82,6 +89,19 @@ public sealed class ProductosCrudViewModel : CrudViewModelBase<Producto, int>
         _servicio.RellenarExistencias(Items);
         ItemsView.Refresh();
         OnTodasLasPropiedadesCambiaron();
+    }
+
+    /// <summary>Precarga el catálogo sugerido para una planta láctea; no duplica lo que ya
+    /// exista, así que se puede pulsar más de una vez sin riesgo.</summary>
+    private void CargarSugeridos()
+    {
+        var creados = _servicio.CargarSugeridos(CatalogoLacteoSugerido.Productos);
+        Recargar();
+
+        _dialogos.Informar("Catálogo cargado",
+            creados > 0
+                ? $"Se agregaron {creados} productos sugeridos."
+                : "Los productos sugeridos ya estaban todos cargados.");
     }
 }
 

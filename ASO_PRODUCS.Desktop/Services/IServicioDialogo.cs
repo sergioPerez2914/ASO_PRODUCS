@@ -15,4 +15,10 @@ public interface IServicioDialogo
 
     /// <summary>Aviso sin decisión: reglas de negocio rechazadas, resultados de una acción.</summary>
     void Informar(string titulo, string mensaje);
+
+    /// <summary>Pide dónde guardar un archivo (exportar a Excel, por ejemplo).</summary>
+    /// <param name="filtro">Formato de <see cref="Microsoft.Win32.SaveFileDialog.Filter"/>, p.
+    /// ej. <c>"Libro de Excel (*.xlsx)|*.xlsx"</c>.</param>
+    /// <returns>La ruta elegida, o <c>null</c> si el usuario canceló.</returns>
+    string? GuardarArchivo(string titulo, string nombreSugerido, string filtro);
 }

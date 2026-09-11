@@ -165,6 +165,9 @@
                       Foreground="{DynamicResource DangerTextBrush}"
                       Command="{Binding EliminarCommand}"
                       ToolTip="Solo se puede eliminar un producto que nunca se produjo ni despachó; el resto se desactiva." />
+              <Button Content="Cargar sugeridos" Style="{StaticResource SecondaryButtonStyle}"
+                      Command="{Binding CargarSugeridosCommand}"
+                      ToolTip="Carga el catálogo de productos recomendado para una planta láctea; no duplica lo que ya exista." />
             </StackPanel>
           </Grid>
         </Border>

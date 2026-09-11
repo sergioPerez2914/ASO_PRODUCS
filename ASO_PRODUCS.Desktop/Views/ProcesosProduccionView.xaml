@@ -158,6 +158,9 @@
                       Foreground="{DynamicResource DangerTextBrush}"
                       Command="{Binding EliminarCommand}"
                       ToolTip="Solo se puede eliminar una etapa que ningún proceso usó; el resto se desactiva." />
+              <Button Content="Cargar sugeridas" Style="{StaticResource SecondaryButtonStyle}"
+                      Command="{Binding CargarSugeridosCommand}"
+                      ToolTip="Carga las etapas recomendadas para una planta láctea; no duplica las que ya existan." />
             </StackPanel>
           </Grid>
         </Border>

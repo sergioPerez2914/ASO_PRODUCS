@@ -103,6 +103,14 @@ public sealed class SalidasMateriaPrimaViewModel : PantallaCrudViewModel<SalidaM
     /// </summary>
     protected override void Agregar()
     {
+        if (!_tipos.GetAll().Any(t => t.Activo))
+        {
+            _dialogos.Informar("No hay tipos de materia prima",
+                "Antes de registrar una salida, agregue al menos un tipo de materia prima en " +
+                "Materia Prima · Existencias.");
+            return;
+        }
+
         var editor = CrearEditor(CrearNuevo());
 
         if (!_dialogos.MostrarEditor(editor))

@@ -21,6 +21,8 @@ public sealed class ExistenciasMateriaPrimaViewModel : PantallaCrudViewModel<Tip
     private const string FiltroTodos = "Todos";
 
     private readonly MateriaPrimaService _servicio;
+    private readonly IServicioDialogo _dialogos;
+    private readonly ISesionActual _sesion;
 
     private string _filtro = FiltroTodos;
 
@@ -40,6 +42,8 @@ public sealed class ExistenciasMateriaPrimaViewModel : PantallaCrudViewModel<Tip
         _servicio = new MateriaPrimaService(tipos,
                                             DataSourceFactory.CrearRecepcionesMateriaPrima(),
                                             DataSourceFactory.CrearSalidasMateriaPrima());
+        _dialogos = dialogos;
+        _sesion = sesion;
 
         // La base ya pobló Items en su constructor, pero sin existencias: sin esto la primera
         // pintada saldría con todo en cero hasta la primera recarga.
@@ -51,9 +55,12 @@ public sealed class ExistenciasMateriaPrimaViewModel : PantallaCrudViewModel<Tip
             _filtro = filtro;
             ItemsView.Refresh();
         });
+
+        CargarSugeridosCommand = new RelayCommand(CargarSugeridos, () => _sesion.Puede($"{ModuloPermiso}.Crear"));
     }
 
     public ICommand CambiarFiltroCommand { get; }
+    public ICommand CargarSugeridosCommand { get; }
 
     public string Resumen =>
         $"{Items.Count(t => t.Activo)} tipos activos · {Items.Count(t => t.SinExistencia)} sin existencia";
@@ -90,6 +97,19 @@ public sealed class ExistenciasMateriaPrimaViewModel : PantallaCrudViewModel<Tip
         _servicio.RellenarExistencias(Items);
         ItemsView.Refresh();
         OnTodasLasPropiedadesCambiaron();
+    }
+
+    /// <summary>Precarga el catálogo sugerido para una planta láctea; no duplica lo que ya
+    /// exista, así que se puede pulsar más de una vez sin riesgo.</summary>
+    private void CargarSugeridos()
+    {
+        var creados = _servicio.CargarSugeridos(CatalogoLacteoSugerido.TiposMateriaPrima);
+        Recargar();
+
+        _dialogos.Informar("Catálogo cargado",
+            creados > 0
+                ? $"Se agregaron {creados} tipos de materia prima sugeridos."
+                : "Los tipos sugeridos ya estaban todos cargados.");
     }
 }
 

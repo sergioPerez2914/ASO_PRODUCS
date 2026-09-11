@@ -58,6 +58,30 @@ public sealed class MateriaPrimaService
         => !_recepciones.GetAll().Any(r => r.Lineas.Any(l => l.TipoMateriaPrimaId == tipo.Id))
            && !_salidas.GetAll().Any(s => s.Lineas.Any(l => l.TipoMateriaPrimaId == tipo.Id));
 
+    /// <summary>
+    /// Da de alta, de una sola vez, los tipos sugeridos que todavía no existan por nombre
+    /// (reutiliza <see cref="Validar"/>, que ya rechaza los repetidos). Pensado para precargar el
+    /// catálogo de una planta nueva; correrlo más de una vez no duplica nada. Devuelve cuántos se
+    /// crearon.
+    /// </summary>
+    public int CargarSugeridos(IEnumerable<(string Nombre, string UnidadMedida)> sugeridos)
+    {
+        var creados = 0;
+
+        foreach (var (nombre, unidadMedida) in sugeridos)
+        {
+            var candidato = new TipoMateriaPrima { Nombre = nombre, UnidadMedida = unidadMedida, Activo = true };
+
+            if (!Validar(candidato, out _))
+                continue;
+
+            _tipos.Add(candidato);
+            creados++;
+        }
+
+        return creados;
+    }
+
     // --- Existencia ---
 
     /// <summary>

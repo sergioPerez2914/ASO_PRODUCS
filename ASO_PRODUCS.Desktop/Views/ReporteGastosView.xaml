@@ -1,0 +1,77 @@
+<UserControl x:Class="ASO_PRODUCS.Desktop.Views.ReporteGastosView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:controls="clr-namespace:ASO_PRODUCS.Desktop.Controls"
+             mc:Ignorable="d"
+             d:DesignHeight="640" d:DesignWidth="1100">
+
+  <Grid Style="{StaticResource PantallaPlenaStyle}">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto" />
+      <RowDefinition Height="Auto" />
+      <RowDefinition Height="Auto" />
+      <RowDefinition Height="*" />
+    </Grid.RowDefinitions>
+
+    <controls:PageHeader Grid.Row="0"
+                         Titulo="{Binding Submodulo.Nombre}"
+                         Descripcion="{Binding Submodulo.Descripcion}" />
+
+    <Border Grid.Row="1" Style="{StaticResource ToolbarStyle}">
+      <WrapPanel VerticalAlignment="Center">
+        <TextBlock Text="Desde" VerticalAlignment="Center" Margin="0,0,8,0"
+                   FontSize="{StaticResource FsCaption}"
+                   Foreground="{DynamicResource TextMutedBrush}" />
+        <DatePicker Width="130" VerticalAlignment="Center"
+                    Style="{StaticResource FormDatePickerStyle}"
+                    SelectedDate="{Binding FechaDesde}" />
+        <TextBlock Text="hasta" VerticalAlignment="Center" Margin="8,0,8,0"
+                   FontSize="{StaticResource FsCaption}"
+                   Foreground="{DynamicResource TextMutedBrush}" />
+        <DatePicker Width="130" VerticalAlignment="Center"
+                    Style="{StaticResource FormDatePickerStyle}"
+                    SelectedDate="{Binding FechaHasta}" />
+        <Button Content="Exportar a Excel" Style="{StaticResource SecondaryButtonStyle}"
+                Margin="16,0,0,0" Command="{Binding ExportarExcelCommand}" />
+      </WrapPanel>
+    </Border>
+
+    <ItemsControl Grid.Row="2" ItemsSource="{Binding Indicadores}" Margin="0,16,0,0">
+      <ItemsControl.ItemsPanel>
+        <ItemsPanelTemplate>
+          <WrapPanel />
+        </ItemsPanelTemplate>
+      </ItemsControl.ItemsPanel>
+      <ItemsControl.ItemTemplate>
+        <DataTemplate>
+          <controls:KpiTile Margin="0,0,12,12" MinWidth="180"
+                            Etiqueta="{Binding Etiqueta}"
+                            Valor="{Binding Valor}"
+                            Nota="{Binding Nota}"
+                            Estado="{Binding Estado}" />
+        </DataTemplate>
+      </ItemsControl.ItemTemplate>
+    </ItemsControl>
+
+    <!-- Una sola tabla: no hace falta pestaña. -->
+    <Border Grid.Row="3" Style="{StaticResource SectionCardStyle}" Padding="0" Margin="0,16,0,0">
+      <Grid>
+        <DataGrid x:Name="TablaCategorias" Style="{StaticResource DataGridStyle}"
+                  ItemsSource="{Binding PorCategoria}" IsReadOnly="True">
+          <DataGrid.Columns>
+            <controls:ColumnaTexto Header="Categoría" Binding="{Binding Categoria}" Width="40*" MinWidth="180" />
+            <controls:ColumnaNumero Header="Monto" Binding="{Binding MontoTexto}" Width="30*" MinWidth="110" />
+            <controls:ColumnaNumero Header="% del total" Binding="{Binding PorcentajeTexto}" Width="30*" MinWidth="100" />
+          </DataGrid.Columns>
+        </DataGrid>
+
+        <controls:EmptyState Icono="{x:Static controls:Iconos.CuentasPorPagar}"
+                             Titulo="No hay gastos en el período"
+                             Detalle="Cambia el rango de fechas o registra pagos en Finanzas · Movimientos."
+                             Visibility="{Binding HasItems, ElementName=TablaCategorias, Converter={StaticResource SinItemsAVis}}" />
+      </Grid>
+    </Border>
+  </Grid>
+</UserControl>

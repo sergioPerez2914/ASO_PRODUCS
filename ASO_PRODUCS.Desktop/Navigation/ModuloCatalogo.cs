@@ -96,10 +96,10 @@ public static class ModuloCatalogo
             "Existencia, recepción y salida de la materia prima de los productores.",
             Iconos.MateriaPrima,
             [
-                new Submodulo("MateriaPrima.Existencias", "Existencias",
-                    "Cuánto hay de cada tipo de materia prima, de un vistazo.", Iconos.Almacen),
                 new Submodulo("MateriaPrima.Recepciones", "Recepciones",
                     "Historial de recepciones y registro de lo que llega.", Iconos.Entradas),
+                new Submodulo("MateriaPrima.Existencias", "Existencias",
+                    "Cuánto hay de cada tipo de materia prima, de un vistazo.", Iconos.Almacen),
                 new Submodulo("MateriaPrima.Salidas", "Salidas",
                     "Historial de salidas y registro de lo que se despacha.", Iconos.Salidas)
             ]),
@@ -114,6 +114,20 @@ public static class ModuloCatalogo
                     "Etapas de fabricación y los procesos que van transformando materia prima y artículos en producto terminado.", Iconos.Produccion),
                 new Submodulo("Procesos.Despacho", "Despacho",
                     "Catálogo de productos terminados y el registro de lo que se despacha.", Iconos.Despacho)
+            ]),
+
+        new Modulo(
+            "Reportes",
+            "Reportes",
+            "Reportes de producción, ventas y gastos.",
+            Iconos.Reportes,
+            [
+                new Submodulo("Reportes.Procesos", "Reporte de Procesos",
+                    "Producción, rendimiento y consumo de insumos por período.", Iconos.Procesos),
+                new Submodulo("Reportes.Ventas", "Reporte de Ventas",
+                    "Lo vendido, cobrado y pendiente por período.", Iconos.CuentasPorCobrar),
+                new Submodulo("Reportes.Gastos", "Reporte de Gastos",
+                    "Salidas de banco por período y por categoría.", Iconos.CuentasPorPagar)
             ]),
     ];
 

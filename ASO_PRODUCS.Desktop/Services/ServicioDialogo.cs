@@ -49,4 +49,20 @@ public class ServicioDialogo : IServicioDialogo
     {
         MessageBox.Show(mensaje, titulo, MessageBoxButton.OK, MessageBoxImage.Information);
     }
+
+    public string? GuardarArchivo(string titulo, string nombreSugerido, string filtro)
+    {
+        var dialogo = new Microsoft.Win32.SaveFileDialog
+        {
+            Title = titulo,
+            FileName = nombreSugerido,
+            Filter = filtro
+        };
+
+        var resultado = Application.Current?.MainWindow is { } owner
+            ? dialogo.ShowDialog(owner)
+            : dialogo.ShowDialog();
+
+        return resultado == true ? dialogo.FileName : null;
+    }
 }

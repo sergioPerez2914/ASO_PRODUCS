@@ -1,0 +1,118 @@
+<UserControl x:Class="ASO_PRODUCS.Desktop.Views.ReporteProcesosView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:controls="clr-namespace:ASO_PRODUCS.Desktop.Controls"
+             mc:Ignorable="d"
+             d:DesignHeight="720" d:DesignWidth="1100">
+
+  <Grid Style="{StaticResource PantallaPlenaStyle}">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto" />
+      <RowDefinition Height="Auto" />
+      <RowDefinition Height="Auto" />
+      <RowDefinition Height="Auto" />
+      <RowDefinition Height="*" />
+    </Grid.RowDefinitions>
+
+    <controls:PageHeader Grid.Row="0"
+                         Titulo="{Binding Submodulo.Nombre}"
+                         Descripcion="{Binding Submodulo.Descripcion}" />
+
+    <!-- Filtro de fechas + exportar. Mismo par "Desde"/"hasta" que ya usa Finanzas · Movimientos. -->
+    <Border Grid.Row="1" Style="{StaticResource ToolbarStyle}">
+      <WrapPanel VerticalAlignment="Center">
+        <TextBlock Text="Desde" VerticalAlignment="Center" Margin="0,0,8,0"
+                   FontSize="{StaticResource FsCaption}"
+                   Foreground="{DynamicResource TextMutedBrush}" />
+        <DatePicker Width="130" VerticalAlignment="Center"
+                    Style="{StaticResource FormDatePickerStyle}"
+                    SelectedDate="{Binding FechaDesde}" />
+        <TextBlock Text="hasta" VerticalAlignment="Center" Margin="8,0,8,0"
+                   FontSize="{StaticResource FsCaption}"
+                   Foreground="{DynamicResource TextMutedBrush}" />
+        <DatePicker Width="130" VerticalAlignment="Center"
+                    Style="{StaticResource FormDatePickerStyle}"
+                    SelectedDate="{Binding FechaHasta}" />
+        <Button Content="Exportar a Excel" Style="{StaticResource SecondaryButtonStyle}"
+                Margin="16,0,0,0" Command="{Binding ExportarExcelCommand}" />
+      </WrapPanel>
+    </Border>
+
+    <!-- Indicadores: mismo control (KpiTile) que el dashboard de cada módulo. -->
+    <ItemsControl Grid.Row="2" ItemsSource="{Binding Indicadores}" Margin="0,16,0,0">
+      <ItemsControl.ItemsPanel>
+        <ItemsPanelTemplate>
+          <WrapPanel />
+        </ItemsPanelTemplate>
+      </ItemsControl.ItemsPanel>
+      <ItemsControl.ItemTemplate>
+        <DataTemplate>
+          <controls:KpiTile Margin="0,0,12,12" MinWidth="180"
+                            Etiqueta="{Binding Etiqueta}"
+                            Valor="{Binding Valor}"
+                            Nota="{Binding Nota}"
+                            Estado="{Binding Estado}" />
+        </DataTemplate>
+      </ItemsControl.ItemTemplate>
+    </ItemsControl>
+
+    <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="0,4,0,0">
+      <RadioButton Content="Producción" GroupName="VistaReporteProcesos"
+                   Style="{StaticResource SegmentedTabStyle}"
+                   IsChecked="{Binding EsProduccion, Mode=TwoWay}" />
+      <RadioButton Content="Consumo de insumos" GroupName="VistaReporteProcesos"
+                   Style="{StaticResource SegmentedTabStyle}"
+                   IsChecked="{Binding EsConsumo, Mode=TwoWay}" />
+    </StackPanel>
+
+    <Border Grid.Row="3" Style="{StaticResource TabStripStyle}" VerticalAlignment="Bottom" />
+
+    <!-- ===================== Producción por producto ===================== -->
+    <Grid Grid.Row="4" Margin="0,16,0,0"
+          Visibility="{Binding MostrarProduccion, Converter={StaticResource BoolToVis}}">
+      <Border Style="{StaticResource SectionCardStyle}" Padding="0">
+        <Grid>
+          <DataGrid x:Name="TablaProduccion" Style="{StaticResource DataGridStyle}"
+                    ItemsSource="{Binding Produccion}" IsReadOnly="True">
+            <DataGrid.Columns>
+              <controls:ColumnaTexto Header="Producto" Binding="{Binding ProductoNombre}" Width="28*" MinWidth="160" />
+              <controls:ColumnaNumero Header="Planeada" Binding="{Binding CantidadPlaneadaTexto}" Width="18*" MinWidth="110" />
+              <controls:ColumnaNumero Header="Producida" Binding="{Binding CantidadProducidaTexto}" Width="18*" MinWidth="110" />
+              <controls:ColumnaNumero Header="Rendimiento" Binding="{Binding RendimientoTexto}" Width="14*" MinWidth="100" />
+              <controls:ColumnaNumero Header="Procesos" Binding="{Binding CantidadProcesos}" Width="10*" MinWidth="80" />
+            </DataGrid.Columns>
+          </DataGrid>
+
+          <controls:EmptyState Icono="{x:Static controls:Iconos.Procesos}"
+                               Titulo="No hay producción en el período"
+                               Detalle="Cambia el rango de fechas o registra procesos terminados en Procesos · Producción."
+                               Visibility="{Binding HasItems, ElementName=TablaProduccion, Converter={StaticResource SinItemsAVis}}" />
+        </Grid>
+      </Border>
+    </Grid>
+
+    <!-- ===================== Consumo de insumos ===================== -->
+    <Grid Grid.Row="4" Margin="0,16,0,0"
+          Visibility="{Binding MostrarConsumo, Converter={StaticResource BoolToVis}}">
+      <Border Style="{StaticResource SectionCardStyle}" Padding="0">
+        <Grid>
+          <DataGrid x:Name="TablaConsumo" Style="{StaticResource DataGridStyle}"
+                    ItemsSource="{Binding Consumo}" IsReadOnly="True">
+            <DataGrid.Columns>
+              <controls:ColumnaTexto Header="Origen" Binding="{Binding Origen}" Width="20*" MinWidth="110" />
+              <controls:ColumnaTexto Header="Material" Binding="{Binding MaterialNombre}" Width="40*" MinWidth="180" />
+              <controls:ColumnaNumero Header="Consumido" Binding="{Binding CantidadTexto}" Width="20*" MinWidth="120" />
+            </DataGrid.Columns>
+          </DataGrid>
+
+          <controls:EmptyState Icono="{x:Static controls:Iconos.MateriaPrima}"
+                               Titulo="No hay consumo registrado en el período"
+                               Detalle="El consumo sale de las salidas de materia prima e inventario que generan los procesos."
+                               Visibility="{Binding HasItems, ElementName=TablaConsumo, Converter={StaticResource SinItemsAVis}}" />
+        </Grid>
+      </Border>
+    </Grid>
+  </Grid>
+</UserControl>

@@ -50,6 +50,30 @@ public sealed class EtapasProduccionService
     public bool PuedeEliminar(EtapaProduccion etapa)
         => !_procesos.GetAll().Any(p => p.Etapas.Any(e => e.EtapaProduccionId == etapa.Id));
 
+    /// <summary>
+    /// Da de alta, de una sola vez, las etapas sugeridas que todavía no existan por nombre
+    /// (reutiliza <see cref="Validar"/>, que ya rechaza las repetidas). Pensado para precargar el
+    /// catálogo de una planta nueva; correrlo más de una vez no duplica nada. Devuelve cuántas se
+    /// crearon.
+    /// </summary>
+    public int CargarSugeridas(IEnumerable<(string Nombre, string Descripcion, int Orden)> sugeridas)
+    {
+        var creadas = 0;
+
+        foreach (var (nombre, descripcion, orden) in sugeridas)
+        {
+            var candidata = new EtapaProduccion { Nombre = nombre, Descripcion = descripcion, Orden = orden, Activo = true };
+
+            if (!Validar(candidata, out _))
+                continue;
+
+            _etapas.Add(candidata);
+            creadas++;
+        }
+
+        return creadas;
+    }
+
     // --- Resúmenes para el panel del módulo ---
 
     public int TotalActivas() => _etapas.GetAll().Count(e => e.Activo);
