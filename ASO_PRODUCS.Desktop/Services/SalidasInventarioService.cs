@@ -102,11 +102,26 @@ public sealed class SalidasInventarioService
     /// </summary>
     public SalidaInventario Registrar(SalidaInventario salida, int usuarioId)
     {
-        if (salida.Id != 0)
-            throw new InvalidOperationException("Este boleto ya está emitido.");
-
         if (!_sesion.Puede(Permisos.SalidasInventario.Crear))
             throw new InvalidOperationException("No tienes permiso para registrar salidas de almacén.");
+
+        return EmitirSinPermiso(salida, usuarioId);
+    }
+
+    /// <summary>
+    /// Emite el boleto sin repetir el permiso de este módulo: la usa
+    /// <c>ProcesosProduccionService</c> para el consumo de un proceso, que ya comprobó SU propio
+    /// permiso (<c>ProcesosProduccion.Crear</c>/<c>AgregarEtapa</c>) antes de llegar aquí — mismo
+    /// criterio que <c>CuentasPorPagarService.Crear</c> no repite el permiso de Finanzas cuando lo
+    /// llama <c>EntradasInventarioService</c>.
+    /// </summary>
+    internal SalidaInventario RegistrarSinPermiso(SalidaInventario salida, int usuarioId)
+        => EmitirSinPermiso(salida, usuarioId);
+
+    private SalidaInventario EmitirSinPermiso(SalidaInventario salida, int usuarioId)
+    {
+        if (salida.Id != 0)
+            throw new InvalidOperationException("Este boleto ya está emitido.");
 
         if (!Validar(salida, out var error))
             throw new InvalidOperationException(error);

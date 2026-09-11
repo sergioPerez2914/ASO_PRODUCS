@@ -170,6 +170,25 @@ public sealed class MovimientosService
                    usuarioId);
 
     /// <summary>
+    /// Entrada por el cobro de una factura de cliente. Lo llama
+    /// <see cref="CuentasPorCobrarService.RegistrarCobro"/> en la misma operación que marca la
+    /// factura como cobrada: el usuario no teclea nada aquí.
+    ///
+    /// No valida <c>_sesion.Puede</c> aquí adentro, mismo criterio de composición que
+    /// <see cref="RegistrarPagoProveedor"/>: el permiso ya lo exigió quien llama
+    /// (<c>Finanzas.Cobrar</c>).
+    /// </summary>
+    public MovimientoBanco RegistrarCobroCliente(FacturaCliente factura, AsientoBanco datos, int usuarioId)
+        => Asentar(TipoMovimientoBanco.Entrada,
+                   factura.Monto,
+                   $"Cobro factura Nº {factura.NumeroDocumento} — {factura.ClienteNombre}",
+                   CategoriaMovimiento.CobroCliente,
+                   OrigenMovimiento.FacturaCliente,
+                   factura.Id,
+                   datos,
+                   usuarioId);
+
+    /// <summary>
     /// El cuerpo común de los tres. Congela el monto que dice el documento en este instante: si
     /// mañana alguien corrige la factura, el libro no se mueve — mismo criterio que
     /// <c>TarifaMonto</c> en los documentos que citan una tarifa.

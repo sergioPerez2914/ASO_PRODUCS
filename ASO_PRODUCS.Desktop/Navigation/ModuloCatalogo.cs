@@ -66,10 +66,14 @@ public static class ModuloCatalogo
             [
                 new Submodulo("Finanzas.CuentasPorPagar", "Cuentas por Pagar",
                     "Obligaciones con proveedores y su vencimiento.", Iconos.CuentasPorPagar),
+                new Submodulo("Finanzas.CuentasPorCobrar", "Cuentas por Cobrar",
+                    "Lo que los clientes deben a la organización y su vencimiento.", Iconos.CuentasPorCobrar),
                 new Submodulo("Finanzas.Movimientos", "Movimientos",
                     "Estado de la cuenta según lo cobrado y pagado en la aplicación.", Iconos.Banco),
                 new Submodulo("Finanzas.Proveedores", "Proveedores",
-                    "Maestro de proveedores de la organización.", Iconos.Proveedor)
+                    "Maestro de proveedores de la organización.", Iconos.Proveedor),
+                new Submodulo("Finanzas.Clientes", "Clientes",
+                    "Maestro de clientes a los que se les despacha producto terminado.", Iconos.Cliente)
             ]),
 
         new Modulo(
@@ -98,6 +102,18 @@ public static class ModuloCatalogo
                     "Historial de recepciones y registro de lo que llega.", Iconos.Entradas),
                 new Submodulo("MateriaPrima.Salidas", "Salidas",
                     "Historial de salidas y registro de lo que se despacha.", Iconos.Salidas)
+            ]),
+
+        new Modulo(
+            "Procesos",
+            "Procesos",
+            "Fabricación de producto terminado y su despacho.",
+            Iconos.Procesos,
+            [
+                new Submodulo("Procesos.Produccion", "Producción",
+                    "Etapas de fabricación y los procesos que van transformando materia prima y artículos en producto terminado.", Iconos.Produccion),
+                new Submodulo("Procesos.Despacho", "Despacho",
+                    "Catálogo de productos terminados y el registro de lo que se despacha.", Iconos.Despacho)
             ]),
     ];
 

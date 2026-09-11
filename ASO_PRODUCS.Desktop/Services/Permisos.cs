@@ -38,7 +38,36 @@ public static class Permisos
     public static class Finanzas
     {
         public const string Pagar = "Finanzas.Pagar";
+
+        /// <summary>Registrar el cobro de una factura de cliente. Paralelo a <see cref="Pagar"/>
+        /// y no el mismo permiso: cobrar y pagar son flujos de caja opuestos, con perfiles de
+        /// riesgo distintos (quién puede sacar dinero no tiene por qué ser quien da algo por
+        /// cobrado).</summary>
+        public const string Cobrar = "Finanzas.Cobrar";
+
+        /// <summary>Anular una factura pendiente, de proveedor o de cliente: ya es un permiso de
+        /// módulo, no de una entidad puntual.</summary>
         public const string Anular = "Finanzas.Anular";
+    }
+
+    /// <summary>Maestro de clientes (Finanzas · Clientes).</summary>
+    public static class Clientes
+    {
+        public const string Crear = "Clientes.Crear";
+        public const string Editar = "Clientes.Editar";
+        public const string Eliminar = "Clientes.Eliminar";
+    }
+
+    /// <summary>
+    /// Facturas de cliente (Finanzas · Cuentas por Cobrar). No hay "Anular" propio: reutiliza
+    /// <see cref="Finanzas.Anular"/>, igual que <see cref="FacturasProveedor"/> tampoco lo
+    /// declara.
+    /// </summary>
+    public static class FacturasCliente
+    {
+        public const string Crear = "FacturasCliente.Crear";
+        public const string Editar = "FacturasCliente.Editar";
+        public const string Eliminar = "FacturasCliente.Eliminar";
     }
 
     /// <summary>
@@ -114,6 +143,44 @@ public static class Permisos
     {
         public const string Crear = "SalidasMateriaPrima.Crear";
         public const string Anular = "SalidasMateriaPrima.Anular";
+    }
+
+    /// <summary>Catálogo de etapas de producción (Procesos · Producción).</summary>
+    public static class EtapasProduccion
+    {
+        public const string Crear = "EtapasProduccion.Crear";
+        public const string Editar = "EtapasProduccion.Editar";
+        public const string Eliminar = "EtapasProduccion.Eliminar";
+    }
+
+    /// <summary>Catálogo de productos terminados (Procesos · Despacho).</summary>
+    public static class Productos
+    {
+        public const string Crear = "Productos.Crear";
+        public const string Editar = "Productos.Editar";
+        public const string Eliminar = "Productos.Eliminar";
+    }
+
+    /// <summary>
+    /// Procesos de producción. No hay "Editar" ni "Eliminar": un proceso es un documento y no se
+    /// corrige ni se borra. <see cref="Crear"/> es "Iniciar" en la pantalla —el nombre sigue la
+    /// convención que ya arma <c>CrudViewModelBase</c>—, y <see cref="AgregarEtapa"/>/
+    /// <see cref="Terminar"/> son transiciones propias que no tiene ningún otro documento del
+    /// scaffold.
+    /// </summary>
+    public static class ProcesosProduccion
+    {
+        public const string Crear = "ProcesosProduccion.Crear";
+        public const string AgregarEtapa = "ProcesosProduccion.AgregarEtapa";
+        public const string Terminar = "ProcesosProduccion.Terminar";
+        public const string Anular = "ProcesosProduccion.Anular";
+    }
+
+    /// <summary>Despachos de producto terminado. Mismo criterio que las salidas de materia prima.</summary>
+    public static class Despachos
+    {
+        public const string Crear = "Despachos.Crear";
+        public const string Anular = "Despachos.Anular";
     }
 
     public static class Peticiones

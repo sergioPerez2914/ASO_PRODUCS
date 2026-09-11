@@ -108,7 +108,7 @@ public sealed class CuentasPorPagarService
     /// <summary>
     /// Da la factura por pagada y anota la salida en el libro de banco, en una sola operación. El
     /// asiento va primero porque es el que puede rechazar; ver
-    /// <see cref="FacturaClienteService.RegistrarCobro"/>.
+    /// <see cref="CuentasPorCobrarService.RegistrarCobro"/>.
     /// </summary>
     public FacturaProveedor RegistrarPago(FacturaProveedor factura, AsientoBanco asiento, int usuarioId)
     {

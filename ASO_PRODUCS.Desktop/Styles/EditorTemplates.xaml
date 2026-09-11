@@ -22,6 +22,14 @@
     <views:FacturaProveedorEditorView />
   </DataTemplate>
 
+  <DataTemplate DataType="{x:Type vm:ClienteEditorViewModel}">
+    <views:ClienteEditorView />
+  </DataTemplate>
+
+  <DataTemplate DataType="{x:Type vm:FacturaClienteEditorViewModel}">
+    <views:FacturaClienteEditorView />
+  </DataTemplate>
+
   <DataTemplate DataType="{x:Type vm:AsientoBancoEditorViewModel}">
     <views:AsientoBancoEditorView />
   </DataTemplate>
@@ -64,6 +72,32 @@
 
   <DataTemplate DataType="{x:Type vm:SalidaMateriaPrimaEditorViewModel}">
     <views:SalidaMateriaPrimaEditorView />
+  </DataTemplate>
+
+  <!-- Procesos · Producción y Despacho -->
+
+  <DataTemplate DataType="{x:Type vm:EtapaProduccionEditorViewModel}">
+    <views:EtapaProduccionEditorView />
+  </DataTemplate>
+
+  <DataTemplate DataType="{x:Type vm:IniciarProcesoEditorViewModel}">
+    <views:IniciarProcesoEditorView />
+  </DataTemplate>
+
+  <DataTemplate DataType="{x:Type vm:EtapaProcesoEditorViewModel}">
+    <views:EtapaProcesoEditorView />
+  </DataTemplate>
+
+  <DataTemplate DataType="{x:Type vm:TerminarProcesoEditorViewModel}">
+    <views:TerminarProcesoEditorView />
+  </DataTemplate>
+
+  <DataTemplate DataType="{x:Type vm:ProductoEditorViewModel}">
+    <views:ProductoEditorView />
+  </DataTemplate>
+
+  <DataTemplate DataType="{x:Type vm:DespachoEditorViewModel}">
+    <views:DespachoEditorView />
   </DataTemplate>
 
   <!-- Armazón -->

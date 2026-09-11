@@ -1,0 +1,195 @@
+<UserControl x:Class="ASO_PRODUCS.Desktop.Views.ProcesosProduccionView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:controls="clr-namespace:ASO_PRODUCS.Desktop.Controls"
+             mc:Ignorable="d"
+             d:DesignHeight="640" d:DesignWidth="1100">
+
+  <Grid Style="{StaticResource PantallaPlenaStyle}">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto" />
+      <RowDefinition Height="Auto" />
+      <RowDefinition Height="*" />
+    </Grid.RowDefinitions>
+
+    <controls:PageHeader Grid.Row="0"
+                         Titulo="{Binding Submodulo.Nombre}"
+                         Descripcion="{Binding Submodulo.Descripcion}" />
+
+    <!-- Conmutador: el catálogo de etapas y el historial de procesos. Mismo patrón que
+         Finanzas · Movimientos. -->
+    <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,4,0,0">
+      <RadioButton Content="Procesos" GroupName="VistaProduccion"
+                   Style="{StaticResource SegmentedTabStyle}"
+                   IsChecked="{Binding EsProcesos, Mode=TwoWay}" />
+      <RadioButton Content="Etapas" GroupName="VistaProduccion"
+                   Style="{StaticResource SegmentedTabStyle}"
+                   IsChecked="{Binding EsEtapas, Mode=TwoWay}" />
+    </StackPanel>
+
+    <Border Grid.Row="1" Style="{StaticResource TabStripStyle}" VerticalAlignment="Bottom" />
+
+    <!-- ===================== Procesos: el historial de fabricación ===================== -->
+    <Grid Grid.Row="2" Margin="0,16,0,0"
+          Visibility="{Binding MostrarProcesos, Converter={StaticResource BoolToVis}}">
+      <!-- DataContext en un Grid interno: compartir elemento con Visibility haría que esa
+           binding se resuelva contra el sub-VM (sin MostrarProcesos) y no contra este VM. -->
+      <Grid DataContext="{Binding Procesos}">
+        <Grid.RowDefinitions>
+          <RowDefinition Height="Auto" />
+          <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <Border Grid.Row="0" Style="{StaticResource ToolbarStyle}">
+          <Grid>
+            <Grid.RowDefinitions>
+              <RowDefinition Height="Auto" />
+              <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="*" />
+              <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <WrapPanel Grid.Row="0" Grid.Column="0" VerticalAlignment="Center">
+              <controls:SearchBox Width="280" Margin="0,0,12,0" VerticalAlignment="Center"
+                                  Texto="{Binding TextoBusqueda, Mode=TwoWay}" />
+
+              <controls:FiltroDropdown Style="{StaticResource FiltroDropdownStyle}" SelectedIndex="0"
+                                       Margin="0,0,12,0" VerticalAlignment="Center"
+                                       Command="{Binding CambiarFiltroCommand}">
+                <ComboBoxItem Content="Todos" />
+                <ComboBoxItem Content="En proceso" />
+                <ComboBoxItem Content="Terminados" />
+                <ComboBoxItem Content="Anulados" />
+              </controls:FiltroDropdown>
+            </WrapPanel>
+
+            <TextBlock Grid.Row="0" Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center"
+                       Text="{Binding Resumen}" FontSize="{StaticResource FsBody}"
+                       Foreground="{DynamicResource TextSecondaryBrush}" />
+
+            <StackPanel Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Orientation="Horizontal"
+                        Margin="0,12,0,0">
+              <Button Content="Iniciar proceso" Style="{StaticResource PrimaryButtonStyle}"
+                      Command="{Binding AgregarCommand}" />
+              <Button Content="Agregar etapa" Style="{StaticResource SecondaryButtonStyle}"
+                      Command="{Binding AgregarEtapaCommand}" />
+              <Button Content="Terminar" Style="{StaticResource SecondaryButtonStyle}"
+                      Command="{Binding TerminarCommand}" />
+              <Button Content="Anular" Style="{StaticResource SecondaryButtonStyle}"
+                      Foreground="{DynamicResource DangerTextBrush}"
+                      Command="{Binding AnularCommand}" />
+            </StackPanel>
+          </Grid>
+        </Border>
+
+        <Border Grid.Row="1" Style="{StaticResource SectionCardStyle}" Padding="0">
+          <Grid>
+            <DataGrid x:Name="TablaProcesos" Style="{StaticResource DataGridStyle}"
+                      ItemsSource="{Binding ItemsView}"
+                      SelectedItem="{Binding SelectedItem}">
+              <DataGrid.Columns>
+                <controls:ColumnaTexto Header="Nº" Binding="{Binding Numero}" Width="12*" MinWidth="90" />
+                <controls:ColumnaTexto Header="Fecha" Binding="{Binding FechaTexto}" Width="9*" MinWidth="76" />
+                <controls:ColumnaTexto Header="Producto" Binding="{Binding ProductoNombre}" Width="20*" MinWidth="140" />
+                <controls:ColumnaNumero Header="Planeado" Binding="{Binding CantidadPlaneadaTexto}" Width="13*" MinWidth="100" />
+                <controls:ColumnaNumero Header="Producido" Binding="{Binding CantidadProducidaTexto}" Width="13*" MinWidth="100" />
+                <controls:ColumnaNumero Header="Etapas" Binding="{Binding CantidadEtapas}" Width="8*" MinWidth="60" />
+                <DataGridTemplateColumn Header="Estado" Width="104">
+                  <DataGridTemplateColumn.CellTemplate>
+                    <DataTemplate>
+                      <Border Style="{StaticResource ChipEstadoProcesoProduccionStyle}">
+                        <TextBlock Text="{Binding EstadoTexto}" FontSize="{StaticResource FsCaption}" />
+                      </Border>
+                    </DataTemplate>
+                  </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+              </DataGrid.Columns>
+            </DataGrid>
+
+            <controls:EmptyState Icono="{x:Static controls:Iconos.Produccion}"
+                                 Titulo="No hay procesos de producción"
+                                 Detalle="Inicia el primer proceso para empezar a fabricar producto terminado."
+                                 Visibility="{Binding HasItems, ElementName=TablaProcesos, Converter={StaticResource SinItemsAVis}}" />
+          </Grid>
+        </Border>
+      </Grid>
+    </Grid>
+
+    <!-- ===================== Etapas: el catálogo reutilizable ===================== -->
+    <Grid Grid.Row="2" Margin="0,16,0,0"
+          Visibility="{Binding MostrarEtapas, Converter={StaticResource BoolToVis}}">
+      <Grid DataContext="{Binding Etapas}">
+        <Grid.RowDefinitions>
+          <RowDefinition Height="Auto" />
+          <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <Border Grid.Row="0" Style="{StaticResource ToolbarStyle}">
+          <Grid>
+            <Grid.RowDefinitions>
+              <RowDefinition Height="Auto" />
+              <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="*" />
+              <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <WrapPanel Grid.Row="0" Grid.Column="0" VerticalAlignment="Center">
+              <controls:SearchBox Width="280" Margin="0,0,12,0" VerticalAlignment="Center"
+                                  Texto="{Binding TextoBusqueda, Mode=TwoWay}" />
+            </WrapPanel>
+
+            <TextBlock Grid.Row="0" Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center"
+                       Text="{Binding Resumen}" FontSize="{StaticResource FsBody}"
+                       Foreground="{DynamicResource TextSecondaryBrush}" />
+
+            <StackPanel Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Orientation="Horizontal"
+                        Margin="0,12,0,0">
+              <Button Content="Nueva etapa" Style="{StaticResource PrimaryButtonStyle}"
+                      Command="{Binding AgregarCommand}" />
+              <Button Content="Editar" Style="{StaticResource SecondaryButtonStyle}"
+                      Command="{Binding EditarCommand}" />
+              <Button Content="Eliminar" Style="{StaticResource SecondaryButtonStyle}"
+                      Foreground="{DynamicResource DangerTextBrush}"
+                      Command="{Binding EliminarCommand}"
+                      ToolTip="Solo se puede eliminar una etapa que ningún proceso usó; el resto se desactiva." />
+            </StackPanel>
+          </Grid>
+        </Border>
+
+        <Border Grid.Row="1" Style="{StaticResource SectionCardStyle}" Padding="0">
+          <Grid>
+            <DataGrid x:Name="TablaEtapas" Style="{StaticResource DataGridStyle}"
+                      ItemsSource="{Binding ItemsView}"
+                      SelectedItem="{Binding SelectedItem}">
+              <DataGrid.Columns>
+                <controls:ColumnaTexto Header="Etapa" Binding="{Binding Nombre}" Width="28*" MinWidth="160" />
+                <controls:ColumnaTexto Header="Descripción" Binding="{Binding Descripcion}" Width="40*" MinWidth="180" />
+                <controls:ColumnaNumero Header="Orden" Binding="{Binding Orden}" Width="10*" MinWidth="70" />
+                <DataGridTemplateColumn Header="Estado" Width="104">
+                  <DataGridTemplateColumn.CellTemplate>
+                    <DataTemplate>
+                      <Border Style="{StaticResource ChipActivoStyle}">
+                        <TextBlock Text="{Binding EstadoTexto}" FontSize="{StaticResource FsCaption}" />
+                      </Border>
+                    </DataTemplate>
+                  </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+              </DataGrid.Columns>
+            </DataGrid>
+
+            <controls:EmptyState Icono="{x:Static controls:Iconos.Procesos}"
+                                 Titulo="No hay etapas registradas"
+                                 Detalle="Da de alta las etapas que atraviesan tus procesos (lavado, prensado, salado…) para poder agregarlas después."
+                                 Visibility="{Binding HasItems, ElementName=TablaEtapas, Converter={StaticResource SinItemsAVis}}" />
+          </Grid>
+        </Border>
+      </Grid>
+    </Grid>
+  </Grid>
+</UserControl>

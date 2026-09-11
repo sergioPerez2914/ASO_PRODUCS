@@ -21,6 +21,8 @@ public class AsoProductoresDbContext : DbContext
     public DbSet<FacturaProveedor> FacturasProveedor { get; set; }
     public DbSet<CuentaBancaria> CuentasBancarias { get; set; }
     public DbSet<MovimientoBanco> MovimientosBanco { get; set; }
+    public DbSet<Cliente> Clientes { get; set; }
+    public DbSet<FacturaCliente> FacturasCliente { get; set; }
 
     // ---- Inventario: almacén, entradas y salidas ----
     public DbSet<Articulo> Articulos { get; set; }
@@ -31,6 +33,12 @@ public class AsoProductoresDbContext : DbContext
     public DbSet<TipoMateriaPrima> TiposMateriaPrima { get; set; }
     public DbSet<RecepcionMateriaPrima> RecepcionesMateriaPrima { get; set; }
     public DbSet<SalidaMateriaPrima> SalidasMateriaPrima { get; set; }
+
+    // ---- Procesos: producción y despacho ----
+    public DbSet<EtapaProduccion> EtapasProduccion { get; set; }
+    public DbSet<Producto> Productos { get; set; }
+    public DbSet<ProcesoProduccion> ProcesosProduccion { get; set; }
+    public DbSet<Despacho> Despachos { get; set; }
 
     /// <summary>
     /// Organización sobre la que trabaja ESTE contexto. Se toma del ámbito al construirlo y no
@@ -155,6 +163,55 @@ public class AsoProductoresDbContext : DbContext
             entity.OwnsMany(f => f.Lineas, linea =>
             {
                 linea.WithOwner().HasForeignKey("FacturaProveedorId");
+                linea.Property<int>("Id");
+                linea.HasKey("Id");
+                linea.Property(x => x.DestinoTexto).HasMaxLength(150);
+                linea.Property(x => x.CantidadTexto).HasMaxLength(50);
+                linea.Property(x => x.PrecioUnitario).HasColumnType("decimal(18,2)");
+                linea.Property(x => x.Subtotal).HasColumnType("decimal(18,2)");
+
+                linea.Ignore(x => x.PrecioUnitarioTexto);
+                linea.Ignore(x => x.SubtotalTexto);
+            });
+        });
+
+        modelBuilder.Entity<Cliente>(entity =>
+        {
+            entity.HasKey(c => c.Id);
+            entity.Property(c => c.Nombre).IsRequired().HasMaxLength(150);
+            entity.Property(c => c.Rif).HasMaxLength(30);
+            entity.Property(c => c.Telefono).HasMaxLength(30);
+            entity.Property(c => c.Notas).HasMaxLength(500);
+
+            entity.Ignore(c => c.EstadoTexto);
+            entity.Ignore(c => c.Etiqueta);
+        });
+
+        modelBuilder.Entity<FacturaCliente>(entity =>
+        {
+            entity.HasKey(f => f.Id);
+            entity.Property(f => f.NumeroDocumento).HasMaxLength(50);
+            entity.Property(f => f.ClienteNombre).HasMaxLength(150);
+            entity.Property(f => f.Descripcion).HasMaxLength(500);
+            entity.Property(f => f.MotivoAnulacion).HasMaxLength(500);
+            entity.Property(f => f.DespachoNumero).HasMaxLength(20);
+            entity.Property(f => f.Monto).HasColumnType("decimal(18,2)").IsRequired();
+
+            // El camino inverso: qué despacho originó esta cuenta por cobrar, igual criterio que
+            // EntradaInventario.HasIndex(e => e.FacturaProveedorId).
+            entity.HasIndex(f => f.DespachoId);
+
+            entity.Ignore(f => f.EstaVencida);
+            entity.Ignore(f => f.DiasParaVencer);
+            entity.Ignore(f => f.EstadoTexto);
+            entity.Ignore(f => f.MontoTexto);
+            entity.Ignore(f => f.VencimientoTexto);
+            entity.Ignore(f => f.PlazoTexto);
+            entity.Ignore(f => f.DespachoTexto);
+
+            entity.OwnsMany(f => f.Lineas, linea =>
+            {
+                linea.WithOwner().HasForeignKey("FacturaClienteId");
                 linea.Property<int>("Id");
                 linea.HasKey("Id");
                 linea.Property(x => x.DestinoTexto).HasMaxLength(150);
@@ -308,8 +365,12 @@ public class AsoProductoresDbContext : DbContext
             entity.Property(s => s.AutorizadoPorNombre).HasMaxLength(150);
             entity.Property(s => s.Observaciones).HasMaxLength(500);
             entity.Property(s => s.MotivoAnulacion).HasMaxLength(500);
+            entity.Property(s => s.ProcesoProduccionNumero).HasMaxLength(20);
 
             entity.HasIndex(s => new { s.OrganizacionId, s.Numero }).IsUnique();
+
+            // El camino inverso del enlace a Procesos: qué salida originó el consumo de un proceso.
+            entity.HasIndex(s => s.ProcesoProduccionId);
 
             entity.Ignore(s => s.CuentaEnKardex);
             entity.Ignore(s => s.DestinoTexto);
@@ -389,8 +450,12 @@ public class AsoProductoresDbContext : DbContext
             entity.Property(s => s.Observaciones).HasMaxLength(500);
             entity.Property(s => s.AutorizadoPorNombre).HasMaxLength(150);
             entity.Property(s => s.MotivoAnulacion).HasMaxLength(500);
+            entity.Property(s => s.ProcesoProduccionNumero).HasMaxLength(20);
 
             entity.HasIndex(s => new { s.OrganizacionId, s.Numero }).IsUnique();
+
+            // El camino inverso del enlace a Procesos: qué salida originó el consumo de un proceso.
+            entity.HasIndex(s => s.ProcesoProduccionId);
 
             entity.Ignore(s => s.CuentaEnExistencia);
             entity.Ignore(s => s.EstadoTexto);
@@ -408,6 +473,140 @@ public class AsoProductoresDbContext : DbContext
                 linea.Property(x => x.Cantidad).HasColumnType("decimal(18,2)");
 
                 linea.Ignore(x => x.CantidadTexto);
+            });
+        });
+
+        // ---- Procesos: producción y despacho ----
+
+        modelBuilder.Entity<EtapaProduccion>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Nombre).IsRequired().HasMaxLength(150);
+            entity.Property(e => e.Descripcion).HasMaxLength(500);
+
+            entity.Ignore(e => e.EstadoTexto);
+        });
+
+        modelBuilder.Entity<Producto>(entity =>
+        {
+            entity.HasKey(p => p.Id);
+            entity.Property(p => p.Nombre).IsRequired().HasMaxLength(150);
+            entity.Property(p => p.UnidadMedida).HasMaxLength(30);
+
+            // Existencia NO se persiste: es la suma de procesos terminados menos despachos, la
+            // rellena ProductosService.
+            entity.Ignore(p => p.Existencia);
+            entity.Ignore(p => p.SinExistencia);
+            entity.Ignore(p => p.EstadoTexto);
+            entity.Ignore(p => p.ExistenciaTexto);
+        });
+
+        modelBuilder.Entity<ProcesoProduccion>(entity =>
+        {
+            entity.HasKey(p => p.Id);
+            entity.Property(p => p.Numero).IsRequired().HasMaxLength(20);
+            entity.Property(p => p.ProductoNombre).HasMaxLength(150);
+            entity.Property(p => p.UnidadMedidaSnapshot).HasMaxLength(30);
+            entity.Property(p => p.Observaciones).HasMaxLength(500);
+            entity.Property(p => p.MotivoAnulacion).HasMaxLength(500);
+            entity.Property(p => p.CreadoPorNombre).HasMaxLength(150);
+            entity.Property(p => p.TerminadoPorNombre).HasMaxLength(150);
+            entity.Property(p => p.CantidadPlaneada).HasColumnType("decimal(18,2)");
+            entity.Property(p => p.CantidadProducida).HasColumnType("decimal(18,2)");
+
+            // El correlativo se calcula como "el último + 1" antes de escribir; este índice es
+            // la red que convierte una carrera entre dos puestos en un error, no en un duplicado.
+            entity.HasIndex(p => new { p.OrganizacionId, p.Numero }).IsUnique();
+
+            entity.Ignore(p => p.CuentaEnExistencia);
+            entity.Ignore(p => p.EstadoTexto);
+            entity.Ignore(p => p.FechaTexto);
+            entity.Ignore(p => p.CantidadPlaneadaTexto);
+            entity.Ignore(p => p.CantidadProducidaTexto);
+            entity.Ignore(p => p.CantidadEtapas);
+
+            entity.OwnsMany(p => p.LineasIniciales, linea =>
+            {
+                linea.WithOwner().HasForeignKey("ProcesoProduccionId");
+                linea.Property<int>("Id");
+                linea.HasKey("Id");
+                linea.Property(x => x.MaterialNombre).HasMaxLength(150);
+                linea.Property(x => x.UnidadMedidaSnapshot).HasMaxLength(30);
+                linea.Property(x => x.Cantidad).HasColumnType("decimal(18,2)");
+
+                linea.Ignore(x => x.CantidadTexto);
+                linea.Ignore(x => x.OrigenTexto);
+            });
+
+            // Agregado de DOS niveles: cada etapa tiene, a su vez, sus propias líneas de consumo
+            // (OwnsMany anidado). SqlProcesoProduccionDataSource explica por qué esto no necesita
+            // ningún cambio en SqlAgregadoDataSource.
+            entity.OwnsMany(p => p.Etapas, etapa =>
+            {
+                etapa.WithOwner().HasForeignKey("ProcesoProduccionId");
+                etapa.Property<int>("Id");
+                etapa.HasKey("Id");
+                etapa.Property(x => x.EtapaProduccionNombre).HasMaxLength(150);
+                etapa.Property(x => x.Observaciones).HasMaxLength(500);
+
+                etapa.Ignore(x => x.FechaRegistroTexto);
+                etapa.Ignore(x => x.CantidadLineas);
+
+                etapa.OwnsMany(x => x.Lineas, linea =>
+                {
+                    linea.WithOwner().HasForeignKey("EtapaProcesoProduccionId");
+                    linea.Property<int>("Id");
+                    linea.HasKey("Id");
+                    linea.Property(x => x.MaterialNombre).HasMaxLength(150);
+                    linea.Property(x => x.UnidadMedidaSnapshot).HasMaxLength(30);
+                    linea.Property(x => x.Cantidad).HasColumnType("decimal(18,2)");
+
+                    linea.Ignore(x => x.CantidadTexto);
+                    linea.Ignore(x => x.OrigenTexto);
+                });
+            });
+        });
+
+        modelBuilder.Entity<Despacho>(entity =>
+        {
+            entity.HasKey(d => d.Id);
+            entity.Property(d => d.Numero).IsRequired().HasMaxLength(20);
+            entity.Property(d => d.Observaciones).HasMaxLength(500);
+            entity.Property(d => d.AutorizadoPorNombre).HasMaxLength(150);
+            entity.Property(d => d.MotivoAnulacion).HasMaxLength(500);
+            entity.Property(d => d.ClienteNombre).HasMaxLength(150);
+            entity.Property(d => d.FacturaClienteNumero).HasMaxLength(50);
+            entity.Property(d => d.Total).HasColumnType("decimal(18,2)").IsRequired();
+
+            entity.HasIndex(d => new { d.OrganizacionId, d.Numero }).IsUnique();
+
+            // El camino inverso del enlace a Finanzas: qué despacho originó una cuenta por cobrar.
+            entity.HasIndex(d => d.FacturaClienteId);
+
+            entity.Ignore(d => d.CuentaEnExistencia);
+            entity.Ignore(d => d.GeneraCuentaPorCobrar);
+            entity.Ignore(d => d.TipoTexto);
+            entity.Ignore(d => d.EstadoTexto);
+            entity.Ignore(d => d.FechaTexto);
+            entity.Ignore(d => d.TotalTexto);
+            entity.Ignore(d => d.CuentaPorCobrarTexto);
+            entity.Ignore(d => d.CantidadLineas);
+            entity.Ignore(d => d.TotalCantidad);
+
+            entity.OwnsMany(d => d.Lineas, linea =>
+            {
+                linea.WithOwner().HasForeignKey("DespachoId");
+                linea.Property<int>("Id");
+                linea.HasKey("Id");
+                linea.Property(x => x.ProductoNombre).HasMaxLength(150);
+                linea.Property(x => x.UnidadMedidaSnapshot).HasMaxLength(30);
+                linea.Property(x => x.Cantidad).HasColumnType("decimal(18,2)");
+                linea.Property(x => x.PrecioUnitario).HasColumnType("decimal(18,2)");
+                linea.Property(x => x.Subtotal).HasColumnType("decimal(18,2)");
+
+                linea.Ignore(x => x.CantidadTexto);
+                linea.Ignore(x => x.PrecioUnitarioTexto);
+                linea.Ignore(x => x.SubtotalTexto);
             });
         });
 

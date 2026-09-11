@@ -1,0 +1,208 @@
+<UserControl x:Class="ASO_PRODUCS.Desktop.Views.DespachosView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:controls="clr-namespace:ASO_PRODUCS.Desktop.Controls"
+             mc:Ignorable="d"
+             d:DesignHeight="640" d:DesignWidth="1100">
+
+  <Grid Style="{StaticResource PantallaPlenaStyle}">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto" />
+      <RowDefinition Height="Auto" />
+      <RowDefinition Height="*" />
+    </Grid.RowDefinitions>
+
+    <controls:PageHeader Grid.Row="0"
+                         Titulo="{Binding Submodulo.Nombre}"
+                         Descripcion="{Binding Submodulo.Descripcion}" />
+
+    <!-- Conmutador: el catálogo de productos y el historial de despachos. Mismo patrón que
+         Procesos · Producción. -->
+    <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,4,0,0">
+      <RadioButton Content="Despachos" GroupName="VistaDespacho"
+                   Style="{StaticResource SegmentedTabStyle}"
+                   IsChecked="{Binding EsDespachos, Mode=TwoWay}" />
+      <RadioButton Content="Productos" GroupName="VistaDespacho"
+                   Style="{StaticResource SegmentedTabStyle}"
+                   IsChecked="{Binding EsProductos, Mode=TwoWay}" />
+    </StackPanel>
+
+    <Border Grid.Row="1" Style="{StaticResource TabStripStyle}" VerticalAlignment="Bottom" />
+
+    <!-- ===================== Despachos: el historial de salida ===================== -->
+    <Grid Grid.Row="2" Margin="0,16,0,0"
+          Visibility="{Binding MostrarDespachos, Converter={StaticResource BoolToVis}}">
+      <!-- DataContext en un Grid interno: compartir elemento con Visibility haría que esa
+           binding se resuelva contra el sub-VM (sin MostrarDespachos) y no contra este VM. -->
+      <Grid DataContext="{Binding Despachos}">
+        <Grid.RowDefinitions>
+          <RowDefinition Height="Auto" />
+          <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <Border Grid.Row="0" Style="{StaticResource ToolbarStyle}">
+          <Grid>
+            <Grid.RowDefinitions>
+              <RowDefinition Height="Auto" />
+              <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="*" />
+              <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <WrapPanel Grid.Row="0" Grid.Column="0" VerticalAlignment="Center">
+              <controls:SearchBox Width="280" Margin="0,0,12,0" VerticalAlignment="Center"
+                                  Texto="{Binding TextoBusqueda, Mode=TwoWay}" />
+
+              <controls:FiltroDropdown Style="{StaticResource FiltroDropdownStyle}" SelectedIndex="0"
+                                       Margin="0,0,12,0" VerticalAlignment="Center"
+                                       Command="{Binding CambiarFiltroCommand}">
+                <ComboBoxItem Content="Todos" />
+                <ComboBoxItem Content="Ventas" />
+                <ComboBoxItem Content="Ajustes" />
+                <ComboBoxItem Content="Anulados" />
+              </controls:FiltroDropdown>
+            </WrapPanel>
+
+            <TextBlock Grid.Row="0" Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center"
+                       Text="{Binding Resumen}" FontSize="{StaticResource FsBody}"
+                       Foreground="{DynamicResource TextSecondaryBrush}" />
+
+            <StackPanel Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Orientation="Horizontal"
+                        Margin="0,12,0,0">
+              <Button Content="Registrar despacho" Style="{StaticResource PrimaryButtonStyle}"
+                      Command="{Binding AgregarCommand}" />
+              <Button Content="Anular" Style="{StaticResource SecondaryButtonStyle}"
+                      Foreground="{DynamicResource DangerTextBrush}"
+                      Command="{Binding AnularCommand}" />
+            </StackPanel>
+          </Grid>
+        </Border>
+
+        <Border Grid.Row="1" Style="{StaticResource SectionCardStyle}" Padding="0">
+          <Grid>
+            <DataGrid x:Name="TablaDespachos" Style="{StaticResource DataGridStyle}"
+                      ItemsSource="{Binding ItemsView}"
+                      SelectedItem="{Binding SelectedItem}">
+              <DataGrid.Columns>
+                <controls:ColumnaTexto Header="Nº" Binding="{Binding Numero}" Width="10*" MinWidth="80" />
+                <controls:ColumnaTexto Header="Fecha" Binding="{Binding FechaTexto}" Width="8*" MinWidth="72" />
+                <controls:ColumnaTexto Header="Tipo" Binding="{Binding TipoTexto}" Width="8*" MinWidth="64" />
+                <controls:ColumnaTexto Header="Cliente" Binding="{Binding ClienteNombre}" Width="16*" MinWidth="100" />
+                <controls:ColumnaTexto Header="Autorizó" Binding="{Binding AutorizadoPorNombre}" Width="14*" MinWidth="100" />
+                <controls:ColumnaNumero Header="Unidades" Binding="{Binding TotalCantidad, StringFormat=N2}" Width="10*" MinWidth="76" />
+                <controls:ColumnaNumero Header="Monto" Binding="{Binding TotalTexto}" Width="10*" MinWidth="76" />
+                <controls:ColumnaTexto Header="Cta. x cobrar" Binding="{Binding CuentaPorCobrarTexto}" Width="12*" MinWidth="90" />
+                <DataGridTemplateColumn Header="Estado" Width="96">
+                  <DataGridTemplateColumn.CellTemplate>
+                    <DataTemplate>
+                      <Border Style="{StaticResource ChipEstadoDespachoStyle}">
+                        <TextBlock Text="{Binding EstadoTexto}" FontSize="{StaticResource FsCaption}" />
+                      </Border>
+                    </DataTemplate>
+                  </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+              </DataGrid.Columns>
+            </DataGrid>
+
+            <controls:EmptyState Icono="{x:Static controls:Iconos.Despacho}"
+                                 Titulo="No hay despachos registrados"
+                                 Detalle="Registra el primer despacho cuando salga producto terminado."
+                                 Visibility="{Binding HasItems, ElementName=TablaDespachos, Converter={StaticResource SinItemsAVis}}" />
+          </Grid>
+        </Border>
+      </Grid>
+    </Grid>
+
+    <!-- ===================== Productos: el catálogo con existencia ===================== -->
+    <Grid Grid.Row="2" Margin="0,16,0,0"
+          Visibility="{Binding MostrarProductos, Converter={StaticResource BoolToVis}}">
+      <Grid DataContext="{Binding Productos}">
+        <Grid.RowDefinitions>
+          <RowDefinition Height="Auto" />
+          <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <Border Grid.Row="0" Style="{StaticResource ToolbarStyle}">
+          <Grid>
+            <Grid.RowDefinitions>
+              <RowDefinition Height="Auto" />
+              <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="*" />
+              <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <WrapPanel Grid.Row="0" Grid.Column="0" VerticalAlignment="Center">
+              <controls:SearchBox Width="280" Margin="0,0,12,0" VerticalAlignment="Center"
+                                  Texto="{Binding TextoBusqueda, Mode=TwoWay}" />
+
+              <controls:FiltroDropdown Style="{StaticResource FiltroDropdownStyle}" SelectedIndex="0"
+                                       Margin="0,0,12,0" VerticalAlignment="Center"
+                                       Command="{Binding CambiarFiltroCommand}">
+                <ComboBoxItem Content="Todos" />
+                <ComboBoxItem Content="Con existencia" />
+                <ComboBoxItem Content="Sin existencia" />
+                <ComboBoxItem Content="Inactivos" />
+              </controls:FiltroDropdown>
+            </WrapPanel>
+
+            <TextBlock Grid.Row="0" Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center"
+                       Text="{Binding Resumen}" FontSize="{StaticResource FsBody}"
+                       Foreground="{DynamicResource TextSecondaryBrush}" />
+
+            <StackPanel Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Orientation="Horizontal"
+                        Margin="0,12,0,0">
+              <Button Content="Nuevo producto" Style="{StaticResource PrimaryButtonStyle}"
+                      Command="{Binding AgregarCommand}" />
+              <Button Content="Editar" Style="{StaticResource SecondaryButtonStyle}"
+                      Command="{Binding EditarCommand}" />
+              <Button Content="Eliminar" Style="{StaticResource SecondaryButtonStyle}"
+                      Foreground="{DynamicResource DangerTextBrush}"
+                      Command="{Binding EliminarCommand}"
+                      ToolTip="Solo se puede eliminar un producto que nunca se produjo ni despachó; el resto se desactiva." />
+            </StackPanel>
+          </Grid>
+        </Border>
+
+        <Border Grid.Row="1" Style="{StaticResource SectionCardStyle}" Padding="0">
+          <Grid>
+            <DataGrid x:Name="TablaProductos" Style="{StaticResource DataGridStyle}"
+                      ItemsSource="{Binding ItemsView}"
+                      SelectedItem="{Binding SelectedItem}">
+              <DataGrid.Columns>
+                <controls:ColumnaTexto Header="Producto" Binding="{Binding Nombre}" Width="34*" MinWidth="180" />
+                <controls:ColumnaTexto Header="Unidad" Binding="{Binding UnidadMedida}" Width="16*" MinWidth="90" />
+                <controls:ColumnaNumero Header="Existencia" Binding="{Binding ExistenciaTexto}" Width="18*" MinWidth="110">
+                  <controls:ColumnaNumero.ElementStyle>
+                    <Style TargetType="TextBlock">
+                      <Setter Property="FontWeight" Value="{StaticResource FwMedium}" />
+                    </Style>
+                  </controls:ColumnaNumero.ElementStyle>
+                </controls:ColumnaNumero>
+                <DataGridTemplateColumn Header="Estado" Width="110">
+                  <DataGridTemplateColumn.CellTemplate>
+                    <DataTemplate>
+                      <Border Style="{StaticResource ChipExistenciaStyle}">
+                        <TextBlock Text="{Binding EstadoTexto}" FontSize="{StaticResource FsCaption}" />
+                      </Border>
+                    </DataTemplate>
+                  </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+              </DataGrid.Columns>
+            </DataGrid>
+
+            <controls:EmptyState Icono="{x:Static controls:Iconos.Produccion}"
+                                 Titulo="No hay productos"
+                                 Detalle="Da de alta los productos que fabrica la organización; su existencia sale sola de los procesos terminados y los despachos."
+                                 Visibility="{Binding HasItems, ElementName=TablaProductos, Converter={StaticResource SinItemsAVis}}" />
+          </Grid>
+        </Border>
+      </Grid>
+    </Grid>
+  </Grid>
+</UserControl>

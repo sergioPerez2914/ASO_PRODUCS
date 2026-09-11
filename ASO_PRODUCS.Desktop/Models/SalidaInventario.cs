@@ -17,7 +17,8 @@ public enum AreaDestino
     Etiquetado,
     Mantenimiento,
     Administracion,
-    Otro
+    Otro,
+    Produccion
 }
 
 /// <summary>Por qué sale. Se persiste como ORDINAL: miembros nuevos al final.</summary>
@@ -77,6 +78,13 @@ public class SalidaInventario : IEntidad<int>, IDeOrganizacion
 
     public string Observaciones { get; set; } = string.Empty;
 
+    /// <summary>Proceso de producción que originó esta salida, si vino de un consumo de
+    /// Procesos y no de un registro manual. Enlace suelto, sin clave foránea real, igual que
+    /// <see cref="EntradaInventario.FacturaProveedorId"/>.</summary>
+    public int? ProcesoProduccionId { get; set; }
+
+    public string ProcesoProduccionNumero { get; set; } = string.Empty;  // snapshot
+
     /// <summary>Lo que se llevaron, artículo por artículo.</summary>
     public List<SalidaInventarioLinea> Lineas { get; set; } = [];
 
@@ -101,6 +109,7 @@ public class SalidaInventario : IEntidad<int>, IDeOrganizacion
             AreaDestino.Etiquetado => "Etiquetado",
             AreaDestino.Mantenimiento => "Mantenimiento",
             AreaDestino.Administracion => "Administración",
+            AreaDestino.Produccion => "Producción",
             _ => "Otro"
         };
 

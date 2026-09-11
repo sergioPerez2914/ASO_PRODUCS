@@ -63,20 +63,30 @@ public static class MatrizPermisos
         Permisos.Ver(ModuloCatalogo.Peticiones.Clave),
         Permisos.Ver(ModuloCatalogo.Configuracion.Clave),
         Permisos.Ver("Finanzas.CuentasPorPagar"),
+        Permisos.Ver("Finanzas.CuentasPorCobrar"),
         Permisos.Ver("Finanzas.Movimientos"),
         Permisos.Ver("Finanzas.Proveedores"),
+        Permisos.Ver("Finanzas.Clientes"),
         Permisos.Ver("Inventario.Almacen"),
         Permisos.Ver("Inventario.Entradas"),
         Permisos.Ver("Inventario.Salidas"),
         Permisos.Ver("MateriaPrima.Existencias"),
         Permisos.Ver("MateriaPrima.Recepciones"),
         Permisos.Ver("MateriaPrima.Salidas"),
+        Permisos.Ver("Procesos.Produccion"),
+        Permisos.Ver("Procesos.Despacho"),
 
         Permisos.Proveedores.Crear,
         Permisos.Proveedores.Editar,
 
         Permisos.FacturasProveedor.Crear,
         Permisos.FacturasProveedor.Editar,
+
+        Permisos.Clientes.Crear,
+        Permisos.Clientes.Editar,
+
+        Permisos.FacturasCliente.Crear,
+        Permisos.FacturasCliente.Editar,
 
         Permisos.Articulos.Crear,
         Permisos.Articulos.Editar,
@@ -90,6 +100,18 @@ public static class MatrizPermisos
         Permisos.RecepcionesMateriaPrima.Crear,
         Permisos.SalidasMateriaPrima.Crear,
 
+        Permisos.EtapasProduccion.Crear,
+        Permisos.EtapasProduccion.Editar,
+
+        Permisos.Productos.Crear,
+        Permisos.Productos.Editar,
+
+        Permisos.ProcesosProduccion.Crear,
+        Permisos.ProcesosProduccion.AgregarEtapa,
+        Permisos.ProcesosProduccion.Terminar,
+
+        Permisos.Despachos.Crear,
+
         Permisos.Peticiones.Solicitar
 
         // Fuera a propósito:
@@ -100,6 +122,10 @@ public static class MatrizPermisos
         //   almacén es de Supervisor, igual que deshacer uno de Finanzas.
         // - RecepcionesMateriaPrima.Anular / SalidasMateriaPrima.Anular /
         //   TiposMateriaPrima.Eliminar: mismo criterio que Inventario.
+        // - EtapasProduccion.Eliminar / Productos.Eliminar / ProcesosProduccion.Anular /
+        //   Despachos.Anular: mismo criterio, deshacer y borrar es de Supervisor.
+        // - Clientes.Eliminar / FacturasCliente.Eliminar / Finanzas.Cobrar: cobrar mueve dinero,
+        //   igual que Finanzas.Pagar, así que queda con Supervisor.
     ];
 
     /// <summary>
@@ -113,7 +139,11 @@ public static class MatrizPermisos
             Permisos.Proveedores.Eliminar,
             Permisos.FacturasProveedor.Eliminar,
 
+            Permisos.Clientes.Eliminar,
+            Permisos.FacturasCliente.Eliminar,
+
             Permisos.Finanzas.Pagar,
+            Permisos.Finanzas.Cobrar,
             Permisos.Finanzas.Anular,
 
             Permisos.Movimientos.Crear,
@@ -133,6 +163,11 @@ public static class MatrizPermisos
             Permisos.TiposMateriaPrima.Eliminar,
             Permisos.RecepcionesMateriaPrima.Anular,
             Permisos.SalidasMateriaPrima.Anular,
+
+            Permisos.EtapasProduccion.Eliminar,
+            Permisos.Productos.Eliminar,
+            Permisos.ProcesosProduccion.Anular,
+            Permisos.Despachos.Anular,
 
             Permisos.Peticiones.Resolver
 

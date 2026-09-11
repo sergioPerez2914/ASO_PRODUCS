@@ -90,11 +90,26 @@ public sealed class SalidasMateriaPrimaService
     /// </summary>
     public SalidaMateriaPrima Registrar(SalidaMateriaPrima salida, int usuarioId)
     {
-        if (salida.Id != 0)
-            throw new InvalidOperationException("Esta salida ya está emitida.");
-
         if (!_sesion.Puede(Permisos.SalidasMateriaPrima.Crear))
             throw new InvalidOperationException("No tienes permiso para registrar salidas de materia prima.");
+
+        return EmitirSinPermiso(salida, usuarioId);
+    }
+
+    /// <summary>
+    /// Emite la salida sin repetir el permiso de este módulo: la usa
+    /// <c>ProcesosProduccionService</c> para el consumo de un proceso, que ya comprobó SU propio
+    /// permiso (<c>ProcesosProduccion.Crear</c>/<c>AgregarEtapa</c>) antes de llegar aquí — mismo
+    /// criterio que <c>CuentasPorPagarService.Crear</c> no repite el permiso de Finanzas cuando lo
+    /// llama <c>EntradasInventarioService</c>.
+    /// </summary>
+    internal SalidaMateriaPrima RegistrarSinPermiso(SalidaMateriaPrima salida, int usuarioId)
+        => EmitirSinPermiso(salida, usuarioId);
+
+    private SalidaMateriaPrima EmitirSinPermiso(SalidaMateriaPrima salida, int usuarioId)
+    {
+        if (salida.Id != 0)
+            throw new InvalidOperationException("Esta salida ya está emitida.");
 
         if (!Validar(salida, out var error))
             throw new InvalidOperationException(error);

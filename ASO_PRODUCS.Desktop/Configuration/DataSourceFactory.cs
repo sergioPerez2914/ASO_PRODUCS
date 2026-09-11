@@ -30,6 +30,12 @@ public static class DataSourceFactory
     private static ITipoMateriaPrimaDataSource? _tiposMateriaPrima;
     private static IRecepcionMateriaPrimaDataSource? _recepcionesMateriaPrima;
     private static ISalidaMateriaPrimaDataSource? _salidasMateriaPrima;
+    private static IEtapaProduccionDataSource? _etapasProduccion;
+    private static IProductoDataSource? _productos;
+    private static IProcesoProduccionDataSource? _procesosProduccion;
+    private static IDespachoDataSource? _despachos;
+    private static IClienteDataSource? _clientes;
+    private static IFacturaClienteDataSource? _facturasCliente;
     private static IAuthService? _auth;
     private static IAjustesStore? _ajustesStore;
 
@@ -74,6 +80,24 @@ public static class DataSourceFactory
 
     public static ISalidaMateriaPrimaDataSource CrearSalidasMateriaPrima() =>
         _salidasMateriaPrima ??= new SqlSalidaMateriaPrimaDataSource();
+
+    public static IEtapaProduccionDataSource CrearEtapasProduccion() =>
+        _etapasProduccion ??= new SqlEtapaProduccionDataSource();
+
+    public static IProductoDataSource CrearProductos() =>
+        _productos ??= new SqlProductoDataSource();
+
+    public static IProcesoProduccionDataSource CrearProcesosProduccion() =>
+        _procesosProduccion ??= new SqlProcesoProduccionDataSource();
+
+    public static IDespachoDataSource CrearDespachos() =>
+        _despachos ??= new SqlDespachoDataSource();
+
+    public static IClienteDataSource CrearClientes() =>
+        _clientes ??= new SqlClienteDataSource();
+
+    public static IFacturaClienteDataSource CrearFacturasCliente() =>
+        _facturasCliente ??= new SqlFacturaClienteDataSource();
 
     public static IAuthService CrearAuth() =>
         _auth ??= new AuthService(CrearUsuarios());

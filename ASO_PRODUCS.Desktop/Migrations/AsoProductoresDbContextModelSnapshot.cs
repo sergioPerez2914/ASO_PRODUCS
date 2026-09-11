@@ -75,6 +75,45 @@ namespace ASO_PRODUCS.Desktop.Migrations
                     b.ToTable("Articulos");
                 });
 
+            modelBuilder.Entity("ASO_PRODUCS.Desktop.Models.Cliente", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("Activo")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<string>("Notas")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("OrganizacionId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Rif")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<string>("Telefono")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Clientes");
+                });
+
             modelBuilder.Entity("ASO_PRODUCS.Desktop.Models.CuentaBancaria", b =>
                 {
                     b.Property<int>("Id")
@@ -126,6 +165,86 @@ namespace ASO_PRODUCS.Desktop.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("CuentasBancarias");
+                });
+
+            modelBuilder.Entity("ASO_PRODUCS.Desktop.Models.Despacho", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("AutorizadoPorId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("AutorizadoPorNombre")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<int?>("ClienteId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ClienteNombre")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<int>("CreadoPorId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Estado")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("FacturaClienteId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("FacturaClienteNumero")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime>("Fecha")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("FechaAnulacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("MotivoAnulacion")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("Numero")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("Observaciones")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("OrganizacionId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Tipo")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("Total")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FacturaClienteId");
+
+                    b.HasIndex("OrganizacionId", "Numero")
+                        .IsUnique();
+
+                    b.ToTable("Despachos");
                 });
 
             modelBuilder.Entity("ASO_PRODUCS.Desktop.Models.EntradaInventario", b =>
@@ -216,6 +335,110 @@ namespace ASO_PRODUCS.Desktop.Migrations
                         .IsUnique();
 
                     b.ToTable("EntradasInventario");
+                });
+
+            modelBuilder.Entity("ASO_PRODUCS.Desktop.Models.EtapaProduccion", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("Activo")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Descripcion")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<int>("Orden")
+                        .HasColumnType("int");
+
+                    b.Property<int>("OrganizacionId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("EtapasProduccion");
+                });
+
+            modelBuilder.Entity("ASO_PRODUCS.Desktop.Models.FacturaCliente", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ClienteId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ClienteNombre")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<int>("CreadoPorId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Descripcion")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int?>("DespachoId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("DespachoNumero")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<int>("Estado")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("FechaAnulacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("FechaCobro")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("FechaEmision")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("FechaVencimiento")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("Monto")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("MotivoAnulacion")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("NumeroDocumento")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<int>("OrganizacionId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DespachoId");
+
+                    b.ToTable("FacturasCliente");
                 });
 
             modelBuilder.Entity("ASO_PRODUCS.Desktop.Models.FacturaProveedor", b =>
@@ -501,6 +724,118 @@ namespace ASO_PRODUCS.Desktop.Migrations
                     b.ToTable("PeticionesCambio");
                 });
 
+            modelBuilder.Entity("ASO_PRODUCS.Desktop.Models.ProcesoProduccion", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("CantidadPlaneada")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal?>("CantidadProducida")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("CreadoPorId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("CreadoPorNombre")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<int>("Estado")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("Fecha")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("FechaAnulacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("FechaTermino")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("MotivoAnulacion")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("Numero")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("Observaciones")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("OrganizacionId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ProductoId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ProductoNombre")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<int?>("TerminadoPorId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("TerminadoPorNombre")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<string>("UnidadMedidaSnapshot")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganizacionId", "Numero")
+                        .IsUnique();
+
+                    b.ToTable("ProcesosProduccion");
+                });
+
+            modelBuilder.Entity("ASO_PRODUCS.Desktop.Models.Producto", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("Activo")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<int>("OrganizacionId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("UnidadMedida")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Productos");
+                });
+
             modelBuilder.Entity("ASO_PRODUCS.Desktop.Models.Proveedor", b =>
                 {
                     b.Property<int>("Id")
@@ -657,12 +992,22 @@ namespace ASO_PRODUCS.Desktop.Migrations
                     b.Property<int>("OrganizacionId")
                         .HasColumnType("int");
 
+                    b.Property<int?>("ProcesoProduccionId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ProcesoProduccionNumero")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
                     b.Property<string>("RetiradoPor")
                         .IsRequired()
                         .HasMaxLength(150)
                         .HasColumnType("nvarchar(150)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ProcesoProduccionId");
 
                     b.HasIndex("OrganizacionId", "Numero")
                         .IsUnique();
@@ -718,7 +1063,17 @@ namespace ASO_PRODUCS.Desktop.Migrations
                     b.Property<int>("OrganizacionId")
                         .HasColumnType("int");
 
+                    b.Property<int?>("ProcesoProduccionId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ProcesoProduccionNumero")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("ProcesoProduccionId");
 
                     b.HasIndex("OrganizacionId", "Numero")
                         .IsUnique();
@@ -800,6 +1155,54 @@ namespace ASO_PRODUCS.Desktop.Migrations
                     b.ToTable("Usuarios");
                 });
 
+            modelBuilder.Entity("ASO_PRODUCS.Desktop.Models.Despacho", b =>
+                {
+                    b.OwnsMany("ASO_PRODUCS.Desktop.Models.DespachoLinea", "Lineas", b1 =>
+                        {
+                            b1.Property<int>("Id")
+                                .ValueGeneratedOnAdd()
+                                .HasColumnType("int");
+
+                            SqlServerPropertyBuilderExtensions.UseIdentityColumn(b1.Property<int>("Id"));
+
+                            b1.Property<decimal>("Cantidad")
+                                .HasColumnType("decimal(18,2)");
+
+                            b1.Property<int>("DespachoId")
+                                .HasColumnType("int");
+
+                            b1.Property<decimal>("PrecioUnitario")
+                                .HasColumnType("decimal(18,2)");
+
+                            b1.Property<int>("ProductoId")
+                                .HasColumnType("int");
+
+                            b1.Property<string>("ProductoNombre")
+                                .IsRequired()
+                                .HasMaxLength(150)
+                                .HasColumnType("nvarchar(150)");
+
+                            b1.Property<decimal>("Subtotal")
+                                .HasColumnType("decimal(18,2)");
+
+                            b1.Property<string>("UnidadMedidaSnapshot")
+                                .IsRequired()
+                                .HasMaxLength(30)
+                                .HasColumnType("nvarchar(30)");
+
+                            b1.HasKey("Id");
+
+                            b1.HasIndex("DespachoId");
+
+                            b1.ToTable("DespachoLinea");
+
+                            b1.WithOwner()
+                                .HasForeignKey("DespachoId");
+                        });
+
+                    b.Navigation("Lineas");
+                });
+
             modelBuilder.Entity("ASO_PRODUCS.Desktop.Models.EntradaInventario", b =>
                 {
                     b.OwnsMany("ASO_PRODUCS.Desktop.Models.EntradaInventarioLinea", "Lineas", b1 =>
@@ -853,6 +1256,48 @@ namespace ASO_PRODUCS.Desktop.Migrations
                     b.Navigation("Lineas");
                 });
 
+            modelBuilder.Entity("ASO_PRODUCS.Desktop.Models.FacturaCliente", b =>
+                {
+                    b.OwnsMany("ASO_PRODUCS.Desktop.Models.FacturaClienteLinea", "Lineas", b1 =>
+                        {
+                            b1.Property<int>("Id")
+                                .ValueGeneratedOnAdd()
+                                .HasColumnType("int");
+
+                            SqlServerPropertyBuilderExtensions.UseIdentityColumn(b1.Property<int>("Id"));
+
+                            b1.Property<string>("CantidadTexto")
+                                .IsRequired()
+                                .HasMaxLength(50)
+                                .HasColumnType("nvarchar(50)");
+
+                            b1.Property<string>("DestinoTexto")
+                                .IsRequired()
+                                .HasMaxLength(150)
+                                .HasColumnType("nvarchar(150)");
+
+                            b1.Property<int>("FacturaClienteId")
+                                .HasColumnType("int");
+
+                            b1.Property<decimal>("PrecioUnitario")
+                                .HasColumnType("decimal(18,2)");
+
+                            b1.Property<decimal>("Subtotal")
+                                .HasColumnType("decimal(18,2)");
+
+                            b1.HasKey("Id");
+
+                            b1.HasIndex("FacturaClienteId");
+
+                            b1.ToTable("FacturaClienteLinea");
+
+                            b1.WithOwner()
+                                .HasForeignKey("FacturaClienteId");
+                        });
+
+                    b.Navigation("Lineas");
+                });
+
             modelBuilder.Entity("ASO_PRODUCS.Desktop.Models.FacturaProveedor", b =>
                 {
                     b.OwnsMany("ASO_PRODUCS.Desktop.Models.FacturaProveedorLinea", "Lineas", b1 =>
@@ -893,6 +1338,132 @@ namespace ASO_PRODUCS.Desktop.Migrations
                         });
 
                     b.Navigation("Lineas");
+                });
+
+            modelBuilder.Entity("ASO_PRODUCS.Desktop.Models.ProcesoProduccion", b =>
+                {
+                    b.OwnsMany("ASO_PRODUCS.Desktop.Models.EtapaProcesoProduccion", "Etapas", b1 =>
+                        {
+                            b1.Property<int>("Id")
+                                .ValueGeneratedOnAdd()
+                                .HasColumnType("int");
+
+                            SqlServerPropertyBuilderExtensions.UseIdentityColumn(b1.Property<int>("Id"));
+
+                            b1.Property<int>("EtapaProduccionId")
+                                .HasColumnType("int");
+
+                            b1.Property<string>("EtapaProduccionNombre")
+                                .IsRequired()
+                                .HasMaxLength(150)
+                                .HasColumnType("nvarchar(150)");
+
+                            b1.Property<DateTime>("FechaRegistro")
+                                .HasColumnType("datetime2");
+
+                            b1.Property<string>("Observaciones")
+                                .IsRequired()
+                                .HasMaxLength(500)
+                                .HasColumnType("nvarchar(500)");
+
+                            b1.Property<int>("ProcesoProduccionId")
+                                .HasColumnType("int");
+
+                            b1.HasKey("Id");
+
+                            b1.HasIndex("ProcesoProduccionId");
+
+                            b1.ToTable("EtapaProcesoProduccion");
+
+                            b1.WithOwner()
+                                .HasForeignKey("ProcesoProduccionId");
+
+                            b1.OwnsMany("ASO_PRODUCS.Desktop.Models.EtapaProcesoProduccionLinea", "Lineas", b2 =>
+                                {
+                                    b2.Property<int>("Id")
+                                        .ValueGeneratedOnAdd()
+                                        .HasColumnType("int");
+
+                                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b2.Property<int>("Id"));
+
+                                    b2.Property<decimal>("Cantidad")
+                                        .HasColumnType("decimal(18,2)");
+
+                                    b2.Property<int>("EtapaProcesoProduccionId")
+                                        .HasColumnType("int");
+
+                                    b2.Property<int>("MaterialId")
+                                        .HasColumnType("int");
+
+                                    b2.Property<string>("MaterialNombre")
+                                        .IsRequired()
+                                        .HasMaxLength(150)
+                                        .HasColumnType("nvarchar(150)");
+
+                                    b2.Property<int>("Origen")
+                                        .HasColumnType("int");
+
+                                    b2.Property<string>("UnidadMedidaSnapshot")
+                                        .IsRequired()
+                                        .HasMaxLength(30)
+                                        .HasColumnType("nvarchar(30)");
+
+                                    b2.HasKey("Id");
+
+                                    b2.HasIndex("EtapaProcesoProduccionId");
+
+                                    b2.ToTable("EtapaProcesoProduccionLinea");
+
+                                    b2.WithOwner()
+                                        .HasForeignKey("EtapaProcesoProduccionId");
+                                });
+
+                            b1.Navigation("Lineas");
+                        });
+
+                    b.OwnsMany("ASO_PRODUCS.Desktop.Models.ProcesoProduccionLineaInicial", "LineasIniciales", b1 =>
+                        {
+                            b1.Property<int>("Id")
+                                .ValueGeneratedOnAdd()
+                                .HasColumnType("int");
+
+                            SqlServerPropertyBuilderExtensions.UseIdentityColumn(b1.Property<int>("Id"));
+
+                            b1.Property<decimal>("Cantidad")
+                                .HasColumnType("decimal(18,2)");
+
+                            b1.Property<int>("MaterialId")
+                                .HasColumnType("int");
+
+                            b1.Property<string>("MaterialNombre")
+                                .IsRequired()
+                                .HasMaxLength(150)
+                                .HasColumnType("nvarchar(150)");
+
+                            b1.Property<int>("Origen")
+                                .HasColumnType("int");
+
+                            b1.Property<int>("ProcesoProduccionId")
+                                .HasColumnType("int");
+
+                            b1.Property<string>("UnidadMedidaSnapshot")
+                                .IsRequired()
+                                .HasMaxLength(30)
+                                .HasColumnType("nvarchar(30)");
+
+                            b1.HasKey("Id");
+
+                            b1.HasIndex("ProcesoProduccionId");
+
+                            b1.ToTable("ProcesoProduccionLineaInicial");
+
+                            b1.WithOwner()
+                                .HasForeignKey("ProcesoProduccionId");
+                        });
+
+                    b.Navigation("Etapas");
+
+                    b.Navigation("LineasIniciales");
                 });
 
             modelBuilder.Entity("ASO_PRODUCS.Desktop.Models.RecepcionMateriaPrima", b =>

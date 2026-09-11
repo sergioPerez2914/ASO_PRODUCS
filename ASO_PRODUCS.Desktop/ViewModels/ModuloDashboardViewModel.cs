@@ -143,6 +143,7 @@ public sealed class ModuloDashboardViewModel : ViewModelBase, IRecargable
         "Finanzas" => CalcularFinanzas(),
         "Inventario" => CalcularInventario(),
         "MateriaPrima" => CalcularMateriaPrima(),
+        "Procesos" => CalcularProcesos(),
         _ => null
     };
 
@@ -167,10 +168,12 @@ public sealed class ModuloDashboardViewModel : ViewModelBase, IRecargable
                                      DataSourceFactory.CrearCuentasBancarias(), sesion);
 
         var pagar = new CuentasPorPagarService(DataSourceFactory.CrearFacturasProveedor(), banco, sesion);
+        var cobrar = new CuentasPorCobrarService(DataSourceFactory.CrearFacturasCliente(), banco, sesion);
 
         var porPagar = pagar.TotalPorPagar();
         var vencido = pagar.TotalVencido();
         var disponible = banco.DisponibleTotal();
+        var porCobrar = cobrar.TotalPorCobrar();
 
         return
         [
@@ -179,6 +182,7 @@ public sealed class ModuloDashboardViewModel : ViewModelBase, IRecargable
             new Indicador("Disponible", $"{disponible:N2}", "en las cuentas de la organización",
                 disponible <= 0 ? EstadoIndicador.Atencion : EstadoIndicador.Normal),
             new Indicador("Por pagar", $"{porPagar:N2}", "deuda con proveedores"),
+            new Indicador("Por cobrar", $"{porCobrar:N2}", "deuda de clientes"),
             new Indicador("Vencido", $"{vencido:N2}", "pagos fuera de plazo",
                 vencido > 0 ? EstadoIndicador.Critico : EstadoIndicador.Normal)
         ];
@@ -242,6 +246,48 @@ public sealed class ModuloDashboardViewModel : ViewModelBase, IRecargable
             new Indicador("Tipos", $"{materiaPrima.TotalTiposActivos()}", "activos en el catálogo"),
             new Indicador("Recepciones este mes", $"{servicioRecepciones.DelMes().Count}",
                 $"{servicioSalidas.DelMes().Count} salidas en el mismo período")
+        ];
+    }
+
+    private static IReadOnlyList<Indicador> CalcularProcesos()
+    {
+        var sesion = SesionActual.Instancia;
+
+        var procesosDs = DataSourceFactory.CrearProcesosProduccion();
+        var productosDs = DataSourceFactory.CrearProductos();
+        var despachosDs = DataSourceFactory.CrearDespachos();
+
+        var productos = new ProductosService(productosDs, procesosDs, despachosDs);
+
+        var materiaPrima = new MateriaPrimaService(DataSourceFactory.CrearTiposMateriaPrima(),
+            DataSourceFactory.CrearRecepcionesMateriaPrima(), DataSourceFactory.CrearSalidasMateriaPrima());
+        var inventario = new InventarioService(DataSourceFactory.CrearArticulos(),
+            DataSourceFactory.CrearEntradasInventario(), DataSourceFactory.CrearSalidasInventario());
+
+        var salidasMateriaPrima = new SalidasMateriaPrimaService(DataSourceFactory.CrearSalidasMateriaPrima(), materiaPrima, sesion);
+        var salidasInventario = new SalidasInventarioService(DataSourceFactory.CrearSalidasInventario(), inventario, sesion);
+
+        var procesos = new ProcesosProduccionService(procesosDs, productos, salidasMateriaPrima, salidasInventario,
+            DataSourceFactory.CrearArticulos(), sesion);
+
+        var facturasClienteDs = DataSourceFactory.CrearFacturasCliente();
+        var banco = new MovimientosService(DataSourceFactory.CrearMovimientosBanco(),
+                                     DataSourceFactory.CrearCuentasBancarias(), sesion);
+        var cuentasPorCobrar = new CuentasPorCobrarService(facturasClienteDs, banco, sesion);
+
+        var despachos = new DespachosService(despachosDs, productos, facturasClienteDs, cuentasPorCobrar, sesion);
+
+        var enProceso = procesos.EnProcesoCount();
+        var sinExistencia = productos.ProductosSinExistencia();
+
+        return
+        [
+            new Indicador("En proceso", $"{enProceso}", "fabricaciones en curso"),
+            new Indicador("Sin existencia", $"{sinExistencia}", "productos agotados",
+                SegunCuenta(sinExistencia, 3)),
+            new Indicador("Terminados este mes", $"{procesos.DelMes().Count(p => p.Estado == EstadoProcesoProduccion.Terminado)}",
+                "procesos que cerraron en el período"),
+            new Indicador("Despachos este mes", $"{despachos.DelMes().Count}", "salidas de producto terminado")
         ];
     }
 }

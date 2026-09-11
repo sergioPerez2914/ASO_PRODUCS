@@ -36,6 +36,13 @@ public class SalidaMateriaPrima : IEntidad<int>, IDeOrganizacion
 
     public string Observaciones { get; set; } = string.Empty;
 
+    /// <summary>Proceso de producción que originó esta salida, si vino de un consumo de
+    /// Procesos y no de un registro manual. Enlace suelto, sin clave foránea real, igual que
+    /// <see cref="EntradaInventario.FacturaProveedorId"/>.</summary>
+    public int? ProcesoProduccionId { get; set; }
+
+    public string ProcesoProduccionNumero { get; set; } = string.Empty;  // snapshot
+
     /// <summary>Lo que salió, tipo de materia prima por tipo.</summary>
     public List<SalidaMateriaPrimaLinea> Lineas { get; set; } = [];
 

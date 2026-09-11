@@ -37,7 +37,8 @@ public enum OrigenMovimiento
 {
     Manual,
     FacturaProveedor,
-    Transferencia
+    Transferencia,
+    FacturaCliente
 }
 
 /// <summary>
@@ -54,7 +55,8 @@ public enum CategoriaMovimiento
     GastoVario,
     AporteCapital,
     Retiro,
-    Otro
+    Otro,
+    CobroCliente
 }
 
 /// <summary>
@@ -185,6 +187,7 @@ public class MovimientoBanco : IEntidad<int>, IDeOrganizacion
         CategoriaMovimiento.AporteCapital => "Aporte de capital",
         CategoriaMovimiento.Retiro => "Retiro",
         CategoriaMovimiento.Otro => "Otro",
+        CategoriaMovimiento.CobroCliente => "Cobro de cliente",
         _ => Categoria.ToString()
     };
 
@@ -194,6 +197,7 @@ public class MovimientoBanco : IEntidad<int>, IDeOrganizacion
         OrigenMovimiento.Manual => "Manual",
         OrigenMovimiento.FacturaProveedor => "Factura de proveedor",
         OrigenMovimiento.Transferencia => "Transferencia",
+        OrigenMovimiento.FacturaCliente => "Factura de cliente",
         _ => Origen.ToString()
     };
 
@@ -201,6 +205,7 @@ public class MovimientoBanco : IEntidad<int>, IDeOrganizacion
     public string DocumentoTexto => (Origen, OrigenId) switch
     {
         (OrigenMovimiento.FacturaProveedor, { } id) => $"Factura Nº {id}",
+        (OrigenMovimiento.FacturaCliente, { } id) => $"Factura Nº {id}",
         (OrigenMovimiento.Transferencia, _) => "Entre cuentas",
         _ => "—"
     };

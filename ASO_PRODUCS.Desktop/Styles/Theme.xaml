@@ -216,6 +216,34 @@
     </Style.Triggers>
   </Style>
 
+  <!-- Chip de estado de una factura de cliente. Calco de ChipEstadoFacturaProveedorStyle, pero
+       WPF liga el DataTrigger al tipo CLR exacto del enum, así que EstadoFacturaCliente necesita
+       su propio chip aunque los ordinales coincidan. -->
+  <Style x:Key="ChipEstadoFacturaClienteStyle" TargetType="Border" BasedOn="{StaticResource ChipBaseStyle}">
+    <Style.Triggers>
+      <DataTrigger Binding="{Binding Estado}" Value="{x:Static models:EstadoFacturaCliente.Pendiente}">
+        <Setter Property="Background" Value="{DynamicResource InfoSoftBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource InfoBordeBrush}" />
+        <Setter Property="TextElement.Foreground" Value="{DynamicResource InfoTextBrush}" />
+      </DataTrigger>
+      <DataTrigger Binding="{Binding Estado}" Value="{x:Static models:EstadoFacturaCliente.Cobrada}">
+        <Setter Property="Background" Value="{DynamicResource SuccessSoftBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource SuccessBordeBrush}" />
+        <Setter Property="TextElement.Foreground" Value="{DynamicResource SuccessTextBrush}" />
+      </DataTrigger>
+      <DataTrigger Binding="{Binding Estado}" Value="{x:Static models:EstadoFacturaCliente.Anulada}">
+        <Setter Property="Background" Value="{DynamicResource NeutralSoftBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource NeutralBordeBrush}" />
+        <Setter Property="TextElement.Foreground" Value="{DynamicResource NeutralTextBrush}" />
+      </DataTrigger>
+      <DataTrigger Binding="{Binding EstaVencida}" Value="True">
+        <Setter Property="Background" Value="{DynamicResource DangerSoftBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource DangerBordeBrush}" />
+        <Setter Property="TextElement.Foreground" Value="{DynamicResource DangerTextBrush}" />
+      </DataTrigger>
+    </Style.Triggers>
+  </Style>
+
   <!-- Chip de estado de un movimiento de banco. "Conciliado" es el estado bueno —el banco ya lo
        confirmó—, así que se lleva el verde; "Registrado" queda en azul de información, que es lo
        que es: anotado y todavía sin cuadrar contra el extracto. -->
@@ -335,6 +363,48 @@
         <Setter Property="TextElement.Foreground" Value="{DynamicResource InfoTextBrush}" />
       </DataTrigger>
       <DataTrigger Binding="{Binding Estado}" Value="{x:Static models:EstadoSalidaMateriaPrima.Anulada}">
+        <Setter Property="Background" Value="{DynamicResource NeutralSoftBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource NeutralBordeBrush}" />
+        <Setter Property="TextElement.Foreground" Value="{DynamicResource NeutralTextBrush}" />
+      </DataTrigger>
+    </Style.Triggers>
+  </Style>
+
+  <!-- Chip de estado de un proceso de producción: tres estados, a diferencia de los documentos
+       de entrada/salida de arriba. "Terminado" es el estado bueno (verde); "En proceso" es
+       información neutra de que algo sigue en curso (azul); "Anulado" se apaga al neutro de la
+       base, igual que el resto de los documentos anulados. -->
+  <Style x:Key="ChipEstadoProcesoProduccionStyle" TargetType="Border" BasedOn="{StaticResource ChipBaseStyle}">
+    <Style.Triggers>
+      <DataTrigger Binding="{Binding Estado}" Value="{x:Static models:EstadoProcesoProduccion.EnProceso}">
+        <Setter Property="Background" Value="{DynamicResource InfoSoftBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource InfoBordeBrush}" />
+        <Setter Property="TextElement.Foreground" Value="{DynamicResource InfoTextBrush}" />
+      </DataTrigger>
+      <DataTrigger Binding="{Binding Estado}" Value="{x:Static models:EstadoProcesoProduccion.Terminado}">
+        <Setter Property="Background" Value="{DynamicResource SuccessSoftBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource SuccessBordeBrush}" />
+        <Setter Property="TextElement.Foreground" Value="{DynamicResource SuccessTextBrush}" />
+      </DataTrigger>
+      <DataTrigger Binding="{Binding Estado}" Value="{x:Static models:EstadoProcesoProduccion.Anulado}">
+        <Setter Property="Background" Value="{DynamicResource NeutralSoftBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource NeutralBordeBrush}" />
+        <Setter Property="TextElement.Foreground" Value="{DynamicResource NeutralTextBrush}" />
+      </DataTrigger>
+    </Style.Triggers>
+  </Style>
+
+  <!-- Chip de estado de un despacho de producto terminado. Mismo diseño que
+       ChipEstadoSalidaMateriaPrimaStyle, pero WPF liga el DataTrigger al tipo CLR exacto del
+       enum, así que EstadoDespacho necesita su propio chip aunque los ordinales coincidan. -->
+  <Style x:Key="ChipEstadoDespachoStyle" TargetType="Border" BasedOn="{StaticResource ChipBaseStyle}">
+    <Style.Triggers>
+      <DataTrigger Binding="{Binding Estado}" Value="{x:Static models:EstadoDespacho.Registrado}">
+        <Setter Property="Background" Value="{DynamicResource InfoSoftBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource InfoBordeBrush}" />
+        <Setter Property="TextElement.Foreground" Value="{DynamicResource InfoTextBrush}" />
+      </DataTrigger>
+      <DataTrigger Binding="{Binding Estado}" Value="{x:Static models:EstadoDespacho.Anulado}">
         <Setter Property="Background" Value="{DynamicResource NeutralSoftBrush}" />
         <Setter Property="BorderBrush" Value="{DynamicResource NeutralBordeBrush}" />
         <Setter Property="TextElement.Foreground" Value="{DynamicResource NeutralTextBrush}" />
