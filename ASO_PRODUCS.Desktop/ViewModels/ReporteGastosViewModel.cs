@@ -118,7 +118,9 @@ public sealed class ReporteGastosViewModel : PantallaViewModelBase
             new HojaExcel("Por categoría",
                 ["Categoría", "Monto", "% del total"],
                 PorCategoria.Select(f => (IReadOnlyList<string>)
-                    [f.Categoria, f.MontoTexto, f.PorcentajeTexto]).ToList())
+                    [f.Categoria, f.MontoTexto, f.PorcentajeTexto]).ToList(),
+                Titulo: $"{Submodulo?.Nombre ?? "Reporte de Gastos"} · Por categoría",
+                Periodo: $"Período: {FechaDesde:dd/MM/yyyy} - {FechaHasta:dd/MM/yyyy}")
         ]);
 
         _dialogos.Informar("Reporte exportado", $"El archivo se guardó en:\n{ruta}");

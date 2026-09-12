@@ -81,7 +81,6 @@
               <controls:ColumnaNumero Header="Planeada" Binding="{Binding CantidadPlaneadaTexto}" Width="18*" MinWidth="110" />
               <controls:ColumnaNumero Header="Producida" Binding="{Binding CantidadProducidaTexto}" Width="18*" MinWidth="110" />
               <controls:ColumnaNumero Header="Rendimiento" Binding="{Binding RendimientoTexto}" Width="14*" MinWidth="100" />
-              <controls:ColumnaNumero Header="Procesos" Binding="{Binding CantidadProcesos}" Width="10*" MinWidth="80" />
             </DataGrid.Columns>
           </DataGrid>
 

@@ -123,8 +123,7 @@ public sealed class ReporteProcesosViewModel : PantallaViewModelBase
                 g.Key.ProductoNombre,
                 g.Key.UnidadMedidaSnapshot,
                 g.Sum(p => p.CantidadPlaneada),
-                g.Sum(p => p.CantidadProducida ?? 0),
-                g.Count()))
+                g.Sum(p => p.CantidadProducida ?? 0)))
             .OrderByDescending(f => f.CantidadProducida)
             .ToList();
 
@@ -169,29 +168,41 @@ public sealed class ReporteProcesosViewModel : PantallaViewModelBase
         Indicadores.Add(new Indicador("Productos fabricados", porProducto.Count.ToString(), "productos distintos en el período"));
     }
 
+    /// <summary>Exporta SOLO la vista abierta en pantalla — mismo criterio que
+    /// <see cref="ReporteVentasViewModel.ExportarExcel"/>.</summary>
     private void ExportarExcel()
     {
-        var ruta = _dialogos.GuardarArchivo("Exportar reporte de procesos", "ReporteProcesos.xlsx",
-            "Libro de Excel (*.xlsx)|*.xlsx");
+        string nombreVista;
+        IReadOnlyList<string> encabezados;
+        IReadOnlyList<IReadOnlyList<string>> filas;
+
+        if (VistaActual == VistaConsumo)
+        {
+            nombreVista = "Consumo de insumos";
+            encabezados = ["Origen", "Material", "Unidad", "Cantidad consumida"];
+            filas = Consumo.Select(f => (IReadOnlyList<string>)
+                [f.Origen, f.MaterialNombre, f.Unidad, f.CantidadTexto]).ToList();
+        }
+        else
+        {
+            nombreVista = "Producción";
+            encabezados = ["Producto", "Unidad", "Cantidad planeada", "Cantidad producida", "Rendimiento %"];
+            filas = Produccion.Select(f => (IReadOnlyList<string>)
+                [f.ProductoNombre, f.UnidadMedida, f.CantidadPlaneadaTexto, f.CantidadProducidaTexto,
+                 f.RendimientoTexto]).ToList();
+        }
+
+        var ruta = _dialogos.GuardarArchivo("Exportar reporte de procesos",
+            $"ReporteProcesos_{nombreVista.Replace(" ", "")}.xlsx", "Libro de Excel (*.xlsx)|*.xlsx");
 
         if (ruta is null)
             return;
 
         ExportadorExcel.Exportar(ruta,
         [
-            new HojaExcel("Producción",
-                ["Producto", "Unidad", "Cantidad planeada", "Cantidad producida", "Rendimiento %", "Procesos"],
-                Produccion.Select(f => (IReadOnlyList<string>)
-                [
-                    f.ProductoNombre, f.UnidadMedida, f.CantidadPlaneadaTexto, f.CantidadProducidaTexto,
-                    f.RendimientoTexto, f.CantidadProcesos.ToString()
-                ]).ToList()),
-            new HojaExcel("Consumo de insumos",
-                ["Origen", "Material", "Unidad", "Cantidad consumida"],
-                Consumo.Select(f => (IReadOnlyList<string>)
-                [
-                    f.Origen, f.MaterialNombre, f.Unidad, f.CantidadTexto
-                ]).ToList())
+            new HojaExcel(nombreVista, encabezados, filas,
+                Titulo: $"{Submodulo?.Nombre ?? "Reporte de Procesos"} · {nombreVista}",
+                Periodo: $"Período: {FechaDesde:dd/MM/yyyy} - {FechaHasta:dd/MM/yyyy}")
         ]);
 
         _dialogos.Informar("Reporte exportado", $"El archivo se guardó en:\n{ruta}");
@@ -200,7 +211,7 @@ public sealed class ReporteProcesosViewModel : PantallaViewModelBase
 
 /// <summary>Fila del desglose "Producción por producto".</summary>
 public sealed record FilaProduccionPorProducto(string ProductoNombre, string UnidadMedida,
-    decimal CantidadPlaneada, decimal CantidadProducida, int CantidadProcesos)
+    decimal CantidadPlaneada, decimal CantidadProducida)
 {
     public string CantidadPlaneadaTexto => $"{CantidadPlaneada:N2} {UnidadMedida}".Trim();
     public string CantidadProducidaTexto => $"{CantidadProducida:N2} {UnidadMedida}".Trim();

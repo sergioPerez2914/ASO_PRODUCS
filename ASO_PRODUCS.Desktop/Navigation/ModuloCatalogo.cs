@@ -119,7 +119,7 @@ public static class ModuloCatalogo
         new Modulo(
             "Reportes",
             "Reportes",
-            "Reportes de producción, ventas y gastos.",
+            "Reportes de producción, ventas, gastos y cartera.",
             Iconos.Reportes,
             [
                 new Submodulo("Reportes.Procesos", "Reporte de Procesos",
@@ -127,7 +127,9 @@ public static class ModuloCatalogo
                 new Submodulo("Reportes.Ventas", "Reporte de Ventas",
                     "Lo vendido, cobrado y pendiente por período.", Iconos.CuentasPorCobrar),
                 new Submodulo("Reportes.Gastos", "Reporte de Gastos",
-                    "Salidas de banco por período y por categoría.", Iconos.CuentasPorPagar)
+                    "Salidas de banco por período y por categoría.", Iconos.CuentasPorPagar),
+                new Submodulo("Reportes.Cartera", "Reporte de Cartera",
+                    "Antigüedad de saldos por cliente y por proveedor.", Iconos.CuentasPorCobrar)
             ]),
     ];
 

@@ -603,10 +603,12 @@ public class AsoProductoresDbContext : DbContext
                 linea.Property(x => x.Cantidad).HasColumnType("decimal(18,2)");
                 linea.Property(x => x.PrecioUnitario).HasColumnType("decimal(18,2)");
                 linea.Property(x => x.Subtotal).HasColumnType("decimal(18,2)");
+                linea.Property(x => x.ProcesoProduccionNumero).HasMaxLength(20);
 
                 linea.Ignore(x => x.CantidadTexto);
                 linea.Ignore(x => x.PrecioUnitarioTexto);
                 linea.Ignore(x => x.SubtotalTexto);
+                linea.Ignore(x => x.ProcesoOrigenTexto);
             });
         });
 

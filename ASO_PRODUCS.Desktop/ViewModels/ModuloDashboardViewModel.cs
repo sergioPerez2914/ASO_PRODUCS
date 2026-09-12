@@ -144,6 +144,7 @@ public sealed class ModuloDashboardViewModel : ViewModelBase, IRecargable
         "Inventario" => CalcularInventario(),
         "MateriaPrima" => CalcularMateriaPrima(),
         "Procesos" => CalcularProcesos(),
+        "Reportes" => CalcularReportes(),
         _ => null
     };
 
@@ -288,6 +289,49 @@ public sealed class ModuloDashboardViewModel : ViewModelBase, IRecargable
             new Indicador("Terminados este mes", $"{procesos.DelMes().Count(p => p.Estado == EstadoProcesoProduccion.Terminado)}",
                 "procesos que cerraron en el período"),
             new Indicador("Despachos este mes", $"{despachos.DelMes().Count}", "salidas de producto terminado")
+        ];
+    }
+
+    /// <summary>
+    /// Resumen del propio módulo Reportes: un vistazo a lo que cada uno de sus tres reportes
+    /// profundiza — vendido y cobranza del mes (Ventas/Cartera) y procesos cerrados (Procesos).
+    /// </summary>
+    private static IReadOnlyList<Indicador> CalcularReportes()
+    {
+        var sesion = SesionActual.Instancia;
+
+        var despachosDs = DataSourceFactory.CrearDespachos();
+        var productosDs = DataSourceFactory.CrearProductos();
+        var procesosDs = DataSourceFactory.CrearProcesosProduccion();
+        var productos = new ProductosService(productosDs, procesosDs, despachosDs);
+
+        var facturasClienteDs = DataSourceFactory.CrearFacturasCliente();
+        var banco = new MovimientosService(DataSourceFactory.CrearMovimientosBanco(),
+                                     DataSourceFactory.CrearCuentasBancarias(), sesion);
+        var cuentasPorCobrar = new CuentasPorCobrarService(facturasClienteDs, banco, sesion);
+
+        var despachos = new DespachosService(despachosDs, productos, facturasClienteDs, cuentasPorCobrar, sesion);
+        var procesos = new ProcesosProduccionService(procesosDs, productos,
+            new SalidasMateriaPrimaService(DataSourceFactory.CrearSalidasMateriaPrima(),
+                new MateriaPrimaService(DataSourceFactory.CrearTiposMateriaPrima(),
+                    DataSourceFactory.CrearRecepcionesMateriaPrima(), DataSourceFactory.CrearSalidasMateriaPrima()), sesion),
+            new SalidasInventarioService(DataSourceFactory.CrearSalidasInventario(),
+                new InventarioService(DataSourceFactory.CrearArticulos(),
+                    DataSourceFactory.CrearEntradasInventario(), DataSourceFactory.CrearSalidasInventario()), sesion),
+            DataSourceFactory.CrearArticulos(), sesion);
+
+        var vendidoDelMes = despachos.DelMes().Sum(d => d.Total);
+        var porCobrar = cuentasPorCobrar.TotalPorCobrar();
+        var vencido = cuentasPorCobrar.TotalVencido();
+        var procesosTerminadosDelMes = procesos.DelMes().Count(p => p.Estado == EstadoProcesoProduccion.Terminado);
+
+        return
+        [
+            new Indicador("Vendido este mes", $"{vendidoDelMes:N2}", "despachos tipo Venta"),
+            new Indicador("Por cobrar", $"{porCobrar:N2}", "facturas de cliente pendientes"),
+            new Indicador("Vencido", $"{vencido:N2}", "fuera de plazo",
+                vencido > 0 ? EstadoIndicador.Critico : EstadoIndicador.Normal),
+            new Indicador("Procesos terminados", $"{procesosTerminadosDelMes}", "este mes")
         ];
     }
 }

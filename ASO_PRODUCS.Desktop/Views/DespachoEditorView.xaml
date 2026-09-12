@@ -125,6 +125,17 @@
                                   Visibility="{Binding Datos.MuestraPrecios, Source={StaticResource Puente},
                                                        Converter={StaticResource BoolToVis}}" />
 
+          <DataGridTemplateColumn Header="Proceso de origen (opcional)" Width="24*" MinWidth="180">
+            <DataGridTemplateColumn.CellTemplate>
+              <DataTemplate>
+                <ComboBox Style="{StaticResource LineaComboBoxStyle}"
+                          ItemsSource="{Binding ProcesosDelProducto}"
+                          DisplayMemberPath="Numero"
+                          SelectedItem="{Binding ProcesoSeleccionado, UpdateSourceTrigger=PropertyChanged}" />
+              </DataTemplate>
+            </DataGridTemplateColumn.CellTemplate>
+          </DataGridTemplateColumn>
+
           <DataGridTemplateColumn Width="56">
             <DataGridTemplateColumn.CellTemplate>
               <DataTemplate>

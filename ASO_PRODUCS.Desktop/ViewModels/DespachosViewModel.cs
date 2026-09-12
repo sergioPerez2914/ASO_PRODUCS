@@ -172,6 +172,7 @@ public sealed class DespachosCrudViewModel : CrudViewModelBase<Despacho, int>
 
     private readonly ProductosService _productos;
     private readonly IReadOnlyList<Cliente> _clientes;
+    private readonly IReadOnlyList<ProcesoProduccion> _procesosTerminados;
     private readonly IServicioDialogo _dialogos;
     private readonly ISesionActual _sesionActual;
     private readonly DespachosService _servicio;
@@ -181,6 +182,7 @@ public sealed class DespachosCrudViewModel : CrudViewModelBase<Despacho, int>
     public DespachosCrudViewModel(IDespachoDataSource despachos,
                                   ProductosService productos,
                                   IClienteDataSource clientes,
+                                  IProcesoProduccionDataSource procesos,
                                   DespachosService servicio,
                                   IServicioDialogo dialogos,
                                   ISesionActual sesion)
@@ -188,6 +190,12 @@ public sealed class DespachosCrudViewModel : CrudViewModelBase<Despacho, int>
     {
         _productos = productos;
         _clientes = [.. clientes.GetAll().Where(c => c.Activo).OrderBy(c => c.Nombre)];
+        // Solo procesos Terminado: son los únicos que de verdad produjeron algo que se pueda
+        // haber despachado. El vínculo es informativo, así que no hace falta filtrar además por
+        // si ya se "agotó" — no hay manejo de lotes.
+        _procesosTerminados = [.. procesos.GetAll()
+            .Where(p => p.Estado == EstadoProcesoProduccion.Terminado)
+            .OrderByDescending(p => p.Fecha)];
         _servicio = servicio;
         _dialogos = dialogos;
         _sesionActual = sesion;
@@ -235,7 +243,7 @@ public sealed class DespachosCrudViewModel : CrudViewModelBase<Despacho, int>
     };
 
     protected override CrudEditorViewModelBase<Despacho> CrearEditor(Despacho item) =>
-        new DespachoEditorViewModel(item, _productos.ActivosConExistencia(), _clientes,
+        new DespachoEditorViewModel(item, _productos.ActivosConExistencia(), _clientes, _procesosTerminados,
                                     _sesionActual.UsuarioActual?.NombreCompleto ?? string.Empty, _servicio);
 
     /// <summary>
@@ -297,14 +305,18 @@ public sealed class DespachoEditorViewModel : CrudEditorViewModelBase<Despacho>
     private readonly IReadOnlyDictionary<int, decimal> _existencias;
     private readonly DespachosService _servicio;
 
+    private readonly IReadOnlyList<ProcesoProduccion> _procesosTerminados;
+
     public DespachoEditorViewModel(Despacho original,
                                    IReadOnlyList<Producto> productos,
                                    IReadOnlyList<Cliente> clientes,
+                                   IReadOnlyList<ProcesoProduccion> procesosTerminados,
                                    string autorizadoPorNombre,
                                    DespachosService servicio)
     {
         _original = original;
         _servicio = servicio;
+        _procesosTerminados = procesosTerminados;
 
         // Los productos ya llegan con su existencia rellena (ActivosConExistencia), así que el
         // disponible de cada línea sale de esa misma lista sin otra consulta.
@@ -460,7 +472,7 @@ public sealed class DespachoEditorViewModel : CrudEditorViewModelBase<Despacho>
 
     private LineaDespachoEditorViewModel NuevaLinea()
     {
-        var linea = new LineaDespachoEditorViewModel(Productos, _existencias);
+        var linea = new LineaDespachoEditorViewModel(Productos, _existencias, _procesosTerminados);
         linea.Cambio += AlCambiarLinea;
         return linea;
     }
@@ -492,11 +504,15 @@ public sealed class LineaDespachoEditorViewModel : ViewModelBase
     public event EventHandler? Cambio;
 
     private readonly IReadOnlyDictionary<int, decimal> _existencias;
+    private readonly IReadOnlyList<ProcesoProduccion> _procesosTerminados;
 
-    public LineaDespachoEditorViewModel(IReadOnlyList<Producto> productos, IReadOnlyDictionary<int, decimal> existencias)
+    public LineaDespachoEditorViewModel(IReadOnlyList<Producto> productos,
+                                        IReadOnlyDictionary<int, decimal> existencias,
+                                        IReadOnlyList<ProcesoProduccion> procesosTerminados)
     {
         Productos = productos;
         _existencias = existencias;
+        _procesosTerminados = procesosTerminados;
     }
 
     public IReadOnlyList<Producto> Productos { get; }
@@ -506,6 +522,22 @@ public sealed class LineaDespachoEditorViewModel : ViewModelBase
     {
         get => _productoSeleccionado;
         set { if (SetProperty(ref _productoSeleccionado, value)) Recalcular(); }
+    }
+
+    /// <summary>Solo los procesos que fabricaron el producto elegido en esta línea — la lista se
+    /// reduce en el acto al cambiar de producto, igual que <see cref="Disponible"/>.</summary>
+    public IReadOnlyList<ProcesoProduccion> ProcesosDelProducto =>
+        ProductoSeleccionado is null
+            ? []
+            : [.. _procesosTerminados.Where(p => p.ProductoId == ProductoSeleccionado.Id)];
+
+    /// <summary>De qué proceso salió lo despachado, si el operador lo sabe. Opcional a propósito:
+    /// no se valida ni se descuenta nada de él — ver el comentario de <see cref="DespachoLinea.ProcesoProduccionId"/>.</summary>
+    private ProcesoProduccion? _procesoSeleccionado;
+    public ProcesoProduccion? ProcesoSeleccionado
+    {
+        get => _procesoSeleccionado;
+        set => SetProperty(ref _procesoSeleccionado, value);
     }
 
     private string _cantidad = string.Empty;
@@ -552,7 +584,9 @@ public sealed class LineaDespachoEditorViewModel : ViewModelBase
         UnidadMedidaSnapshot = ProductoSeleccionado.UnidadMedida,
         Cantidad = CantidadValor,
         PrecioUnitario = conPrecios ? PrecioValor : 0m,
-        Subtotal = conPrecios ? Subtotal : 0m
+        Subtotal = conPrecios ? Subtotal : 0m,
+        ProcesoProduccionId = ProcesoSeleccionado?.Id,
+        ProcesoProduccionNumero = ProcesoSeleccionado?.Numero ?? string.Empty
     };
 
     private void Recalcular()
@@ -562,6 +596,12 @@ public sealed class LineaDespachoEditorViewModel : ViewModelBase
         OnPropertyChanged(nameof(SePasa));
         OnPropertyChanged(nameof(Subtotal));
         OnPropertyChanged(nameof(SubtotalTexto));
+        OnPropertyChanged(nameof(ProcesosDelProducto));
+
+        // Un proceso elegido para un producto ya no aplica si la línea cambió de producto.
+        if (ProcesoSeleccionado is { } proceso && !ProcesosDelProducto.Contains(proceso))
+            ProcesoSeleccionado = null;
+
         Cambio?.Invoke(this, EventArgs.Empty);
     }
 }
@@ -605,7 +645,7 @@ public sealed class DespachosViewModel : PantallaViewModelBase
                                             cuentasPorCobrar, sesion);
 
         Productos = new ProductosCrudViewModel(productosDs, productosServicio, dialogos, sesion);
-        Despachos = new DespachosCrudViewModel(despachosDs, productosServicio, clientesDs, servicio, dialogos, sesion);
+        Despachos = new DespachosCrudViewModel(despachosDs, productosServicio, clientesDs, procesosDs, servicio, dialogos, sesion);
 
         CambiarVistaCommand = new RelayCommand<string>(vista => VistaActual = vista);
     }

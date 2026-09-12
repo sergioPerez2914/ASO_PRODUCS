@@ -176,6 +176,7 @@ public partial class MainWindow : Window
             ["Reportes.Procesos"] = (m, s) => new ReporteProcesosViewModel(m, s),
             ["Reportes.Ventas"] = (m, s) => new ReporteVentasViewModel(m, s),
             ["Reportes.Gastos"] = (m, s) => new ReporteGastosViewModel(m, s),
+            ["Reportes.Cartera"] = (m, s) => new ReporteCarteraViewModel(m, s),
         };
 
     private object CrearVistaModulo(Modulo modulo)

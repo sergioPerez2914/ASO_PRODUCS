@@ -69,7 +69,7 @@
     <views:DespachosView />
   </DataTemplate>
 
-  <!-- Reportes: Procesos, Ventas y Gastos -->
+  <!-- Reportes: Procesos, Ventas, Gastos y Cartera -->
 
   <DataTemplate DataType="{x:Type vm:ReporteProcesosViewModel}">
     <views:ReporteProcesosView />
@@ -81,6 +81,10 @@
 
   <DataTemplate DataType="{x:Type vm:ReporteGastosViewModel}">
     <views:ReporteGastosView />
+  </DataTemplate>
+
+  <DataTemplate DataType="{x:Type vm:ReporteCarteraViewModel}">
+    <views:ReporteCarteraView />
   </DataTemplate>
 
   <!-- Armazón -->

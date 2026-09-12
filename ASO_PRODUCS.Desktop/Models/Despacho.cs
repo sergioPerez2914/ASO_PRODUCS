@@ -130,9 +130,22 @@ public class DespachoLinea
 
     public decimal Subtotal { get; set; }
 
+    /// <summary>
+    /// De qué <see cref="ProcesoProduccion"/> salió lo despachado, si el operador lo indicó al
+    /// despachar. Nulo si no se especificó — es un dato INFORMATIVO, elegido a mano: no se valida
+    /// contra la existencia del proceso ni descuenta nada de él, porque la existencia de
+    /// <see cref="Producto"/> sigue siendo un total global derivado, sin manejo de lotes.
+    /// </summary>
+    public int? ProcesoProduccionId { get; set; }
+    public string ProcesoProduccionNumero { get; set; } = string.Empty;  // snapshot
+
     public string CantidadTexto => $"{Cantidad:N2} {UnidadMedidaSnapshot}".Trim();
     public string PrecioUnitarioTexto => PrecioUnitario.ToString("N2");
     public string SubtotalTexto => Subtotal.ToString("N2");
+
+    public string ProcesoOrigenTexto => string.IsNullOrWhiteSpace(ProcesoProduccionNumero)
+        ? "Sin especificar"
+        : $"Proceso {ProcesoProduccionNumero}";
 
     public DespachoLinea Clonar() => (DespachoLinea)MemberwiseClone();
 }

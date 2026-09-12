@@ -63,6 +63,9 @@
       <RadioButton Content="Por cliente" GroupName="VistaReporteVentas"
                    Style="{StaticResource SegmentedTabStyle}"
                    IsChecked="{Binding EsPorCliente, Mode=TwoWay}" />
+      <RadioButton Content="Detalle" GroupName="VistaReporteVentas"
+                   Style="{StaticResource SegmentedTabStyle}"
+                   IsChecked="{Binding EsDetalle, Mode=TwoWay}" />
     </StackPanel>
 
     <Border Grid.Row="3" Style="{StaticResource TabStripStyle}" VerticalAlignment="Bottom" />
@@ -107,6 +110,33 @@
                                Titulo="No hay ventas en el período"
                                Detalle="Cambia el rango de fechas o registra despachos tipo Venta en Procesos · Despacho."
                                Visibility="{Binding HasItems, ElementName=TablaPorCliente, Converter={StaticResource SinItemsAVis}}" />
+        </Grid>
+      </Border>
+    </Grid>
+
+    <!-- ===================== Detalle ===================== -->
+    <Grid Grid.Row="4" Margin="0,16,0,0"
+          Visibility="{Binding MostrarDetalle, Converter={StaticResource BoolToVis}}">
+      <Border Style="{StaticResource SectionCardStyle}" Padding="0">
+        <Grid>
+          <DataGrid x:Name="TablaDetalle" Style="{StaticResource DataGridStyle}"
+                    ItemsSource="{Binding Detalle}" IsReadOnly="True">
+            <DataGrid.Columns>
+              <controls:ColumnaTexto Header="Fecha" Binding="{Binding FechaTexto}" Width="12*" MinWidth="90" />
+              <controls:ColumnaTexto Header="Despacho" Binding="{Binding DespachoNumero}" Width="14*" MinWidth="100" />
+              <controls:ColumnaTexto Header="Cliente" Binding="{Binding ClienteNombre}" Width="20*" MinWidth="140" />
+              <controls:ColumnaTexto Header="Producto" Binding="{Binding ProductoNombre}" Width="18*" MinWidth="140" />
+              <controls:ColumnaNumero Header="Cantidad" Binding="{Binding CantidadTexto}" Width="14*" MinWidth="110" />
+              <controls:ColumnaNumero Header="Precio unitario" Binding="{Binding PrecioUnitarioTexto}" Width="12*" MinWidth="100" />
+              <controls:ColumnaNumero Header="Subtotal" Binding="{Binding SubtotalTexto}" Width="12*" MinWidth="100" />
+              <controls:ColumnaTexto Header="Proceso de origen" Binding="{Binding ProcesoOrigenTexto}" Width="16*" MinWidth="140" />
+            </DataGrid.Columns>
+          </DataGrid>
+
+          <controls:EmptyState Icono="{x:Static controls:Iconos.Despacho}"
+                               Titulo="No hay ventas en el período"
+                               Detalle="Cambia el rango de fechas o registra despachos tipo Venta en Procesos · Despacho."
+                               Visibility="{Binding HasItems, ElementName=TablaDetalle, Converter={StaticResource SinItemsAVis}}" />
         </Grid>
       </Border>
     </Grid>
