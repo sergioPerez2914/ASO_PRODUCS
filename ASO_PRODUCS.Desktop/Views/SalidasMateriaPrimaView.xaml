@@ -110,7 +110,8 @@
             <DataGrid.Columns>
               <controls:ColumnaTexto Header="Nº" Binding="{Binding Numero}" Width="12*" MinWidth="86" />
               <controls:ColumnaTexto Header="Fecha" Binding="{Binding FechaTexto}" Width="10*" MinWidth="78" />
-              <controls:ColumnaTexto Header="Autoriza" Binding="{Binding AutorizadoPorNombre}" Width="22*" MinWidth="130" />
+              <controls:ColumnaTexto Header="Motivo" Binding="{Binding MotivoDetalleTexto}" Width="20*" MinWidth="140" />
+              <controls:ColumnaTexto Header="Autoriza" Binding="{Binding AutorizadoPorNombre}" Width="18*" MinWidth="120" />
               <controls:ColumnaNumero Header="Líneas" Binding="{Binding CantidadLineas}" Width="9*" MinWidth="58" />
               <controls:ColumnaNumero Header="Total" Binding="{Binding TotalCantidad, StringFormat=N2}" Width="12*" MinWidth="86" />
               <DataGridTemplateColumn Header="Estado" Width="96">

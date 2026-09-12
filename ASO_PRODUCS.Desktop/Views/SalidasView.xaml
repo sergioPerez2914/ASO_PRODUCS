@@ -115,7 +115,7 @@
               <controls:ColumnaTexto Header="Nº" Binding="{Binding Numero}" Width="12*" MinWidth="86" />
               <controls:ColumnaTexto Header="Fecha" Binding="{Binding FechaTexto}" Width="10*" MinWidth="78" />
               <controls:ColumnaTexto Header="Destino" Binding="{Binding DestinoTexto}" Width="19*" MinWidth="120" />
-              <controls:ColumnaTexto Header="Motivo" Binding="{Binding MotivoTexto}" Width="12*" MinWidth="90" />
+              <controls:ColumnaTexto Header="Motivo" Binding="{Binding MotivoDetalleTexto}" Width="16*" MinWidth="120" />
               <controls:ColumnaTexto Header="Retira" Binding="{Binding RetiradoPor}" Width="17*" MinWidth="110" />
               <controls:ColumnaTexto Header="Autoriza" Binding="{Binding AutorizadoPorNombre}" Width="17*" MinWidth="110" />
               <controls:ColumnaNumero Header="Líneas" Binding="{Binding CantidadLineas}" Width="8*" MinWidth="58" />

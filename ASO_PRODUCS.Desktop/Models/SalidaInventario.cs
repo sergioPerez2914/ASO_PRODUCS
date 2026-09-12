@@ -121,6 +121,13 @@ public class SalidaInventario : IEntidad<int>, IDeOrganizacion
         _ => "Traslado"
     };
 
+    /// <summary>"Consumo"/"Merma" a secas no distingue una salida cargada a mano de una que
+    /// generó un proceso de producción — las dos dicen igual hoy. Si vino de un proceso
+    /// (<see cref="ProcesoProduccionId"/> no nulo), lo dice.</summary>
+    public string MotivoDetalleTexto => ProcesoProduccionId is not null
+        ? $"{MotivoTexto} · Proceso {ProcesoProduccionNumero}"
+        : MotivoTexto;
+
     public string EstadoTexto => Estado == EstadoSalida.Registrada ? "Registrada" : "Anulada";
 
     public string FechaTexto => Fecha.ToString("dd/MM/yyyy");

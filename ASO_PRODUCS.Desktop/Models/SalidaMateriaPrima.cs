@@ -80,6 +80,13 @@ public class SalidaMateriaPrima : IEntidad<int>, IDeOrganizacion
 
     public string MotivoTexto => Motivo == MotivoSalidaMateriaPrima.Consumo ? "Consumo" : "Merma";
 
+    /// <summary>"Consumo"/"Merma" a secas no distingue una salida cargada a mano de una que
+    /// generó un proceso de producción — las dos dicen igual hoy. Si vino de un proceso
+    /// (<see cref="ProcesoProduccionId"/> no nulo), lo dice.</summary>
+    public string MotivoDetalleTexto => ProcesoProduccionId is not null
+        ? $"{MotivoTexto} · Proceso {ProcesoProduccionNumero}"
+        : MotivoTexto;
+
     public string FechaTexto => Fecha.ToString("dd/MM/yyyy");
 
     public int CantidadLineas => Lineas.Count;
