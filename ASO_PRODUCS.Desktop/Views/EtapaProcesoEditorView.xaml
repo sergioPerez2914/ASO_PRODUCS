@@ -15,15 +15,37 @@
 
   <StackPanel>
 
-    <controls:FormField Etiqueta="Etapa">
+    <controls:FormField Etiqueta="Etapa"
+                        Visibility="{Binding MuestraSelectorEtapa, Converter={StaticResource BoolToVis}}">
       <ComboBox Style="{StaticResource FormComboBoxStyle}"
                 ItemsSource="{Binding Etapas}"
                 DisplayMemberPath="Nombre"
                 SelectedItem="{Binding EtapaSeleccionada}" />
     </controls:FormField>
 
-    <!-- Consumo de la etapa: opcional. -->
-    <TextBlock Text="Consumo de esta etapa (opcional)" Style="{StaticResource CardTitleStyle}" Margin="0,20,0,8" />
+    <StackPanel Visibility="{Binding MuestraCantidadProducida, Converter={StaticResource BoolToVis}}">
+      <TextBlock Text="{Binding ProductoTexto}" FontSize="{StaticResource FsBody}" TextWrapping="Wrap"
+                 Foreground="{DynamicResource TextSecondaryBrush}" />
+
+      <controls:FormField Etiqueta="Cantidad producida" Margin="0,16,0,0"
+                          Ayuda="Lo que de verdad se obtuvo; puede diferir de lo planeado por una merma.">
+        <TextBox Style="{StaticResource FormTextBoxStyle}" HorizontalAlignment="Left" Width="160"
+                 Text="{Binding CantidadProducida, UpdateSourceTrigger=PropertyChanged}" />
+      </controls:FormField>
+    </StackPanel>
+
+    <controls:FormField Etiqueta="Resultado de la etapa">
+      <ComboBox Style="{StaticResource FormComboBoxStyle}"
+                SelectedValuePath="Tag"
+                SelectedValue="{Binding ResultadoSeleccionado}">
+        <ComboBoxItem Content="Normal" Tag="{x:Static models:ResultadoEtapa.Normal}" />
+        <ComboBoxItem Content="Con incidencia" Tag="{x:Static models:ResultadoEtapa.ConIncidencia}" />
+        <ComboBoxItem Content="Con merma" Tag="{x:Static models:ResultadoEtapa.ConMerma}" />
+      </ComboBox>
+    </controls:FormField>
+
+    <!-- Consumo, en cualquiera de los dos modos: opcional. -->
+    <TextBlock Text="Consumo (opcional)" Style="{StaticResource CardTitleStyle}" Margin="0,20,0,8" />
 
     <Border Style="{StaticResource SectionCardStyle}" Padding="0">
       <DataGrid Style="{StaticResource DataGridStyle}"
@@ -46,7 +68,7 @@
             </DataGridTemplateColumn.CellTemplate>
           </DataGridTemplateColumn>
 
-          <DataGridTemplateColumn Header="Material" Width="34*" MinWidth="220">
+          <DataGridTemplateColumn Header="Material" Width="28*" MinWidth="200">
             <DataGridTemplateColumn.CellTemplate>
               <DataTemplate>
                 <!-- Dos ComboBox superpuestos: la visibilidad es un binding LOCAL a la fila
@@ -67,7 +89,20 @@
             </DataGridTemplateColumn.CellTemplate>
           </DataGridTemplateColumn>
 
-          <controls:ColumnaTexto Header="Unidad" Binding="{Binding UnidadTexto}" Width="10*" MinWidth="70" />
+          <DataGridTemplateColumn Header="Motivo" Width="14*" MinWidth="110">
+            <DataGridTemplateColumn.CellTemplate>
+              <DataTemplate>
+                <ComboBox Style="{StaticResource LineaComboBoxStyle}"
+                          SelectedValuePath="Tag"
+                          SelectedValue="{Binding MotivoSeleccionado, UpdateSourceTrigger=PropertyChanged}">
+                  <ComboBoxItem Content="Consumo" Tag="{x:Static models:MotivoConsumoEtapa.Consumo}" />
+                  <ComboBoxItem Content="Merma/exceso" Tag="{x:Static models:MotivoConsumoEtapa.Merma}" />
+                </ComboBox>
+              </DataTemplate>
+            </DataGridTemplateColumn.CellTemplate>
+          </DataGridTemplateColumn>
+
+          <controls:ColumnaTexto Header="Unidad" Binding="{Binding UnidadTexto}" Width="8*" MinWidth="70" />
 
           <DataGridTemplateColumn Header="Cantidad" Width="14*" MinWidth="100">
             <DataGridTemplateColumn.CellTemplate>

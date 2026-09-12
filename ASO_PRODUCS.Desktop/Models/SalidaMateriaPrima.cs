@@ -11,6 +11,15 @@ public enum EstadoSalidaMateriaPrima
     Anulada
 }
 
+/// <summary>Por qué salió esta materia prima. Espejo de <see cref="MotivoSalida"/> (el de
+/// Inventario), sin <c>Devolucion</c>/<c>Traslado</c> porque no aplican aquí todavía. Se persiste
+/// como ORDINAL: miembros nuevos al final.</summary>
+public enum MotivoSalidaMateriaPrima
+{
+    Consumo,
+    Merma
+}
+
 /// <summary>
 /// Documento de salida de materia prima: lo que salió, de cada tipo.
 ///
@@ -35,6 +44,11 @@ public class SalidaMateriaPrima : IEntidad<int>, IDeOrganizacion
     public DateTime Fecha { get; set; }
 
     public string Observaciones { get; set; } = string.Empty;
+
+    /// <summary>Por qué salió. Por defecto (ordinal 0) es <see cref="MotivoSalidaMateriaPrima.Consumo"/>,
+    /// para que una salida registrada a mano (que nunca fija este campo) siga leyéndose igual que
+    /// antes de que existiera.</summary>
+    public MotivoSalidaMateriaPrima Motivo { get; set; }
 
     /// <summary>Proceso de producción que originó esta salida, si vino de un consumo de
     /// Procesos y no de un registro manual. Enlace suelto, sin clave foránea real, igual que
@@ -63,6 +77,8 @@ public class SalidaMateriaPrima : IEntidad<int>, IDeOrganizacion
     public bool CuentaEnExistencia => Estado == EstadoSalidaMateriaPrima.Registrada;
 
     public string EstadoTexto => Estado == EstadoSalidaMateriaPrima.Registrada ? "Registrada" : "Anulada";
+
+    public string MotivoTexto => Motivo == MotivoSalidaMateriaPrima.Consumo ? "Consumo" : "Merma";
 
     public string FechaTexto => Fecha.ToString("dd/MM/yyyy");
 

@@ -4,6 +4,7 @@ using ASO_PRODUCS.Desktop.BD;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace ASO_PRODUCS.Desktop.Migrations
 {
     [DbContext(typeof(AsoProductoresDbContext))]
-    partial class AsoProductoresDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260912014040_AgregarProveedorARecepcionesMateriaPrima")]
+    partial class AgregarProveedorARecepcionesMateriaPrima
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1397,9 +1400,6 @@ namespace ASO_PRODUCS.Desktop.Migrations
                                 .HasColumnType("int");
 
                             SqlServerPropertyBuilderExtensions.UseIdentityColumn(b1.Property<int>("Id"));
-
-                            b1.Property<bool>("EsCierre")
-                                .HasColumnType("bit");
 
                             b1.Property<int>("EtapaProduccionId")
                                 .HasColumnType("int");

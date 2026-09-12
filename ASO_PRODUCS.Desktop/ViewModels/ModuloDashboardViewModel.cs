@@ -233,9 +233,17 @@ public sealed class ModuloDashboardViewModel : ViewModelBase, IRecargable
         var tipos = DataSourceFactory.CrearTiposMateriaPrima();
         var recepciones = DataSourceFactory.CrearRecepcionesMateriaPrima();
         var salidas = DataSourceFactory.CrearSalidasMateriaPrima();
+        var facturas = DataSourceFactory.CrearFacturasProveedor();
 
         var materiaPrima = new MateriaPrimaService(tipos, recepciones, salidas);
-        var servicioRecepciones = new RecepcionesMateriaPrimaService(recepciones, materiaPrima, sesion);
+
+        var banco = new MovimientosService(DataSourceFactory.CrearMovimientosBanco(),
+                                     DataSourceFactory.CrearCuentasBancarias(), sesion);
+
+        var servicioRecepciones = new RecepcionesMateriaPrimaService(
+            recepciones, DataSourceFactory.CrearProveedores(), facturas, materiaPrima,
+            new CuentasPorPagarService(facturas, banco, sesion), sesion);
+
         var servicioSalidas = new SalidasMateriaPrimaService(salidas, materiaPrima, sesion);
 
         var sinExistencia = materiaPrima.TiposSinExistencia();
@@ -246,7 +254,9 @@ public sealed class ModuloDashboardViewModel : ViewModelBase, IRecargable
                 SegunCuenta(sinExistencia, 3)),
             new Indicador("Tipos", $"{materiaPrima.TotalTiposActivos()}", "activos en el catálogo"),
             new Indicador("Recepciones este mes", $"{servicioRecepciones.DelMes().Count}",
-                $"{servicioSalidas.DelMes().Count} salidas en el mismo período")
+                $"{servicioSalidas.DelMes().Count} salidas en el mismo período"),
+            new Indicador("Comprado este mes", $"{servicioRecepciones.TotalComprasDelMes():N2}",
+                "en recepciones con cuenta por pagar")
         ];
     }
 

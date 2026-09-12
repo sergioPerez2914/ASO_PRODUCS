@@ -90,7 +90,8 @@
           <Grid>
             <DataGrid x:Name="TablaProcesos" Style="{StaticResource DataGridStyle}"
                       ItemsSource="{Binding ItemsView}"
-                      SelectedItem="{Binding SelectedItem}">
+                      SelectedItem="{Binding SelectedItem}"
+                      MouseDoubleClick="TablaProcesos_MouseDoubleClick">
               <DataGrid.Columns>
                 <controls:ColumnaTexto Header="Nº" Binding="{Binding Numero}" Width="12*" MinWidth="90" />
                 <controls:ColumnaTexto Header="Fecha" Binding="{Binding FechaTexto}" Width="9*" MinWidth="76" />

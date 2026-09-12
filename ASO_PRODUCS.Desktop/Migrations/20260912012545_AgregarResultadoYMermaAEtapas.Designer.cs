@@ -4,6 +4,7 @@ using ASO_PRODUCS.Desktop.BD;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace ASO_PRODUCS.Desktop.Migrations
 {
     [DbContext(typeof(AsoProductoresDbContext))]
-    partial class AsoProductoresDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260912012545_AgregarResultadoYMermaAEtapas")]
+    partial class AgregarResultadoYMermaAEtapas
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -894,14 +897,6 @@ namespace ASO_PRODUCS.Desktop.Migrations
                     b.Property<int>("Estado")
                         .HasColumnType("int");
 
-                    b.Property<int?>("FacturaProveedorId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("FacturaProveedorNumero")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
                     b.Property<DateTime>("Fecha")
                         .HasColumnType("datetime2");
 
@@ -909,9 +904,6 @@ namespace ASO_PRODUCS.Desktop.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<DateTime>("FechaCreacion")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime?>("FechaVencimiento")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("MotivoAnulacion")
@@ -923,11 +915,6 @@ namespace ASO_PRODUCS.Desktop.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
 
-                    b.Property<string>("NumeroDocumento")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
                     b.Property<string>("Observaciones")
                         .IsRequired()
                         .HasMaxLength(500)
@@ -936,33 +923,12 @@ namespace ASO_PRODUCS.Desktop.Migrations
                     b.Property<int>("OrganizacionId")
                         .HasColumnType("int");
 
-                    b.Property<int?>("ProveedorId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("ProveedorNombre")
-                        .IsRequired()
-                        .HasMaxLength(150)
-                        .HasColumnType("nvarchar(150)");
-
-                    b.Property<string>("RecibidoPor")
-                        .IsRequired()
-                        .HasMaxLength(150)
-                        .HasColumnType("nvarchar(150)");
-
                     b.Property<string>("Referencia")
                         .IsRequired()
                         .HasMaxLength(60)
                         .HasColumnType("nvarchar(60)");
 
-                    b.Property<int>("Tipo")
-                        .HasColumnType("int");
-
-                    b.Property<decimal>("Total")
-                        .HasColumnType("decimal(18,2)");
-
                     b.HasKey("Id");
-
-                    b.HasIndex("FacturaProveedorId");
 
                     b.HasIndex("OrganizacionId", "Numero")
                         .IsUnique();
@@ -1398,9 +1364,6 @@ namespace ASO_PRODUCS.Desktop.Migrations
 
                             SqlServerPropertyBuilderExtensions.UseIdentityColumn(b1.Property<int>("Id"));
 
-                            b1.Property<bool>("EsCierre")
-                                .HasColumnType("bit");
-
                             b1.Property<int>("EtapaProduccionId")
                                 .HasColumnType("int");
 
@@ -1536,14 +1499,8 @@ namespace ASO_PRODUCS.Desktop.Migrations
                             b1.Property<decimal>("Cantidad")
                                 .HasColumnType("decimal(18,2)");
 
-                            b1.Property<decimal>("PrecioUnitario")
-                                .HasColumnType("decimal(18,2)");
-
                             b1.Property<int>("RecepcionMateriaPrimaId")
                                 .HasColumnType("int");
-
-                            b1.Property<decimal>("Subtotal")
-                                .HasColumnType("decimal(18,2)");
 
                             b1.Property<int>("TipoMateriaPrimaId")
                                 .HasColumnType("int");

@@ -228,11 +228,19 @@ específico de esa planta:
   `SalidasMateriaPrimaService.Validar` revisa esa existencia EN VIVO antes de dejar salir algo, y
   `RecepcionesMateriaPrimaService.Anular` revisa que deshacer una recepción no la deje en
   negativo — calco de las reglas equivalentes de Inventario.
-- **No genera cuenta por pagar en Finanzas.** A diferencia de `EntradaInventario`,
-  `RecepcionesMateriaPrimaService` no depende de `CuentasPorPagarService`: este módulo no asume
-  que lo recibido se compró (puede ser aporte de un socio, cosecha propia, maquila, etc.). Si el
-  negocio real de los productores sí compra la materia prima, esa dependencia se agrega siguiendo
-  el ejemplo de `EntradasInventarioService`.
+- **Genera cuenta por pagar en Finanzas cuando viene de un proveedor** (2026-09-12): calco de
+  `EntradaInventario`/`EntradasInventarioService`. `RecepcionMateriaPrima.Tipo`
+  (`TipoRecepcionMateriaPrima`: `CompraProveedor`, `CompraExterna`, `OtroOrigen`) reemplaza el
+  antiguo "todo es sin proveedor". Las dos primeras exigen proveedor (del padrón, o uno nuevo dado
+  de alta al vuelo si es "externo"), número de documento, precio por línea y vencimiento, y
+  `RecepcionesMateriaPrimaService.Registrar` crea la `FacturaProveedor` correspondiente —factura
+  antes que recepción, mismo orden que `EntradasInventarioService.Registrar`, por el mismo motivo
+  (es la operación que puede rechazar). `Anular` deshace también esa factura, si sigue pendiente, y
+  se niega si ya está pagada — mismo criterio que `EntradasInventarioService.Anular`.
+  `OtroOrigen` es el único que no depende de Finanzas: cubre aporte de un socio, cosecha propia,
+  maquila, etc., y es a lo que se migraron todas las recepciones que ya existían antes de este
+  cambio (no habían tenido proveedor nunca). `Referencia` (guía/remito/orden) se conserva tal cual,
+  independiente de `NumeroDocumento` (el papel de la compra, que alimenta la factura).
 - **Sin campo de destino en Salidas**, a propósito: `SalidaMateriaPrima` no tiene el equivalente
   de `SalidaInventario.Destino` — es lo primero que hay que decidir con el negocio real (a quién o
   a dónde va la materia prima) y agregar cuando se conozca.
@@ -303,9 +311,16 @@ Las entidades de dominio persisten en **SQL Server vía EF Core Migrations**.
   seguida de `AgregarMateriaPrima` (`TipoMateriaPrima`,
   `RecepcionMateriaPrima`+`RecepcionMateriaPrimaLinea`,
   `SalidaMateriaPrima`+`SalidaMateriaPrimaLinea`), `AgregarProcesos` (`EtapaProduccion`,
-  `ProcesoProduccion` con sus `LineasIniciales`/`Etapas`, `Producto`) y
+  `ProcesoProduccion` con sus `LineasIniciales`/`Etapas`, `Producto`),
   `AgregarClientesYCuentasPorCobrar` (`Cliente`, `FacturaCliente`+`FacturaClienteLinea`,
-  `Despacho`+`DespachoLinea`).
+  `Despacho`+`DespachoLinea`), `AgregarProcesoOrigenADespacho` (`ProcesoProduccionId`/`Numero` en
+  `DespachoLinea`), `AgregarResultadoYMermaAEtapas` (`Resultado` en `EtapaProcesoProduccion`,
+  `Motivo` en `EtapaProcesoProduccionLinea` y en `SalidaMateriaPrima`) y
+  `AgregarProveedorARecepcionesMateriaPrima` (`Tipo`/`ProveedorId`/`NumeroDocumento`/
+  `FechaVencimiento`/`RecibidoPor`/`Total`/`FacturaProveedorId` en `RecepcionMateriaPrima`,
+  `PrecioUnitario`/`Subtotal` en `RecepcionMateriaPrimaLinea` — con un `UPDATE` de datos que migra
+  a `OtroOrigen` todas las recepciones que ya existían, para no etiquetarlas como compra a
+  proveedor por el valor por defecto de la columna nueva).
 - **La cadena de conexión vive solo en `appsettings.local.json`** (por máquina, en `.gitignore`);
   la de `appsettings.json` (clave `ConnectionStrings:AsoProductoresDb`) apunta a LocalDB con un
   `.mdf` en `App_Data`.
@@ -443,9 +458,11 @@ de revisar y cambiar; no son bugs:
    los cuatro patrones del framework, Inventario para uno construido de cero, Materia Prima para
    uno de existencias desacoplado de Finanzas, y Procesos para uno que dispara efectos en más de
    un módulo existente a la vez.
-6. **Materia Prima sin destino ni origen real**: `SalidaMateriaPrima` no dice a quién o a dónde va
-   la materia prima, y `RecepcionMateriaPrima` no dice de quién viene ni si hay que pagarle — ver
-   "Materia Prima" arriba. Definir con el negocio real si hace falta alguno de los dos.
+6. **`SalidaMateriaPrima` sin destino real**: a diferencia de `SalidaInventario.Destino`, no dice a
+   quién o a dónde va la materia prima que sale — ver "Materia Prima" arriba. Definir con el
+   negocio real si hace falta. (La otra mitad de este punto, que `RecepcionMateriaPrima` no decía
+   de quién venía ni si había que pagarle, ya se resolvió — ver "Genera cuenta por pagar..." en
+   "Materia Prima" arriba.)
 7. **`Solicitables` vacío**: no hay ninguna petición de cambio configurada todavía — ver
    "Peticiones de cambio" arriba. Los candidatos naturales ya existen: `EntradasInventario.Anular`,
    `SalidasInventario.Anular`, `RecepcionesMateriaPrima.Anular`, `SalidasMateriaPrima.Anular`,

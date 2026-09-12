@@ -23,6 +23,26 @@ public enum OrigenMaterial
     Articulo
 }
 
+/// <summary>Cómo terminó una etapa. Se persiste como ORDINAL: miembros nuevos al final.</summary>
+public enum ResultadoEtapa
+{
+    Normal,
+    ConIncidencia,
+    ConMerma
+}
+
+/// <summary>
+/// Por qué se consumió una línea dentro de una etapa: lo normal para esa etapa, o una
+/// merma/exceso sobre lo habitual. Distinto de <see cref="MotivoSalida"/>/
+/// <see cref="MotivoSalidaMateriaPrima"/> (esos son del documento de salida completo; este es por
+/// línea, dentro de una misma etapa). Se persiste como ORDINAL: miembros nuevos al final.
+/// </summary>
+public enum MotivoConsumoEtapa
+{
+    Consumo,
+    Merma
+}
+
 /// <summary>
 /// Documento de fabricación: consume materia prima y/o artículos de inventario para producir un
 /// producto terminado, a lo largo de las etapas que la planta necesite.
@@ -83,9 +103,14 @@ public class ProcesoProduccion : IEntidad<int>, IDeOrganizacion
     /// anular devuelva la existencia del producto sin tocar ninguna otra fila.</summary>
     public bool CuentaEnExistencia => Estado == EstadoProcesoProduccion.Terminado;
 
+    /// <summary>En curso, muestra el nombre de la última etapa (o "En proceso" si todavía no pasó
+    /// por ninguna) en vez del texto genérico — es seguro porque el cierre que agrega
+    /// <c>Terminar</c> solo se suma en la MISMA llamada que cambia <see cref="Estado"/> a
+    /// Terminado, así que <c>Etapas[^1]</c> nunca es un cierre mientras el proceso sigue
+    /// EnProceso.</summary>
     public string EstadoTexto => Estado switch
     {
-        EstadoProcesoProduccion.EnProceso => "En proceso",
+        EstadoProcesoProduccion.EnProceso => Etapas.Count > 0 ? Etapas[^1].EtapaProduccionNombre : "En proceso",
         EstadoProcesoProduccion.Terminado => "Terminado",
         _ => "Anulado"
     };
@@ -98,7 +123,9 @@ public class ProcesoProduccion : IEntidad<int>, IDeOrganizacion
         ? $"{cantidad:N2} {UnidadMedidaSnapshot}".Trim()
         : "—";
 
-    public int CantidadEtapas => Etapas.Count;
+    /// <summary>Cuenta solo etapas reales del catálogo; el cierre que agrega <c>Terminar</c> no es
+    /// una etapa de producción.</summary>
+    public int CantidadEtapas => Etapas.Count(e => !e.EsCierre);
 
     /// <summary>
     /// Copia HONDA: duplica de verdad <see cref="LineasIniciales"/>, <see cref="Etapas"/> y, dentro
@@ -152,11 +179,30 @@ public class EtapaProcesoProduccion
 
     public DateTime FechaRegistro { get; set; }
 
+    /// <summary>Cómo confirmó el usuario que salió esta etapa. No obliga a tener una línea con
+    /// <see cref="MotivoConsumoEtapa.Merma"/> ni al revés — el resultado puede quedar explicado
+    /// solo en <see cref="Observaciones"/>.</summary>
+    public ResultadoEtapa Resultado { get; set; }
+
+    /// <summary>Marca la entrada sintética que agrega <c>ProcesosProduccionService.Terminar</c> al
+    /// cerrar el proceso — no es una etapa real del catálogo. Cuando es <c>true</c>,
+    /// <see cref="EtapaProduccionId"/> vale 0 (los ids del catálogo son IDENTITY, siempre &gt; 0) y
+    /// <see cref="EtapaProduccionNombre"/> es el texto fijo "Cierre del proceso". El servicio
+    /// estampa los tres campos juntos, nunca uno sin los otros: es un solo marcador atómico.</summary>
+    public bool EsCierre { get; set; }
+
     /// <summary>Consumo opcional de esta etapa: el material nuevo que hizo falta en ese paso, si
     /// hizo falta alguno.</summary>
     public List<EtapaProcesoProduccionLinea> Lineas { get; set; } = [];
 
     public string FechaRegistroTexto => FechaRegistro.ToString("dd/MM/yyyy HH:mm");
+
+    public string ResultadoTexto => Resultado switch
+    {
+        ResultadoEtapa.Normal => "Normal",
+        ResultadoEtapa.ConIncidencia => "Con incidencia",
+        _ => "Con merma"
+    };
 
     public int CantidadLineas => Lineas.Count;
 
@@ -186,9 +232,16 @@ public class EtapaProcesoProduccionLinea
 
     public decimal Cantidad { get; set; }
 
+    /// <summary>Si esta línea es el consumo normal de la etapa o una merma/exceso sobre lo
+    /// habitual. Por defecto (ordinal 0) es <see cref="MotivoConsumoEtapa.Consumo"/>, para que
+    /// nada existente cambie de comportamiento.</summary>
+    public MotivoConsumoEtapa Motivo { get; set; }
+
     public string CantidadTexto => $"{Cantidad:N2} {UnidadMedidaSnapshot}".Trim();
 
     public string OrigenTexto => Origen == OrigenMaterial.MateriaPrima ? "Materia prima" : "Inventario";
+
+    public string MotivoTexto => Motivo == MotivoConsumoEtapa.Consumo ? "Consumo" : "Merma/exceso";
 
     public EtapaProcesoProduccionLinea Clonar() => (EtapaProcesoProduccionLinea)MemberwiseClone();
 }

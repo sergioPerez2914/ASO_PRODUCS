@@ -11,15 +11,19 @@
   <UserControl.Resources>
     <!-- Detalle de la recepción como ToolTip de fila, mismo patrón que Entradas de almacén. -->
     <DataTemplate DataType="{x:Type models:RecepcionMateriaPrima}">
-      <StackPanel Grid.IsSharedSizeScope="True" MaxWidth="420">
+      <StackPanel Grid.IsSharedSizeScope="True" MaxWidth="460">
         <TextBlock Text="{Binding Referencia, StringFormat='Referencia: {0}'}" Margin="0,0,0,8" />
         <Grid Margin="0,0,0,4">
           <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*" SharedSizeGroup="ColTipoRecepcion" />
             <ColumnDefinition Width="Auto" SharedSizeGroup="ColCantidadRecepcion" />
+            <ColumnDefinition Width="Auto" SharedSizeGroup="ColPrecioRecepcion" />
+            <ColumnDefinition Width="Auto" SharedSizeGroup="ColSubtotalRecepcion" />
           </Grid.ColumnDefinitions>
           <TextBlock Grid.Column="0" Text="Tipo" FontWeight="{StaticResource FwMedium}" Margin="0,0,16,0" />
-          <TextBlock Grid.Column="1" Text="Cantidad" FontWeight="{StaticResource FwMedium}" HorizontalAlignment="Right" />
+          <TextBlock Grid.Column="1" Text="Cantidad" FontWeight="{StaticResource FwMedium}" Margin="0,0,16,0" HorizontalAlignment="Right" />
+          <TextBlock Grid.Column="2" Text="Precio" FontWeight="{StaticResource FwMedium}" Margin="0,0,16,0" HorizontalAlignment="Right" />
+          <TextBlock Grid.Column="3" Text="Subtotal" FontWeight="{StaticResource FwMedium}" HorizontalAlignment="Right" />
         </Grid>
         <Border Height="1" Background="{DynamicResource BorderBrush}" Margin="0,0,0,4" />
         <ItemsControl ItemsSource="{Binding Lineas}">
@@ -29,13 +33,20 @@
                 <Grid.ColumnDefinitions>
                   <ColumnDefinition Width="*" SharedSizeGroup="ColTipoRecepcion" />
                   <ColumnDefinition Width="Auto" SharedSizeGroup="ColCantidadRecepcion" />
+                  <ColumnDefinition Width="Auto" SharedSizeGroup="ColPrecioRecepcion" />
+                  <ColumnDefinition Width="Auto" SharedSizeGroup="ColSubtotalRecepcion" />
                 </Grid.ColumnDefinitions>
                 <TextBlock Grid.Column="0" Text="{Binding TipoMateriaPrimaNombre}" Margin="0,0,16,0" TextTrimming="CharacterEllipsis" />
-                <TextBlock Grid.Column="1" Text="{Binding CantidadTexto}" HorizontalAlignment="Right" />
+                <TextBlock Grid.Column="1" Text="{Binding CantidadTexto}" Margin="0,0,16,0" HorizontalAlignment="Right" />
+                <TextBlock Grid.Column="2" Text="{Binding PrecioUnitarioTexto}" Margin="0,0,16,0" HorizontalAlignment="Right" />
+                <TextBlock Grid.Column="3" Text="{Binding SubtotalTexto}" HorizontalAlignment="Right" />
               </Grid>
             </DataTemplate>
           </ItemsControl.ItemTemplate>
         </ItemsControl>
+        <Border Height="1" Background="{DynamicResource BorderBrush}" Margin="0,4,0,4" />
+        <TextBlock HorizontalAlignment="Right" FontWeight="{StaticResource FwMedium}"
+                   Text="{Binding TotalTexto, StringFormat='Total: {0}'}" />
       </StackPanel>
     </DataTemplate>
   </UserControl.Resources>
@@ -75,6 +86,9 @@
                                      Margin="0,0,12,0" VerticalAlignment="Center"
                                      Command="{Binding CambiarFiltroCommand}">
               <ComboBoxItem Content="Todas" />
+              <ComboBoxItem Content="Compras a proveedor" />
+              <ComboBoxItem Content="Compras externas" />
+              <ComboBoxItem Content="Otro origen" />
               <ComboBoxItem Content="Anuladas" />
             </controls:FiltroDropdown>
           </WrapPanel>
@@ -106,11 +120,21 @@
               </Style>
             </DataGrid.RowStyle>
             <DataGrid.Columns>
-              <controls:ColumnaTexto Header="Nº" Binding="{Binding Numero}" Width="12*" MinWidth="86" />
-              <controls:ColumnaTexto Header="Fecha" Binding="{Binding FechaTexto}" Width="10*" MinWidth="78" />
-              <controls:ColumnaTexto Header="Referencia" Binding="{Binding Referencia}" Width="20*" MinWidth="120" />
-              <controls:ColumnaNumero Header="Líneas" Binding="{Binding CantidadLineas}" Width="9*" MinWidth="60" />
-              <controls:ColumnaNumero Header="Total" Binding="{Binding TotalCantidad, StringFormat=N2}" Width="12*" MinWidth="86" />
+              <controls:ColumnaTexto Header="Nº" Binding="{Binding Numero}" Width="10*" MinWidth="82" />
+              <controls:ColumnaTexto Header="Fecha" Binding="{Binding FechaTexto}" Width="8*" MinWidth="74" />
+              <controls:ColumnaTexto Header="Tipo" Binding="{Binding TipoTexto}" Width="13*" MinWidth="100" />
+              <controls:ColumnaTexto Header="Origen" Binding="{Binding OrigenTexto}" Width="18*" MinWidth="120" />
+              <controls:ColumnaTexto Header="Referencia" Binding="{Binding Referencia}" Width="13*" MinWidth="100" />
+              <controls:ColumnaTexto Header="Documento" Binding="{Binding NumeroDocumento}" Width="10*" MinWidth="80" />
+              <controls:ColumnaNumero Header="Cantidad" Binding="{Binding TotalCantidad, StringFormat=N2}" Width="10*" MinWidth="80" />
+              <controls:ColumnaNumero Header="Total" Binding="{Binding TotalTexto}" Width="9*" MinWidth="80">
+                <controls:ColumnaNumero.ElementStyle>
+                  <Style TargetType="TextBlock">
+                    <Setter Property="FontWeight" Value="{StaticResource FwMedium}" />
+                  </Style>
+                </controls:ColumnaNumero.ElementStyle>
+              </controls:ColumnaNumero>
+              <controls:ColumnaTexto Header="Cuenta por pagar" Binding="{Binding CuentaPorPagarTexto}" Width="11*" MinWidth="100" />
               <DataGridTemplateColumn Header="Estado" Width="96">
                 <DataGridTemplateColumn.CellTemplate>
                   <DataTemplate>
@@ -125,7 +149,7 @@
 
           <controls:EmptyState Icono="{x:Static controls:Iconos.Entradas}"
                                Titulo="No hay recepciones registradas"
-                               Detalle="Registra la primera recepción cuando llegue materia prima nueva."
+                               Detalle="Registra la primera recepción; si es una compra, su cuenta por pagar aparecerá sola en Finanzas."
                                Visibility="{Binding HasItems, ElementName=TablaRecepciones, Converter={StaticResource SinItemsAVis}}" />
         </Grid>
       </Border>

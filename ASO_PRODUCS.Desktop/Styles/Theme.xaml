@@ -394,6 +394,24 @@
     </Style.Triggers>
   </Style>
 
+  <!-- Chip de resultado de una etapa: "Normal" se queda en el neutro de la base (no es un logro,
+       es el camino esperado); "Con incidencia" es una advertencia; "Con merma" es la más seria de
+       las tres, porque implica material descartado. -->
+  <Style x:Key="ChipResultadoEtapaStyle" TargetType="Border" BasedOn="{StaticResource ChipBaseStyle}">
+    <Style.Triggers>
+      <DataTrigger Binding="{Binding Resultado}" Value="{x:Static models:ResultadoEtapa.ConIncidencia}">
+        <Setter Property="Background" Value="{DynamicResource WarningSoftBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource WarningBordeBrush}" />
+        <Setter Property="TextElement.Foreground" Value="{DynamicResource WarningTextBrush}" />
+      </DataTrigger>
+      <DataTrigger Binding="{Binding Resultado}" Value="{x:Static models:ResultadoEtapa.ConMerma}">
+        <Setter Property="Background" Value="{DynamicResource DangerSoftBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource DangerBordeBrush}" />
+        <Setter Property="TextElement.Foreground" Value="{DynamicResource DangerTextBrush}" />
+      </DataTrigger>
+    </Style.Triggers>
+  </Style>
+
   <!-- Chip de estado de un despacho de producto terminado. Mismo diseño que
        ChipEstadoSalidaMateriaPrimaStyle, pero WPF liga el DataTrigger al tipo CLR exacto del
        enum, así que EstadoDespacho necesita su propio chip aunque los ordinales coincidan. -->

@@ -2,9 +2,9 @@ using System.Windows.Controls;
 
 namespace ASO_PRODUCS.Desktop.Views;
 
-public partial class TerminarProcesoEditorView : UserControl
+public partial class ProcesoDetalleView : UserControl
 {
-    public TerminarProcesoEditorView()
+    public ProcesoDetalleView()
     {
         InitializeComponent();
     }

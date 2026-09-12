@@ -14,11 +14,36 @@
 
   <StackPanel>
 
-    <TextBlock Text="El número de la recepción se asigna al registrarla."
-               FontSize="{StaticResource FsCaption}" TextWrapping="Wrap"
+    <!-- Los tres modos. Pestañas y no pastillas: las pastillas son el estilo de los filtros. -->
+    <StackPanel Orientation="Horizontal">
+      <RadioButton Content="Compra a proveedor" GroupName="TipoRecepcionMateriaPrima"
+                   Style="{StaticResource SegmentedTabStyle}"
+                   IsChecked="{Binding EsCompraProveedor, Mode=TwoWay}" />
+      <RadioButton Content="Compra externa" GroupName="TipoRecepcionMateriaPrima"
+                   Style="{StaticResource SegmentedTabStyle}"
+                   IsChecked="{Binding EsCompraExterna, Mode=TwoWay}" />
+      <RadioButton Content="Otro origen" GroupName="TipoRecepcionMateriaPrima"
+                   Style="{StaticResource SegmentedTabStyle}"
+                   IsChecked="{Binding EsOtroOrigen, Mode=TwoWay}" />
+    </StackPanel>
+
+    <Border Style="{StaticResource TabStripStyle}" />
+
+    <TextBlock Text="{Binding NotaModo}" Margin="0,12,0,0" TextWrapping="Wrap"
+               FontSize="{StaticResource FsCaption}"
                Foreground="{DynamicResource TextMutedBrush}" />
 
-    <Grid>
+    <!-- Cabecera: compra a proveedor -->
+    <controls:FormField Etiqueta="Proveedor"
+                        Visibility="{Binding MuestraProveedor, Converter={StaticResource BoolToVis}}">
+      <ComboBox Style="{StaticResource FormComboBoxStyle}"
+                ItemsSource="{Binding Proveedores}"
+                DisplayMemberPath="Etiqueta"
+                SelectedItem="{Binding ProveedorSeleccionado}" />
+    </controls:FormField>
+
+    <!-- Cabecera: compra externa -->
+    <Grid Visibility="{Binding MuestraComercio, Converter={StaticResource BoolToVis}}">
       <Grid.ColumnDefinitions>
         <ColumnDefinition Width="*" />
         <ColumnDefinition Width="12" />
@@ -26,19 +51,66 @@
       </Grid.ColumnDefinitions>
 
       <StackPanel Grid.Column="0">
-        <controls:FormField Etiqueta="Fecha">
+        <controls:FormField Etiqueta="Proveedor"
+                            Ayuda="Si no está en el padrón de proveedores se dará de alta solo.">
+          <TextBox Style="{StaticResource FormTextBoxStyle}"
+                   Text="{Binding Comercio, UpdateSourceTrigger=PropertyChanged}" />
+        </controls:FormField>
+      </StackPanel>
+
+      <StackPanel Grid.Column="2">
+        <controls:FormField Etiqueta="Gestionado por">
+          <TextBox Style="{StaticResource FormTextBoxStyle}"
+                   Text="{Binding RecibidoPor, UpdateSourceTrigger=PropertyChanged}"
+                   ToolTip="Quién de la empresa gestionó la compra" />
+        </controls:FormField>
+      </StackPanel>
+    </Grid>
+
+    <!-- Papel y plazo: solo cuando hay algo que deber -->
+    <Grid Visibility="{Binding MuestraPrecios, Converter={StaticResource BoolToVis}}">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="*" />
+        <ColumnDefinition Width="12" />
+        <ColumnDefinition Width="*" />
+        <ColumnDefinition Width="12" />
+        <ColumnDefinition Width="*" />
+      </Grid.ColumnDefinitions>
+
+      <StackPanel Grid.Column="0">
+        <controls:FormField Etiqueta="Nº de factura o recibo">
+          <TextBox Style="{StaticResource FormTextBoxStyle}"
+                   Text="{Binding NumeroDocumento, UpdateSourceTrigger=PropertyChanged}"
+                   ToolTip="El número que trae el papel del proveedor" />
+        </controls:FormField>
+      </StackPanel>
+
+      <StackPanel Grid.Column="2">
+        <controls:FormField Etiqueta="Fecha de la compra">
           <DatePicker Style="{StaticResource FormDatePickerStyle}"
                       SelectedDate="{Binding Fecha}" />
         </controls:FormField>
       </StackPanel>
 
-      <StackPanel Grid.Column="2">
-        <controls:FormField Etiqueta="Referencia" Ayuda="Guía, remito u orden de quien entrega.">
-          <TextBox Style="{StaticResource FormTextBoxStyle}"
-                   Text="{Binding Referencia, UpdateSourceTrigger=PropertyChanged}" />
+      <StackPanel Grid.Column="4">
+        <controls:FormField Etiqueta="Vencimiento del pago">
+          <DatePicker Style="{StaticResource FormDatePickerStyle}"
+                      SelectedDate="{Binding FechaVencimiento}" />
         </controls:FormField>
       </StackPanel>
     </Grid>
+
+    <!-- Otro origen solo necesita la fecha -->
+    <controls:FormField Etiqueta="Fecha de la recepción"
+                        Visibility="{Binding EsOtroOrigen, Converter={StaticResource BoolToVis}}">
+      <DatePicker Style="{StaticResource FormDatePickerStyle}"
+                  SelectedDate="{Binding Fecha}" />
+    </controls:FormField>
+
+    <controls:FormField Etiqueta="Referencia" Ayuda="Guía, remito u orden de quien entrega.">
+      <TextBox Style="{StaticResource FormTextBoxStyle}"
+               Text="{Binding Referencia, UpdateSourceTrigger=PropertyChanged}" />
+    </controls:FormField>
 
     <!-- Tipos de materia prima que llegan -->
     <TextBlock Text="Materia prima que llega" Style="{StaticResource CardTitleStyle}" Margin="0,20,0,8" />
@@ -51,7 +123,7 @@
                 HeadersVisibility="Column"
                 CanUserSortColumns="False">
         <DataGrid.Columns>
-          <DataGridTemplateColumn Header="Tipo" Width="40*" MinWidth="220">
+          <DataGridTemplateColumn Header="Tipo" Width="30*" MinWidth="180">
             <DataGridTemplateColumn.CellTemplate>
               <DataTemplate>
                 <ComboBox Style="{StaticResource LineaComboBoxStyle}"
@@ -62,7 +134,9 @@
             </DataGridTemplateColumn.CellTemplate>
           </DataGridTemplateColumn>
 
-          <DataGridTemplateColumn Header="Cantidad" Width="20*" MinWidth="110">
+          <controls:ColumnaNumero Header="Existencia" Binding="{Binding ExistenciaTexto}" Width="14*" MinWidth="90" />
+
+          <DataGridTemplateColumn Header="Cantidad" Width="14*" MinWidth="100">
             <DataGridTemplateColumn.CellTemplate>
               <DataTemplate>
                 <TextBox Style="{StaticResource LineaTextBoxStyle}" TextAlignment="Right"
@@ -70,6 +144,21 @@
               </DataTemplate>
             </DataGridTemplateColumn.CellTemplate>
           </DataGridTemplateColumn>
+
+          <DataGridTemplateColumn Header="Precio" Width="14*" MinWidth="90"
+                                  Visibility="{Binding Datos.MuestraPrecios, Source={StaticResource Puente},
+                                                       Converter={StaticResource BoolToVis}}">
+            <DataGridTemplateColumn.CellTemplate>
+              <DataTemplate>
+                <TextBox Style="{StaticResource LineaTextBoxStyle}" TextAlignment="Right"
+                         Text="{Binding PrecioUnitario, UpdateSourceTrigger=PropertyChanged}" />
+              </DataTemplate>
+            </DataGridTemplateColumn.CellTemplate>
+          </DataGridTemplateColumn>
+
+          <controls:ColumnaNumero Header="Subtotal" Binding="{Binding SubtotalTexto}" Width="14*" MinWidth="90"
+                                  Visibility="{Binding Datos.MuestraPrecios, Source={StaticResource Puente},
+                                                       Converter={StaticResource BoolToVis}}" />
 
           <DataGridTemplateColumn Width="56">
             <DataGridTemplateColumn.CellTemplate>
@@ -97,7 +186,15 @@
               Style="{StaticResource SecondaryButtonStyle}"
               Command="{Binding AgregarLineaCommand}" />
 
-      <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+      <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center"
+                  Visibility="{Binding MuestraPrecios, Converter={StaticResource BoolToVis}}">
+        <TextBlock Text="Total" VerticalAlignment="Center" Margin="0,0,12,0"
+                   Foreground="{DynamicResource TextSecondaryBrush}" />
+        <TextBlock Text="{Binding TotalTexto}" Style="{StaticResource FormValorCalculadoStyle}" />
+      </StackPanel>
+
+      <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center"
+                  Visibility="{Binding EsOtroOrigen, Converter={StaticResource BoolToVis}}">
         <TextBlock Text="Total" VerticalAlignment="Center" Margin="0,0,12,0"
                    Foreground="{DynamicResource TextSecondaryBrush}" />
         <TextBlock Text="{Binding TotalCantidad, StringFormat=N2}" Style="{StaticResource FormValorCalculadoStyle}" />

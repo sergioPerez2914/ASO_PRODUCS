@@ -415,18 +415,32 @@ public class AsoProductoresDbContext : DbContext
         {
             entity.HasKey(r => r.Id);
             entity.Property(r => r.Numero).IsRequired().HasMaxLength(20);
+            entity.Property(r => r.ProveedorNombre).HasMaxLength(150);
+            entity.Property(r => r.NumeroDocumento).HasMaxLength(50);
+            entity.Property(r => r.RecibidoPor).HasMaxLength(150);
             entity.Property(r => r.Referencia).HasMaxLength(60);
             entity.Property(r => r.Observaciones).HasMaxLength(500);
+            entity.Property(r => r.FacturaProveedorNumero).HasMaxLength(50);
             entity.Property(r => r.MotivoAnulacion).HasMaxLength(500);
             entity.Property(r => r.CreadoPorNombre).HasMaxLength(150);
+            entity.Property(r => r.Total).HasColumnType("decimal(18,2)").IsRequired();
 
             // El correlativo se calcula como "el último + 1" antes de escribir; este índice es
             // la red que convierte una carrera entre dos puestos en un error, no en un duplicado.
             entity.HasIndex(r => new { r.OrganizacionId, r.Numero }).IsUnique();
 
+            // El camino inverso del enlace a Finanzas: qué recepción originó una cuenta por pagar.
+            entity.HasIndex(r => r.FacturaProveedorId);
+
+            entity.Ignore(r => r.GeneraCuentaPorPagar);
             entity.Ignore(r => r.CuentaEnExistencia);
+            entity.Ignore(r => r.TipoTexto);
             entity.Ignore(r => r.EstadoTexto);
+            entity.Ignore(r => r.OrigenTexto);
+            entity.Ignore(r => r.TotalTexto);
             entity.Ignore(r => r.FechaTexto);
+            entity.Ignore(r => r.VencimientoTexto);
+            entity.Ignore(r => r.CuentaPorPagarTexto);
             entity.Ignore(r => r.CantidadLineas);
             entity.Ignore(r => r.TotalCantidad);
 
@@ -438,8 +452,12 @@ public class AsoProductoresDbContext : DbContext
                 linea.Property(x => x.TipoMateriaPrimaNombre).HasMaxLength(150);
                 linea.Property(x => x.UnidadMedidaSnapshot).HasMaxLength(30);
                 linea.Property(x => x.Cantidad).HasColumnType("decimal(18,2)");
+                linea.Property(x => x.PrecioUnitario).HasColumnType("decimal(18,2)");
+                linea.Property(x => x.Subtotal).HasColumnType("decimal(18,2)");
 
                 linea.Ignore(x => x.CantidadTexto);
+                linea.Ignore(x => x.PrecioUnitarioTexto);
+                linea.Ignore(x => x.SubtotalTexto);
             });
         });
 
@@ -459,6 +477,7 @@ public class AsoProductoresDbContext : DbContext
 
             entity.Ignore(s => s.CuentaEnExistencia);
             entity.Ignore(s => s.EstadoTexto);
+            entity.Ignore(s => s.MotivoTexto);
             entity.Ignore(s => s.FechaTexto);
             entity.Ignore(s => s.CantidadLineas);
             entity.Ignore(s => s.TotalCantidad);
@@ -550,6 +569,7 @@ public class AsoProductoresDbContext : DbContext
                 etapa.Property(x => x.Observaciones).HasMaxLength(500);
 
                 etapa.Ignore(x => x.FechaRegistroTexto);
+                etapa.Ignore(x => x.ResultadoTexto);
                 etapa.Ignore(x => x.CantidadLineas);
 
                 etapa.OwnsMany(x => x.Lineas, linea =>
@@ -563,6 +583,7 @@ public class AsoProductoresDbContext : DbContext
 
                     linea.Ignore(x => x.CantidadTexto);
                     linea.Ignore(x => x.OrigenTexto);
+                    linea.Ignore(x => x.MotivoTexto);
                 });
             });
         });

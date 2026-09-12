@@ -88,8 +88,8 @@
     <views:EtapaProcesoEditorView />
   </DataTemplate>
 
-  <DataTemplate DataType="{x:Type vm:TerminarProcesoEditorViewModel}">
-    <views:TerminarProcesoEditorView />
+  <DataTemplate DataType="{x:Type vm:ProcesoDetalleViewModel}">
+    <views:ProcesoDetalleView />
   </DataTemplate>
 
   <DataTemplate DataType="{x:Type vm:ProductoEditorViewModel}">

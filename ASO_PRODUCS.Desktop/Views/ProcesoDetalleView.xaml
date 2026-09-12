@@ -1,0 +1,245 @@
+<UserControl x:Class="ASO_PRODUCS.Desktop.Views.ProcesoDetalleView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:models="clr-namespace:ASO_PRODUCS.Desktop.Models"
+             mc:Ignorable="d"
+             d:DesignWidth="900">
+
+  <!-- Ficha de solo lectura: sin FormField (no hay nada que capturar), un encabezado con lo
+       esencial y debajo el historial completo de etapas. -->
+  <StackPanel>
+
+    <!-- Encabezado -->
+    <Border Style="{StaticResource SectionCardStyle}">
+      <StackPanel>
+        <Grid>
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="Auto" />
+          </Grid.ColumnDefinitions>
+
+          <StackPanel Grid.Column="0">
+            <TextBlock Text="{Binding Proceso.ProductoNombre}" Style="{StaticResource CardTitleStyle}" />
+            <TextBlock FontSize="{StaticResource FsCaption}" Margin="0,4,0,0"
+                       Foreground="{DynamicResource TextSecondaryBrush}">
+              <Run Text="{Binding Proceso.Numero, Mode=OneWay}" />
+              <Run Text=" · " />
+              <Run Text="{Binding Proceso.FechaTexto, Mode=OneWay}" />
+            </TextBlock>
+          </StackPanel>
+
+          <Border Grid.Column="1" Style="{StaticResource ChipEstadoProcesoProduccionStyle}"
+                  DataContext="{Binding Proceso}" VerticalAlignment="Top">
+            <TextBlock Text="{Binding EstadoTexto}" FontSize="{StaticResource FsCaption}" />
+          </Border>
+        </Grid>
+
+        <Grid Margin="0,16,0,0">
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="*" />
+          </Grid.ColumnDefinitions>
+
+          <StackPanel Grid.Column="0">
+            <TextBlock Text="Planeado" FontSize="{StaticResource FsCaption}"
+                       Foreground="{DynamicResource TextMutedBrush}" />
+            <TextBlock Text="{Binding Proceso.CantidadPlaneadaTexto}" FontSize="{StaticResource FsBody}" />
+          </StackPanel>
+
+          <StackPanel Grid.Column="1">
+            <TextBlock Text="Producido" FontSize="{StaticResource FsCaption}"
+                       Foreground="{DynamicResource TextMutedBrush}" />
+            <TextBlock Text="{Binding Proceso.CantidadProducidaTexto}" FontSize="{StaticResource FsBody}" />
+          </StackPanel>
+
+          <StackPanel Grid.Column="2">
+            <TextBlock Text="Etapa actual" FontSize="{StaticResource FsCaption}"
+                       Foreground="{DynamicResource TextMutedBrush}" />
+            <TextBlock Text="{Binding EtapaActual.EtapaProduccionNombre}" FontSize="{StaticResource FsBody}">
+              <TextBlock.Style>
+                <Style TargetType="TextBlock">
+                  <Setter Property="Visibility" Value="Collapsed" />
+                  <Style.Triggers>
+                    <DataTrigger Binding="{Binding TieneEtapas}" Value="True">
+                      <Setter Property="Visibility" Value="Visible" />
+                    </DataTrigger>
+                  </Style.Triggers>
+                </Style>
+              </TextBlock.Style>
+            </TextBlock>
+            <TextBlock Text="Aún no ha pasado por ninguna etapa" FontSize="{StaticResource FsBody}"
+                       Foreground="{DynamicResource TextMutedBrush}" TextWrapping="Wrap">
+              <TextBlock.Style>
+                <Style TargetType="TextBlock">
+                  <Setter Property="Visibility" Value="Collapsed" />
+                  <Style.Triggers>
+                    <DataTrigger Binding="{Binding TieneEtapas}" Value="False">
+                      <Setter Property="Visibility" Value="Visible" />
+                    </DataTrigger>
+                  </Style.Triggers>
+                </Style>
+              </TextBlock.Style>
+            </TextBlock>
+          </StackPanel>
+        </Grid>
+
+        <TextBlock Text="{Binding Proceso.Observaciones}" TextWrapping="Wrap" Margin="0,12,0,0"
+                   FontSize="{StaticResource FsBody}" Foreground="{DynamicResource TextSecondaryBrush}">
+          <TextBlock.Style>
+            <Style TargetType="TextBlock">
+              <Setter Property="Visibility" Value="Visible" />
+              <Style.Triggers>
+                <DataTrigger Binding="{Binding Proceso.Observaciones}" Value="">
+                  <Setter Property="Visibility" Value="Collapsed" />
+                </DataTrigger>
+              </Style.Triggers>
+            </Style>
+          </TextBlock.Style>
+        </TextBlock>
+      </StackPanel>
+    </Border>
+
+    <!-- Historial de etapas -->
+    <TextBlock Text="Historial de etapas" Style="{StaticResource CardTitleStyle}" Margin="0,20,0,8" />
+
+    <ItemsControl ItemsSource="{Binding Proceso.Etapas}">
+      <ItemsControl.ItemsPanel>
+        <ItemsPanelTemplate>
+          <StackPanel />
+        </ItemsPanelTemplate>
+      </ItemsControl.ItemsPanel>
+      <ItemsControl.ItemTemplate>
+        <DataTemplate>
+          <Border Style="{StaticResource SectionCardStyle}" Margin="0,0,0,8">
+            <StackPanel>
+              <Grid>
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="*" />
+                  <ColumnDefinition Width="Auto" />
+                  <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <TextBlock Grid.Column="0" Text="{Binding EtapaProduccionNombre}"
+                           FontSize="{StaticResource FsBody}" FontWeight="{StaticResource FwMedium}" />
+
+                <Border Grid.Column="1" Style="{StaticResource ChipResultadoEtapaStyle}" Margin="0,0,12,0">
+                  <TextBlock Text="{Binding ResultadoTexto}" FontSize="{StaticResource FsCaption}" />
+                </Border>
+
+                <TextBlock Grid.Column="2" Text="{Binding FechaRegistroTexto}"
+                           FontSize="{StaticResource FsCaption}"
+                           Foreground="{DynamicResource TextMutedBrush}" VerticalAlignment="Center" />
+              </Grid>
+
+              <TextBlock Text="{Binding Observaciones}" TextWrapping="Wrap" Margin="0,8,0,0"
+                         FontSize="{StaticResource FsBody}" Foreground="{DynamicResource TextSecondaryBrush}">
+                <TextBlock.Style>
+                  <Style TargetType="TextBlock">
+                    <Setter Property="Visibility" Value="Visible" />
+                    <Style.Triggers>
+                      <DataTrigger Binding="{Binding Observaciones}" Value="">
+                        <Setter Property="Visibility" Value="Collapsed" />
+                      </DataTrigger>
+                    </Style.Triggers>
+                  </Style>
+                </TextBlock.Style>
+              </TextBlock>
+
+              <ItemsControl ItemsSource="{Binding Lineas}" Margin="0,8,0,0">
+                <ItemsControl.ItemsPanel>
+                  <ItemsPanelTemplate>
+                    <StackPanel />
+                  </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <Grid Margin="0,2,0,2">
+                      <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="18*" />
+                        <ColumnDefinition Width="42*" />
+                        <ColumnDefinition Width="20*" />
+                        <ColumnDefinition Width="20*" />
+                      </Grid.ColumnDefinitions>
+
+                      <TextBlock Grid.Column="0" Text="{Binding OrigenTexto}"
+                                 FontSize="{StaticResource FsCaption}"
+                                 Foreground="{DynamicResource TextMutedBrush}" />
+                      <TextBlock Grid.Column="1" Text="{Binding MaterialNombre}"
+                                 FontSize="{StaticResource FsCaption}" TextWrapping="Wrap" />
+                      <TextBlock Grid.Column="2" Text="{Binding CantidadTexto}"
+                                 FontSize="{StaticResource FsCaption}" HorizontalAlignment="Right" />
+
+                      <TextBlock Grid.Column="3" Text="{Binding MotivoTexto}"
+                                 FontSize="{StaticResource FsCaption}" HorizontalAlignment="Right">
+                        <TextBlock.Style>
+                          <Style TargetType="TextBlock">
+                            <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
+                            <Style.Triggers>
+                              <DataTrigger Binding="{Binding Motivo}" Value="{x:Static models:MotivoConsumoEtapa.Merma}">
+                                <Setter Property="Foreground" Value="{DynamicResource DangerTextBrush}" />
+                              </DataTrigger>
+                            </Style.Triggers>
+                          </Style>
+                        </TextBlock.Style>
+                      </TextBlock>
+                    </Grid>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
+          </Border>
+        </DataTemplate>
+      </ItemsControl.ItemTemplate>
+    </ItemsControl>
+
+    <!-- Auditoría -->
+    <Border Style="{StaticResource SectionCardStyle}" Margin="0,12,0,0">
+      <StackPanel>
+        <TextBlock FontSize="{StaticResource FsCaption}" Foreground="{DynamicResource TextMutedBrush}">
+          <Run Text="Creado por" />
+          <Run Text="{Binding Proceso.CreadoPorNombre, Mode=OneWay}" />
+          <Run Text=" · " />
+          <Run Text="{Binding Proceso.FechaCreacion, Mode=OneWay, StringFormat=dd/MM/yyyy HH:mm}" />
+        </TextBlock>
+
+        <TextBlock FontSize="{StaticResource FsCaption}" Foreground="{DynamicResource TextMutedBrush}" Margin="0,4,0,0">
+          <TextBlock.Style>
+            <Style TargetType="TextBlock">
+              <Setter Property="Visibility" Value="Visible" />
+              <Style.Triggers>
+                <DataTrigger Binding="{Binding Proceso.TerminadoPorNombre}" Value="">
+                  <Setter Property="Visibility" Value="Collapsed" />
+                </DataTrigger>
+              </Style.Triggers>
+            </Style>
+          </TextBlock.Style>
+          <Run Text="Terminado por" />
+          <Run Text="{Binding Proceso.TerminadoPorNombre, Mode=OneWay}" />
+          <Run Text=" · " />
+          <Run Text="{Binding Proceso.FechaTermino, Mode=OneWay, StringFormat=dd/MM/yyyy HH:mm}" />
+        </TextBlock>
+
+        <TextBlock FontSize="{StaticResource FsCaption}" Foreground="{DynamicResource TextMutedBrush}" Margin="0,4,0,0"
+                   TextWrapping="Wrap">
+          <TextBlock.Style>
+            <Style TargetType="TextBlock">
+              <Setter Property="Visibility" Value="Collapsed" />
+              <Style.Triggers>
+                <DataTrigger Binding="{Binding Proceso.Estado}" Value="{x:Static models:EstadoProcesoProduccion.Anulado}">
+                  <Setter Property="Visibility" Value="Visible" />
+                </DataTrigger>
+              </Style.Triggers>
+            </Style>
+          </TextBlock.Style>
+          <Run Text="Anulado:" />
+          <Run Text="{Binding Proceso.MotivoAnulacion, Mode=OneWay}" />
+          <Run Text=" · " />
+          <Run Text="{Binding Proceso.FechaAnulacion, Mode=OneWay, StringFormat=dd/MM/yyyy HH:mm}" />
+        </TextBlock>
+      </StackPanel>
+    </Border>
+  </StackPanel>
+</UserControl>

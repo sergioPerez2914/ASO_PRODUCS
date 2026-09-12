@@ -99,11 +99,14 @@ public sealed class ProcesosProduccionService
             return false;
         }
 
-        var repetida = lista.GroupBy(l => (l.Origen, l.MaterialId)).FirstOrDefault(g => g.Count() > 1);
+        // El motivo entra en la clave: una línea de Consumo y una de Merma del mismo material,
+        // dentro de la misma etapa, son válidas por separado (terminan en documentos distintos),
+        // no un duplicado a fundir.
+        var repetida = lista.GroupBy(l => (l.Origen, l.MaterialId, l.Motivo)).FirstOrDefault(g => g.Count() > 1);
 
         if (repetida is not null)
         {
-            error = $"{repetida.First().MaterialNombre} está en más de una línea; júntelas en una sola.";
+            error = $"{repetida.First().MaterialNombre} está en más de una línea con el mismo motivo; júntelas en una sola.";
             return false;
         }
 
@@ -130,13 +133,23 @@ public sealed class ProcesosProduccionService
         if (!Validar(proceso, out var error))
             throw new InvalidOperationException(error);
 
-        var (materiaPrima, inventario) = ConstruirSalidas(proceso.LineasIniciales.Select(ALinea));
+        var (consumoMateriaPrima, mermaMateriaPrima, consumoInventario, mermaInventario) =
+            ConstruirSalidas(proceso.LineasIniciales.Select(ALinea));
 
-        if (materiaPrima is not null && !_salidasMateriaPrima.Validar(materiaPrima, out var errorMateriaPrima))
-            throw new InvalidOperationException(errorMateriaPrima);
+        // LineasIniciales siempre mapea a Motivo Consumo (ver ALinea), así que en la práctica
+        // mermaMateriaPrima/mermaInventario siempre salen nulos aquí — el consumo inicial nunca
+        // genera merma. Se valida igual por si ese mapeo cambiara.
+        if (consumoMateriaPrima is not null && !_salidasMateriaPrima.Validar(consumoMateriaPrima, out var errorConsumoMateriaPrima))
+            throw new InvalidOperationException(errorConsumoMateriaPrima);
 
-        if (inventario is not null && !_salidasInventario.Validar(inventario, out var errorInventario))
-            throw new InvalidOperationException(errorInventario);
+        if (mermaMateriaPrima is not null && !_salidasMateriaPrima.Validar(mermaMateriaPrima, out var errorMermaMateriaPrima))
+            throw new InvalidOperationException(errorMermaMateriaPrima);
+
+        if (consumoInventario is not null && !_salidasInventario.Validar(consumoInventario, out var errorConsumoInventario))
+            throw new InvalidOperationException(errorConsumoInventario);
+
+        if (mermaInventario is not null && !_salidasInventario.Validar(mermaInventario, out var errorMermaInventario))
+            throw new InvalidOperationException(errorMermaInventario);
 
         proceso.Numero = SiguienteNumero();
         proceso.Estado = EstadoProcesoProduccion.EnProceso;
@@ -148,8 +161,8 @@ public sealed class ProcesosProduccionService
 
         try
         {
-            RegistrarConsumo(guardado, materiaPrima, inventario, usuarioId,
-                $"Consumo inicial del proceso {guardado.Numero}.");
+            RegistrarConsumo(guardado, consumoMateriaPrima, mermaMateriaPrima, consumoInventario, mermaInventario,
+                usuarioId, $"el consumo inicial del proceso {guardado.Numero}");
         }
         catch
         {
@@ -177,10 +190,11 @@ public sealed class ProcesosProduccionService
         if (!ValidarEtapa(etapa, out var error))
             throw new InvalidOperationException(error);
 
-        var (materiaPrima, inventario) = ConstruirSalidas(etapa.Lineas.Select(ALinea));
+        var (consumoMateriaPrima, mermaMateriaPrima, consumoInventario, mermaInventario) =
+            ConstruirSalidas(etapa.Lineas.Select(ALinea));
 
-        RegistrarConsumo(proceso, materiaPrima, inventario, usuarioId,
-            $"Consumo de la etapa {etapa.EtapaProduccionNombre} del proceso {proceso.Numero}.");
+        RegistrarConsumo(proceso, consumoMateriaPrima, mermaMateriaPrima, consumoInventario, mermaInventario,
+            usuarioId, $"la etapa {etapa.EtapaProduccionNombre} del proceso {proceso.Numero}");
 
         var copia = proceso.Clonar();
         etapa.FechaRegistro = DateTime.Now;
@@ -189,10 +203,17 @@ public sealed class ProcesosProduccionService
         return copia;
     }
 
-    /// <summary>Cierra el proceso con lo que de verdad se obtuvo, que puede diferir de
+    /// <summary>
+    /// Cierra el proceso con lo que de verdad se obtuvo, que puede diferir de
     /// <see cref="ProcesoProduccion.CantidadPlaneada"/> por una merma —eso no se valida contra la
-    /// planeada, es exactamente el dato que interesa registrar.</summary>
-    public ProcesoProduccion Terminar(ProcesoProduccion proceso, decimal cantidadProducida, string observaciones, int usuarioId)
+    /// planeada, es exactamente el dato que interesa registrar. El consumo/merma final de
+    /// <paramref name="cierre"/> se descuenta del inventario/materia prima igual que el de
+    /// cualquier etapa, y la entrada queda en <see cref="ProcesoProduccion.Etapas"/> marcada
+    /// <see cref="EtapaProcesoProduccion.EsCierre"/> — no pasa por <see cref="ValidarEtapa"/>
+    /// (que exige una etapa del catálogo) sino directamente por <see cref="ValidarLineas"/>, porque
+    /// <c>EtapaProduccionId == 0</c> es justo el valor válido de un cierre.
+    /// </summary>
+    public ProcesoProduccion Terminar(ProcesoProduccion proceso, decimal cantidadProducida, EtapaProcesoProduccion cierre, int usuarioId)
     {
         if (!PuedeTerminar(proceso))
             throw new InvalidOperationException("Solo se puede terminar un proceso en curso.");
@@ -203,18 +224,30 @@ public sealed class ProcesosProduccionService
         if (cantidadProducida <= 0)
             throw new InvalidOperationException("Indique cuánto se produjo.");
 
+        if (!ValidarLineas(cierre.Lineas.Select(ALinea), out var error))
+            throw new InvalidOperationException(error);
+
+        var (consumoMateriaPrima, mermaMateriaPrima, consumoInventario, mermaInventario) =
+            ConstruirSalidas(cierre.Lineas.Select(ALinea));
+
+        RegistrarConsumo(proceso, consumoMateriaPrima, mermaMateriaPrima, consumoInventario, mermaInventario,
+            usuarioId, $"el cierre del proceso {proceso.Numero}");
+
         var copia = proceso.Clonar();
         copia.CantidadProducida = cantidadProducida;
-
-        if (!string.IsNullOrWhiteSpace(observaciones))
-            copia.Observaciones = string.IsNullOrWhiteSpace(copia.Observaciones)
-                ? observaciones.Trim()
-                : $"{copia.Observaciones} {observaciones.Trim()}";
-
         copia.Estado = EstadoProcesoProduccion.Terminado;
         copia.TerminadoPorId = usuarioId;
         copia.TerminadoPorNombre = _sesion.UsuarioActual?.NombreCompleto ?? string.Empty;
         copia.FechaTermino = DateTime.Now;
+
+        // Marcador atómico: los tres campos van juntos, nunca uno sin los otros — ver el
+        // comentario de EtapaProcesoProduccion.EsCierre.
+        cierre.EtapaProduccionId = 0;
+        cierre.EtapaProduccionNombre = "Cierre del proceso";
+        cierre.EsCierre = true;
+        cierre.FechaRegistro = DateTime.Now;
+        copia.Etapas.Add(cierre);
+
         _procesos.Update(copia);
         return copia;
     }
@@ -263,86 +296,120 @@ public sealed class ProcesosProduccionService
     // --- Piezas internas ---
 
     private readonly record struct LineaConsumo(
-        OrigenMaterial Origen, int MaterialId, string MaterialNombre, string UnidadMedidaSnapshot, decimal Cantidad);
+        OrigenMaterial Origen, int MaterialId, string MaterialNombre, string UnidadMedidaSnapshot,
+        decimal Cantidad, MotivoConsumoEtapa Motivo);
 
+    /// <summary>El consumo inicial (antes de la primera etapa) siempre es Consumo normal, nunca
+    /// merma: el motivo no se lee del modelo —que no lo tiene— sino que se fija aquí a propósito.</summary>
     private static LineaConsumo ALinea(ProcesoProduccionLineaInicial l) =>
-        new(l.Origen, l.MaterialId, l.MaterialNombre, l.UnidadMedidaSnapshot, l.Cantidad);
+        new(l.Origen, l.MaterialId, l.MaterialNombre, l.UnidadMedidaSnapshot, l.Cantidad, MotivoConsumoEtapa.Consumo);
 
     private static LineaConsumo ALinea(EtapaProcesoProduccionLinea l) =>
-        new(l.Origen, l.MaterialId, l.MaterialNombre, l.UnidadMedidaSnapshot, l.Cantidad);
+        new(l.Origen, l.MaterialId, l.MaterialNombre, l.UnidadMedidaSnapshot, l.Cantidad, l.Motivo);
 
     /// <summary>
-    /// Arma, sin escribir nada, la salida de materia prima y/o la salida de inventario que hace
-    /// falta para cubrir un grupo de líneas de consumo, agrupando por <see cref="OrigenMaterial"/>.
-    /// Cualquiera de las dos puede salir nula si no hubo líneas de ese origen.
+    /// Arma, sin escribir nada, hasta cuatro salidas —materia prima y/o inventario, cada una de
+    /// Consumo y/o de Merma— que hacen falta para cubrir un grupo de líneas de consumo, agrupando
+    /// por <see cref="OrigenMaterial"/> y por <see cref="MotivoConsumoEtapa"/> (un documento solo
+    /// puede tener un motivo para todas sus líneas). Cualquiera de las cuatro puede salir nula si
+    /// no hubo líneas de esa combinación.
     /// </summary>
-    private (SalidaMateriaPrima? MateriaPrima, SalidaInventario? Inventario) ConstruirSalidas(IEnumerable<LineaConsumo> lineas)
+    private (SalidaMateriaPrima? ConsumoMateriaPrima, SalidaMateriaPrima? MermaMateriaPrima,
+             SalidaInventario? ConsumoInventario, SalidaInventario? MermaInventario)
+        ConstruirSalidas(IEnumerable<LineaConsumo> lineas)
     {
         var lista = lineas.ToList();
 
-        SalidaMateriaPrima? salidaMateriaPrima = null;
-        var lineasMateriaPrima = lista.Where(l => l.Origen == OrigenMaterial.MateriaPrima).ToList();
+        var consumoMateriaPrima = ConstruirSalidaMateriaPrima(lista, MotivoConsumoEtapa.Consumo, MotivoSalidaMateriaPrima.Consumo);
+        var mermaMateriaPrima = ConstruirSalidaMateriaPrima(lista, MotivoConsumoEtapa.Merma, MotivoSalidaMateriaPrima.Merma);
+        var consumoInventario = ConstruirSalidaInventario(lista, MotivoConsumoEtapa.Consumo, MotivoSalida.Consumo);
+        var mermaInventario = ConstruirSalidaInventario(lista, MotivoConsumoEtapa.Merma, MotivoSalida.Merma);
 
-        if (lineasMateriaPrima.Count > 0)
+        return (consumoMateriaPrima, mermaMateriaPrima, consumoInventario, mermaInventario);
+    }
+
+    private static SalidaMateriaPrima? ConstruirSalidaMateriaPrima(
+        List<LineaConsumo> lineas, MotivoConsumoEtapa motivoLinea, MotivoSalidaMateriaPrima motivoSalida)
+    {
+        var filtradas = lineas.Where(l => l.Origen == OrigenMaterial.MateriaPrima && l.Motivo == motivoLinea).ToList();
+
+        if (filtradas.Count == 0)
+            return null;
+
+        return new SalidaMateriaPrima
         {
-            salidaMateriaPrima = new SalidaMateriaPrima
+            Fecha = DateTime.Today,
+            Motivo = motivoSalida,
+            Lineas = filtradas.Select(l => new SalidaMateriaPrimaLinea
             {
-                Fecha = DateTime.Today,
-                Lineas = lineasMateriaPrima.Select(l => new SalidaMateriaPrimaLinea
-                {
-                    TipoMateriaPrimaId = l.MaterialId,
-                    TipoMateriaPrimaNombre = l.MaterialNombre,
-                    UnidadMedidaSnapshot = l.UnidadMedidaSnapshot,
-                    Cantidad = l.Cantidad
-                }).ToList()
-            };
-        }
+                TipoMateriaPrimaId = l.MaterialId,
+                TipoMateriaPrimaNombre = l.MaterialNombre,
+                UnidadMedidaSnapshot = l.UnidadMedidaSnapshot,
+                Cantidad = l.Cantidad
+            }).ToList()
+        };
+    }
 
-        SalidaInventario? salidaInventario = null;
-        var lineasArticulo = lista.Where(l => l.Origen == OrigenMaterial.Articulo).ToList();
+    private SalidaInventario? ConstruirSalidaInventario(
+        List<LineaConsumo> lineas, MotivoConsumoEtapa motivoLinea, MotivoSalida motivoSalida)
+    {
+        var filtradas = lineas.Where(l => l.Origen == OrigenMaterial.Articulo && l.Motivo == motivoLinea).ToList();
 
-        if (lineasArticulo.Count > 0)
+        if (filtradas.Count == 0)
+            return null;
+
+        return new SalidaInventario
         {
-            salidaInventario = new SalidaInventario
+            Fecha = DateTime.Today,
+            Destino = AreaDestino.Produccion,
+            Motivo = motivoSalida,
+            RetiradoPor = "Producción",
+            Lineas = filtradas.Select(l => new SalidaInventarioLinea
             {
-                Fecha = DateTime.Today,
-                Destino = AreaDestino.Produccion,
-                Motivo = MotivoSalida.Consumo,
-                RetiradoPor = "Producción",
-                Lineas = lineasArticulo.Select(l => new SalidaInventarioLinea
-                {
-                    ArticuloId = l.MaterialId,
-                    ArticuloCodigo = _articulos.GetById(l.MaterialId)?.Codigo ?? string.Empty,
-                    ArticuloNombre = l.MaterialNombre,
-                    UnidadTexto = l.UnidadMedidaSnapshot,
-                    Cantidad = l.Cantidad
-                }).ToList()
-            };
-        }
-
-        return (salidaMateriaPrima, salidaInventario);
+                ArticuloId = l.MaterialId,
+                ArticuloCodigo = _articulos.GetById(l.MaterialId)?.Codigo ?? string.Empty,
+                ArticuloNombre = l.MaterialNombre,
+                UnidadTexto = l.UnidadMedidaSnapshot,
+                Cantidad = l.Cantidad
+            }).ToList()
+        };
     }
 
     /// <summary>Enlaza las salidas ya armadas al proceso y las emite, sin repetir el permiso de
-    /// Materia Prima/Inventario —ver <c>SalidasMateriaPrimaService.RegistrarSinPermiso</c>.</summary>
-    private void RegistrarConsumo(ProcesoProduccion proceso, SalidaMateriaPrima? materiaPrima,
-        SalidaInventario? inventario, int usuarioId, string observaciones)
+    /// Materia Prima/Inventario —ver <c>SalidasMateriaPrimaService.RegistrarSinPermiso</c>. Las de
+    /// Merma llevan una observación distinta de las de Consumo, para que el documento diga por qué
+    /// salió sin tener que abrir el proceso que lo originó.</summary>
+    private void RegistrarConsumo(ProcesoProduccion proceso,
+        SalidaMateriaPrima? consumoMateriaPrima, SalidaMateriaPrima? mermaMateriaPrima,
+        SalidaInventario? consumoInventario, SalidaInventario? mermaInventario,
+        int usuarioId, string contexto)
     {
-        if (materiaPrima is not null)
-        {
-            materiaPrima.Observaciones = observaciones;
-            materiaPrima.ProcesoProduccionId = proceso.Id;
-            materiaPrima.ProcesoProduccionNumero = proceso.Numero;
-            _salidasMateriaPrima.RegistrarSinPermiso(materiaPrima, usuarioId);
-        }
+        RegistrarSalidaMateriaPrima(proceso, consumoMateriaPrima, usuarioId, $"Consumo de {contexto}.");
+        RegistrarSalidaMateriaPrima(proceso, mermaMateriaPrima, usuarioId, $"Merma/exceso registrado en {contexto}.");
+        RegistrarSalidaInventario(proceso, consumoInventario, usuarioId, $"Consumo de {contexto}.");
+        RegistrarSalidaInventario(proceso, mermaInventario, usuarioId, $"Merma/exceso registrado en {contexto}.");
+    }
 
-        if (inventario is not null)
-        {
-            inventario.Observaciones = observaciones;
-            inventario.ProcesoProduccionId = proceso.Id;
-            inventario.ProcesoProduccionNumero = proceso.Numero;
-            _salidasInventario.RegistrarSinPermiso(inventario, usuarioId);
-        }
+    private void RegistrarSalidaMateriaPrima(ProcesoProduccion proceso, SalidaMateriaPrima? salida, int usuarioId, string observaciones)
+    {
+        if (salida is null)
+            return;
+
+        salida.Observaciones = observaciones;
+        salida.ProcesoProduccionId = proceso.Id;
+        salida.ProcesoProduccionNumero = proceso.Numero;
+        _salidasMateriaPrima.RegistrarSinPermiso(salida, usuarioId);
+    }
+
+    private void RegistrarSalidaInventario(ProcesoProduccion proceso, SalidaInventario? salida, int usuarioId, string observaciones)
+    {
+        if (salida is null)
+            return;
+
+        salida.Observaciones = observaciones;
+        salida.ProcesoProduccionId = proceso.Id;
+        salida.ProcesoProduccionNumero = proceso.Numero;
+        _salidasInventario.RegistrarSinPermiso(salida, usuarioId);
     }
 
     /// <summary>

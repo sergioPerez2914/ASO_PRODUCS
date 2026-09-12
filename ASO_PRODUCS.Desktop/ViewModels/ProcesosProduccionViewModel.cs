@@ -180,12 +180,20 @@ public sealed class ProcesosProduccionCrudViewModel : CrudViewModelBase<ProcesoP
         AnularCommand = new RelayCommand(Anular,
             () => SelectedItem is { } p && _servicio.PuedeAnular(p)
                   && _sesionActual.Puede(Permisos.ProcesosProduccion.Anular));
+
+        VerDetalleCommand = new RelayCommand(VerDetalle);
     }
 
     public ICommand CambiarFiltroCommand { get; }
     public ICommand AgregarEtapaCommand { get; }
     public ICommand TerminarCommand { get; }
     public ICommand AnularCommand { get; }
+
+    /// <summary>Solo la invoca el doble clic de la grilla (ver <c>ProcesosProduccionView.xaml.cs</c>),
+    /// nunca un botón — por eso no lleva <c>CanExecute</c>: la guarda de "hay algo seleccionado"
+    /// vive dentro de <see cref="VerDetalle"/>. Es una consulta de solo lectura, así que funciona
+    /// igual sin importar el <see cref="EstadoProcesoProduccion"/> del proceso.</summary>
+    public ICommand VerDetalleCommand { get; }
 
     public string Resumen =>
         $"{_servicio.EnProcesoCount()} en proceso · {_servicio.DelMes().Count} este mes";
@@ -247,7 +255,8 @@ public sealed class ProcesosProduccionCrudViewModel : CrudViewModelBase<ProcesoP
         if (SelectedItem is not { } proceso)
             return;
 
-        var editor = new EtapaProcesoEditorViewModel(proceso, ListaEtapasActivas(), ListaTipos(), ListaArticulos());
+        var editor = new EtapaProcesoEditorViewModel(proceso, esCierre: false,
+            ListaEtapasActivas(), ListaTipos(), ListaArticulos());
 
         if (!_dialogos.MostrarEditor(editor))
             return;
@@ -255,17 +264,23 @@ public sealed class ProcesosProduccionCrudViewModel : CrudViewModelBase<ProcesoP
         Aplicar(() => _servicio.AgregarEtapa(proceso, editor.ObtenerResultado(), _sesionActual.UsuarioActual?.Id ?? 0));
     }
 
+    /// <summary>
+    /// "Terminar" abre el mismo formulario que "Agregar etapa" —resultado, consumo/merma y
+    /// observaciones—, solo que en vez del selector de etapa pide la cantidad producida; ver
+    /// <see cref="EtapaProcesoEditorViewModel"/>.
+    /// </summary>
     private void Terminar()
     {
         if (SelectedItem is not { } proceso)
             return;
 
-        var editor = new TerminarProcesoEditorViewModel(proceso);
+        var editor = new EtapaProcesoEditorViewModel(proceso, esCierre: true,
+            [], ListaTipos(), ListaArticulos());
 
         if (!_dialogos.MostrarEditor(editor))
             return;
 
-        Aplicar(() => _servicio.Terminar(proceso, editor.CantidadProducidaValor, editor.Observaciones,
+        Aplicar(() => _servicio.Terminar(proceso, editor.CantidadProducidaValor, editor.ObtenerResultado(),
                                          _sesionActual.UsuarioActual?.Id ?? 0));
     }
 
@@ -288,6 +303,14 @@ public sealed class ProcesosProduccionCrudViewModel : CrudViewModelBase<ProcesoP
             return;
 
         Aplicar(() => _servicio.Anular(proceso, editor.Motivo));
+    }
+
+    private void VerDetalle()
+    {
+        if (SelectedItem is not { } proceso)
+            return;
+
+        _dialogos.MostrarEditor(new ProcesoDetalleViewModel(proceso));
     }
 
     /// <summary>
@@ -438,21 +461,37 @@ public sealed class IniciarProcesoEditorViewModel : CrudEditorViewModelBase<Proc
     private LineaConsumoEditorViewModel NuevaLinea() => new(TiposMateriaPrima, Articulos);
 }
 
-/// <summary>El modal de "Agregar etapa": qué etapa del catálogo y el consumo opcional que hizo falta.</summary>
+/// <summary>
+/// El modal compartido de "Agregar etapa"/"Terminar proceso". No es una jerarquía de clases: es UN
+/// solo formulario con una bandera de modo (<c>esCierre</c>) + propiedades "Muestra…" calculadas,
+/// mismo idioma que ya usa <see cref="EntradaEditorViewModel"/>/<see cref="RecepcionMateriaPrimaEditorViewModel"/>
+/// para "un formulario, varios modos". En modo etapa: elige la etapa del catálogo y el consumo
+/// opcional. En modo cierre (Terminar): pide la cantidad producida en vez de la etapa; comparte
+/// con el modo etapa el resultado, la grilla de consumo/merma y las observaciones, así que el
+/// cierre descuenta inventario/materia prima exactamente igual que una etapa —ver
+/// <c>ProcesosProduccionService.Terminar</c>.
+/// </summary>
 public sealed class EtapaProcesoEditorViewModel : CrudEditorViewModelBase<EtapaProcesoProduccion>
 {
+    private readonly bool _esCierre;
     private readonly string _titulo;
+    private readonly string _productoTexto;
 
     public EtapaProcesoEditorViewModel(ProcesoProduccion proceso,
+                                       bool esCierre,
                                        IReadOnlyList<EtapaProduccion> etapas,
                                        IReadOnlyList<TipoMateriaPrima> tiposMateriaPrima,
                                        IReadOnlyList<Articulo> articulos)
     {
-        _titulo = $"Agregar etapa al proceso {proceso.Numero}";
+        _esCierre = esCierre;
+        _titulo = esCierre ? $"Terminar proceso {proceso.Numero}" : $"Agregar etapa al proceso {proceso.Numero}";
+        _productoTexto = $"{proceso.ProductoNombre} — planeado {proceso.CantidadPlaneadaTexto}";
 
         Etapas = etapas;
         TiposMateriaPrima = tiposMateriaPrima;
         Articulos = articulos;
+
+        CantidadProducida = proceso.CantidadPlaneada > 0 ? proceso.CantidadPlaneada.ToString("0.####") : string.Empty;
 
         AgregarLineaCommand = new RelayCommand(() => Lineas.Add(NuevaLinea()));
 
@@ -467,10 +506,16 @@ public sealed class EtapaProcesoEditorViewModel : CrudEditorViewModelBase<EtapaP
 
     public override string Titulo => _titulo;
 
-    /// <summary>Amplio: lleva una grilla de líneas dentro.</summary>
+    /// <summary>Amplio: lleva una grilla de líneas dentro, en los dos modos.</summary>
     public override double AnchoEditor => Ancho.Amplio;
 
-    public override string TextoAccion => "Agregar etapa";
+    public override string TextoAccion => _esCierre ? "Terminar proceso" : "Agregar etapa";
+
+    /// <summary>Solo se usa en modo cierre; se muestra en vez del selector de etapa.</summary>
+    public string ProductoTexto => _productoTexto;
+
+    public bool MuestraSelectorEtapa => !_esCierre;
+    public bool MuestraCantidadProducida => _esCierre;
 
     public IReadOnlyList<EtapaProduccion> Etapas { get; }
     public IReadOnlyList<TipoMateriaPrima> TiposMateriaPrima { get; }
@@ -488,6 +533,28 @@ public sealed class EtapaProcesoEditorViewModel : CrudEditorViewModelBase<EtapaP
         set => SetProperty(ref _etapaSeleccionada, value);
     }
 
+    /// <summary>Cómo confirma el usuario que salió esta etapa (o el cierre). No obliga a tener una
+    /// línea de Merma —ver el comentario de <see cref="Models.ResultadoEtapa"/>—, así que no hay
+    /// regla en <see cref="Validar"/> que los relacione.</summary>
+    private ResultadoEtapa _resultadoSeleccionado = ResultadoEtapa.Normal;
+    public ResultadoEtapa ResultadoSeleccionado
+    {
+        get => _resultadoSeleccionado;
+        set => SetProperty(ref _resultadoSeleccionado, value);
+    }
+
+    private string _cantidadProducida = string.Empty;
+    public string CantidadProducida
+    {
+        get => _cantidadProducida;
+        set => SetProperty(ref _cantidadProducida, value);
+    }
+
+    public bool CantidadProducidaEsValida =>
+        !string.IsNullOrWhiteSpace(CantidadProducida) && decimal.TryParse(CantidadProducida, out var v) && v > 0;
+
+    public decimal CantidadProducidaValor => decimal.TryParse(CantidadProducida, out var valor) ? valor : 0m;
+
     private string _observaciones = string.Empty;
     public string Observaciones
     {
@@ -497,7 +564,16 @@ public sealed class EtapaProcesoEditorViewModel : CrudEditorViewModelBase<EtapaP
 
     protected override bool Validar(out string? error)
     {
-        if (EtapaSeleccionada is null)
+        if (_esCierre)
+        {
+            if (!CantidadProducidaEsValida)
+            {
+                error = "Indique cuánto se produjo, con un número mayor que cero. Puede diferir de lo " +
+                        "planeado: una merma es justo el dato que interesa registrar.";
+                return false;
+            }
+        }
+        else if (EtapaSeleccionada is null)
         {
             error = "Seleccione la etapa.";
             return false;
@@ -513,11 +589,19 @@ public sealed class EtapaProcesoEditorViewModel : CrudEditorViewModelBase<EtapaP
         return true;
     }
 
+    /// <summary>
+    /// Igual en los dos modos: no bifurca por <c>_esCierre</c>. En modo cierre,
+    /// <see cref="EtapaSeleccionada"/> nunca se toca (esa sección está oculta), así que sale con
+    /// <c>EtapaProduccionId = 0</c>/<c>EtapaProduccionNombre = ""</c> a propósito — el servicio es
+    /// quien pisa esos campos con el marcador real de cierre, igual que ya es el único que asigna
+    /// <c>Numero</c> o <c>AutorizadoPorNombre</c> en otros documentos.
+    /// </summary>
     public override EtapaProcesoProduccion ObtenerResultado() => new()
     {
         EtapaProduccionId = EtapaSeleccionada?.Id ?? 0,
         EtapaProduccionNombre = EtapaSeleccionada?.Nombre ?? string.Empty,
         Observaciones = Observaciones.Trim(),
+        Resultado = ResultadoSeleccionado,
 
         // El consumo de una etapa es opcional: las líneas en blanco no se mandan, y quedarse sin
         // ninguna es válido (etapas como "Reposo" o "Etiquetado" no siempre consumen nada nuevo).
@@ -528,57 +612,44 @@ public sealed class EtapaProcesoEditorViewModel : CrudEditorViewModelBase<EtapaP
 }
 
 /// <summary>
-/// El modal de "Terminar proceso": no edita una entidad con <c>Id</c> propio, así que hereda de
-/// la base no genérica —mismo criterio que <see cref="MotivoEditorViewModel"/>—, y el ViewModel
-/// padre lee <see cref="CantidadProducidaValor"/>/<see cref="Observaciones"/> para llamar al
-/// servicio.
+/// La ficha de "ver detalle" de un proceso: solo lectura, se abre con doble clic sobre la fila
+/// (ver <c>ProcesosProduccionView.xaml.cs</c>). Expone el <see cref="ProcesoProduccion"/> completo
+/// en vez de repetir cada propiedad como envoltorio —no hay nada editable aquí, y el modelo ya
+/// trae todos los "…Texto" que hace falta pintar—, mismo criterio no genérico que
+/// <see cref="MotivoEditorViewModel"/>.
 /// </summary>
-public sealed class TerminarProcesoEditorViewModel : CrudEditorViewModelBase
+public sealed class ProcesoDetalleViewModel : CrudEditorViewModelBase
 {
-    private readonly ProcesoProduccion _proceso;
-
-    public TerminarProcesoEditorViewModel(ProcesoProduccion proceso)
+    public ProcesoDetalleViewModel(ProcesoProduccion proceso)
     {
-        _proceso = proceso;
-        CantidadProducida = proceso.CantidadPlaneada > 0 ? proceso.CantidadPlaneada.ToString("0.####") : string.Empty;
+        Proceso = proceso;
     }
 
-    public override string Titulo => $"Terminar proceso {_proceso.Numero}";
+    public ProcesoProduccion Proceso { get; }
 
-    public override double AnchoEditor => Ancho.Compacto;
+    public override string Titulo => $"Proceso {Proceso.Numero}";
 
-    public override string TextoAccion => "Terminar proceso";
+    /// <summary>Amplio: el historial de etapas necesita espacio.</summary>
+    public override double AnchoEditor => Ancho.Amplio;
 
-    public string ProductoTexto => $"{_proceso.ProductoNombre} — planeado {_proceso.CantidadPlaneadaTexto}";
+    public override string TextoAccion => "Cerrar";
 
-    private string _cantidadProducida = string.Empty;
-    public string CantidadProducida
-    {
-        get => _cantidadProducida;
-        set => SetProperty(ref _cantidadProducida, value);
-    }
+    /// <summary>Ficha de solo lectura: no hay nada que cancelar, así que un botón "Cancelar" junto
+    /// a "Cerrar" sobraría —ver el comentario de <see cref="CrudEditorViewModelBase.MuestraCancelar"/>.</summary>
+    public override bool MuestraCancelar => false;
 
-    private string _observaciones = string.Empty;
-    public string Observaciones
-    {
-        get => _observaciones;
-        set => SetProperty(ref _observaciones, value);
-    }
+    /// <summary>La última etapa registrada, o nula si el proceso todavía no pasó por ninguna.
+    /// "Dónde está" el proceso se lee como "en qué etapa va", porque el modelo no tiene un campo
+    /// de ubicación física.</summary>
+    /// <summary>Excluye el cierre: la "etapa actual" es la última etapa real, incluso ya
+    /// terminado el proceso (el cierre igual aparece como última tarjeta del historial completo,
+    /// más abajo en la ficha).</summary>
+    public EtapaProcesoProduccion? EtapaActual => Proceso.Etapas.LastOrDefault(e => !e.EsCierre);
 
-    public bool CantidadProducidaEsValida =>
-        !string.IsNullOrWhiteSpace(CantidadProducida) && decimal.TryParse(CantidadProducida, out var v) && v > 0;
-
-    public decimal CantidadProducidaValor => decimal.TryParse(CantidadProducida, out var valor) ? valor : 0m;
+    public bool TieneEtapas => Proceso.Etapas.Any(e => !e.EsCierre);
 
     protected override bool Validar(out string? error)
     {
-        if (!CantidadProducidaEsValida)
-        {
-            error = "Indique cuánto se produjo, con un número mayor que cero. Puede diferir de lo " +
-                    "planeado: una merma es justo el dato que interesa registrar.";
-            return false;
-        }
-
         error = null;
         return true;
     }
@@ -657,6 +728,15 @@ public sealed class LineaConsumoEditorViewModel : ViewModelBase
         set { if (SetProperty(ref _cantidad, value)) Recalcular(); }
     }
 
+    /// <summary>Solo lo usa <see cref="ConstruirLineaDeEtapa"/>: el consumo inicial (<see cref="ConstruirLineaInicial"/>)
+    /// nunca es merma, así que esta propiedad no cambia nada ahí.</summary>
+    private MotivoConsumoEtapa _motivoSeleccionado = MotivoConsumoEtapa.Consumo;
+    public MotivoConsumoEtapa MotivoSeleccionado
+    {
+        get => _motivoSeleccionado;
+        set => SetProperty(ref _motivoSeleccionado, value);
+    }
+
     /// <summary>Una línea está en blanco si no se eligió ni tipo ni artículo; la usa el editor
     /// padre para filtrarla al construir el resultado.</summary>
     public bool TieneMaterialSeleccionado => EsMateriaPrima ? TipoSeleccionado is not null : ArticuloSeleccionado is not null;
@@ -704,7 +784,8 @@ public sealed class LineaConsumoEditorViewModel : ViewModelBase
             MaterialId = MaterialId,
             MaterialNombre = MaterialNombre,
             UnidadMedidaSnapshot = UnidadTexto,
-            Cantidad = CantidadValor
+            Cantidad = CantidadValor,
+            Motivo = MotivoSeleccionado
         };
     }
 
