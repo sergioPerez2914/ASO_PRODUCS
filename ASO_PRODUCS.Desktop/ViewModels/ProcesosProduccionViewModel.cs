@@ -261,13 +261,14 @@ public sealed class ProcesosProduccionCrudViewModel : CrudViewModelBase<ProcesoP
         if (!_dialogos.MostrarEditor(editor))
             return;
 
-        Aplicar(() => _servicio.AgregarEtapa(proceso, editor.ObtenerResultado(), _sesionActual.UsuarioActual?.Id ?? 0));
+        Aplicar(() => _servicio.AgregarEtapa(proceso, editor.ObtenerResultado(), editor.EtapaSeleccionada!,
+                                            _sesionActual.UsuarioActual?.Id ?? 0));
     }
 
     /// <summary>
-    /// "Terminar" abre el mismo formulario que "Agregar etapa" —resultado, consumo/merma y
-    /// observaciones—, solo que en vez del selector de etapa pide la cantidad producida; ver
-    /// <see cref="EtapaProcesoEditorViewModel"/>.
+    /// "Terminar" abre el mismo formulario que "Agregar etapa" —confirmación de la etapa en curso,
+    /// si la hay, con su consumo/merma— solo que en vez de pedir la siguiente etapa pide la
+    /// cantidad producida; ver <see cref="EtapaProcesoEditorViewModel"/>.
     /// </summary>
     private void Terminar()
     {
@@ -465,17 +466,22 @@ public sealed class IniciarProcesoEditorViewModel : CrudEditorViewModelBase<Proc
 /// El modal compartido de "Agregar etapa"/"Terminar proceso". No es una jerarquía de clases: es UN
 /// solo formulario con una bandera de modo (<c>esCierre</c>) + propiedades "Muestra…" calculadas,
 /// mismo idioma que ya usa <see cref="EntradaEditorViewModel"/>/<see cref="RecepcionMateriaPrimaEditorViewModel"/>
-/// para "un formulario, varios modos". En modo etapa: elige la etapa del catálogo y el consumo
-/// opcional. En modo cierre (Terminar): pide la cantidad producida en vez de la etapa; comparte
-/// con el modo etapa el resultado, la grilla de consumo/merma y las observaciones, así que el
-/// cierre descuenta inventario/materia prima exactamente igual que una etapa —ver
-/// <c>ProcesosProduccionService.Terminar</c>.
+/// para "un formulario, varios modos".
+///
+/// Tiene DOS secciones independientes, no una por modo:
+/// 1. "Cómo salió la etapa en curso" (resultado, consumo/merma, observaciones) — solo aparece si
+///    <see cref="ProcesoProduccion.EtapaActualId"/> no es nulo, es decir, si de verdad hay algo que
+///    cerrar. Nunca pregunta por una etapa que recién va a empezar.
+/// 2. Lo propio de cada modo: en "Agregar etapa", a qué etapa nueva pasa el proceso; en
+///    "Terminar", la cantidad producida.
 /// </summary>
 public sealed class EtapaProcesoEditorViewModel : CrudEditorViewModelBase<EtapaProcesoProduccion>
 {
     private readonly bool _esCierre;
     private readonly string _titulo;
     private readonly string _productoTexto;
+    private readonly bool _muestraCierreEtapaActual;
+    private readonly string _etapaActualNombre;
 
     public EtapaProcesoEditorViewModel(ProcesoProduccion proceso,
                                        bool esCierre,
@@ -486,6 +492,8 @@ public sealed class EtapaProcesoEditorViewModel : CrudEditorViewModelBase<EtapaP
         _esCierre = esCierre;
         _titulo = esCierre ? $"Terminar proceso {proceso.Numero}" : $"Agregar etapa al proceso {proceso.Numero}";
         _productoTexto = $"{proceso.ProductoNombre} — planeado {proceso.CantidadPlaneadaTexto}";
+        _muestraCierreEtapaActual = proceso.EtapaActualId is not null;
+        _etapaActualNombre = proceso.EtapaActualNombre;
 
         Etapas = etapas;
         TiposMateriaPrima = tiposMateriaPrima;
@@ -516,6 +524,14 @@ public sealed class EtapaProcesoEditorViewModel : CrudEditorViewModelBase<EtapaP
 
     public bool MuestraSelectorEtapa => !_esCierre;
     public bool MuestraCantidadProducida => _esCierre;
+
+    /// <summary>Si hay que preguntar "cómo salió" antes de continuar: solo cuando el proceso de
+    /// verdad está atravesando una etapa sin confirmar todavía. Si es la primera etapa del
+    /// proceso (o ya se cerró la última pendiente), no hay nada que cerrar y esta sección no se
+    /// muestra en ninguno de los dos modos.</summary>
+    public bool MuestraCierreEtapaActual => _muestraCierreEtapaActual;
+
+    public string EtapaActualNombre => _etapaActualNombre;
 
     public IReadOnlyList<EtapaProduccion> Etapas { get; }
     public IReadOnlyList<TipoMateriaPrima> TiposMateriaPrima { get; }
@@ -590,16 +606,14 @@ public sealed class EtapaProcesoEditorViewModel : CrudEditorViewModelBase<EtapaP
     }
 
     /// <summary>
-    /// Igual en los dos modos: no bifurca por <c>_esCierre</c>. En modo cierre,
-    /// <see cref="EtapaSeleccionada"/> nunca se toca (esa sección está oculta), así que sale con
-    /// <c>EtapaProduccionId = 0</c>/<c>EtapaProduccionNombre = ""</c> a propósito — el servicio es
-    /// quien pisa esos campos con el marcador real de cierre, igual que ya es el único que asigna
-    /// <c>Numero</c> o <c>AutorizadoPorNombre</c> en otros documentos.
+    /// Esto es la CONFIRMACIÓN de cómo salió la etapa en curso (si la había) — nunca la etapa
+    /// nueva a la que se pasa. Por eso no lleva <c>EtapaProduccionId</c>/<c>Nombre</c>: el servicio
+    /// los estampa a partir de <see cref="ProcesoProduccion.EtapaActualId"/>/<c>EtapaActualNombre</c>
+    /// al cerrar (ver <c>ProcesosProduccionService.CerrarEtapaEnCurso</c>); la etapa nueva viaja
+    /// aparte, en <see cref="EtapaSeleccionada"/>, que el llamador lee directamente.
     /// </summary>
     public override EtapaProcesoProduccion ObtenerResultado() => new()
     {
-        EtapaProduccionId = EtapaSeleccionada?.Id ?? 0,
-        EtapaProduccionNombre = EtapaSeleccionada?.Nombre ?? string.Empty,
         Observaciones = Observaciones.Trim(),
         Resultado = ResultadoSeleccionado,
 
@@ -638,15 +652,12 @@ public sealed class ProcesoDetalleViewModel : CrudEditorViewModelBase
     /// a "Cerrar" sobraría —ver el comentario de <see cref="CrudEditorViewModelBase.MuestraCancelar"/>.</summary>
     public override bool MuestraCancelar => false;
 
-    /// <summary>La última etapa registrada, o nula si el proceso todavía no pasó por ninguna.
-    /// "Dónde está" el proceso se lee como "en qué etapa va", porque el modelo no tiene un campo
-    /// de ubicación física.</summary>
-    /// <summary>Excluye el cierre: la "etapa actual" es la última etapa real, incluso ya
-    /// terminado el proceso (el cierre igual aparece como última tarjeta del historial completo,
-    /// más abajo en la ficha).</summary>
-    public EtapaProcesoProduccion? EtapaActual => Proceso.Etapas.LastOrDefault(e => !e.EsCierre);
+    /// <summary>Si el proceso está atravesando una etapa ahora mismo, todavía sin confirmar cómo
+    /// salió. "Dónde está" el proceso se lee como "en qué etapa va", porque el modelo no tiene un
+    /// campo de ubicación física.</summary>
+    public bool TieneEtapaActual => Proceso.EtapaActualId is not null;
 
-    public bool TieneEtapas => Proceso.Etapas.Any(e => !e.EsCierre);
+    public bool TieneEtapas => Proceso.Etapas.Count > 0;
 
     protected override bool Validar(out string? error)
     {

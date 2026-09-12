@@ -71,18 +71,6 @@ public sealed class ProcesosProduccionService
         return ValidarLineas(proceso.LineasIniciales.Select(ALinea), out error);
     }
 
-    public bool ValidarEtapa(EtapaProcesoProduccion etapa, out string? error)
-    {
-        if (etapa.EtapaProduccionId == 0)
-        {
-            error = "Seleccione la etapa.";
-            return false;
-        }
-
-        // Lineas también puede estar vacía: el consumo de una etapa es opcional.
-        return ValidarLineas(etapa.Lineas.Select(ALinea), out error);
-    }
-
     private static bool ValidarLineas(IEnumerable<LineaConsumo> lineas, out string? error)
     {
         var lista = lineas.ToList();
@@ -174,12 +162,14 @@ public sealed class ProcesosProduccionService
     }
 
     /// <summary>
-    /// Agrega una etapa al proceso, una a la vez —no se editan ni se quitan después—. El consumo
-    /// de la etapa se registra PRIMERO: es la operación que puede rechazar, y el proceso ya tiene
-    /// <c>Id</c>/<c>Numero</c>, así que no hace falta el rollback manual que sí necesita
-    /// <see cref="Iniciar"/>.
+    /// Pasa el proceso a la etapa <paramref name="nuevaEtapa"/>. Si ya había una etapa en curso
+    /// (<see cref="ProcesoProduccion.EtapaActualId"/> no nulo), primero la cierra con
+    /// <paramref name="cierre"/> —confirma cómo salió, descuenta su consumo/merma— y recién
+    /// entonces el proceso pasa a la nueva; si no había ninguna en curso todavía (la primera
+    /// etapa del proceso), <paramref name="cierre"/> se ignora por completo, porque no hay nada
+    /// que cerrar. Nunca se pregunta "cómo salió" la etapa nueva: recién empieza.
     /// </summary>
-    public ProcesoProduccion AgregarEtapa(ProcesoProduccion proceso, EtapaProcesoProduccion etapa, int usuarioId)
+    public ProcesoProduccion AgregarEtapa(ProcesoProduccion proceso, EtapaProcesoProduccion cierre, EtapaProduccion nuevaEtapa, int usuarioId)
     {
         if (!PuedeAgregarEtapa(proceso))
             throw new InvalidOperationException("Solo se pueden agregar etapas a un proceso en curso.");
@@ -187,18 +177,15 @@ public sealed class ProcesosProduccionService
         if (!_sesion.Puede(Permisos.ProcesosProduccion.AgregarEtapa))
             throw new InvalidOperationException("No tienes permiso para agregar etapas a un proceso de producción.");
 
-        if (!ValidarEtapa(etapa, out var error))
-            throw new InvalidOperationException(error);
-
-        var (consumoMateriaPrima, mermaMateriaPrima, consumoInventario, mermaInventario) =
-            ConstruirSalidas(etapa.Lineas.Select(ALinea));
-
-        RegistrarConsumo(proceso, consumoMateriaPrima, mermaMateriaPrima, consumoInventario, mermaInventario,
-            usuarioId, $"la etapa {etapa.EtapaProduccionNombre} del proceso {proceso.Numero}");
+        if (nuevaEtapa.Id == 0)
+            throw new InvalidOperationException("Seleccione la etapa a la que pasa el proceso.");
 
         var copia = proceso.Clonar();
-        etapa.FechaRegistro = DateTime.Now;
-        copia.Etapas.Add(etapa);
+        CerrarEtapaEnCurso(proceso, copia, cierre, usuarioId);
+
+        copia.EtapaActualId = nuevaEtapa.Id;
+        copia.EtapaActualNombre = nuevaEtapa.Nombre;
+
         _procesos.Update(copia);
         return copia;
     }
@@ -206,12 +193,10 @@ public sealed class ProcesosProduccionService
     /// <summary>
     /// Cierra el proceso con lo que de verdad se obtuvo, que puede diferir de
     /// <see cref="ProcesoProduccion.CantidadPlaneada"/> por una merma —eso no se valida contra la
-    /// planeada, es exactamente el dato que interesa registrar. El consumo/merma final de
-    /// <paramref name="cierre"/> se descuenta del inventario/materia prima igual que el de
-    /// cualquier etapa, y la entrada queda en <see cref="ProcesoProduccion.Etapas"/> marcada
-    /// <see cref="EtapaProcesoProduccion.EsCierre"/> — no pasa por <see cref="ValidarEtapa"/>
-    /// (que exige una etapa del catálogo) sino directamente por <see cref="ValidarLineas"/>, porque
-    /// <c>EtapaProduccionId == 0</c> es justo el valor válido de un cierre.
+    /// planeada, es exactamente el dato que interesa registrar. Si había una etapa en curso, antes
+    /// se cierra igual que en <see cref="AgregarEtapa"/> —mismo <paramref name="cierre"/>, mismo
+    /// motivo: es la última confirmación antes de dejar de fabricar—; si no había ninguna en
+    /// curso, <paramref name="cierre"/> se ignora.
     /// </summary>
     public ProcesoProduccion Terminar(ProcesoProduccion proceso, decimal cantidadProducida, EtapaProcesoProduccion cierre, int usuarioId)
     {
@@ -224,6 +209,34 @@ public sealed class ProcesosProduccionService
         if (cantidadProducida <= 0)
             throw new InvalidOperationException("Indique cuánto se produjo.");
 
+        var copia = proceso.Clonar();
+        CerrarEtapaEnCurso(proceso, copia, cierre, usuarioId);
+
+        copia.CantidadProducida = cantidadProducida;
+        copia.Estado = EstadoProcesoProduccion.Terminado;
+        copia.TerminadoPorId = usuarioId;
+        copia.TerminadoPorNombre = _sesion.UsuarioActual?.NombreCompleto ?? string.Empty;
+        copia.FechaTermino = DateTime.Now;
+        copia.EtapaActualId = null;
+        copia.EtapaActualNombre = string.Empty;
+
+        _procesos.Update(copia);
+        return copia;
+    }
+
+    /// <summary>
+    /// Confirma y cierra la etapa en curso de <paramref name="proceso"/> (si hay alguna),
+    /// agregándola a <paramref name="copia"/>.Etapas y descontando su consumo/merma —compartido
+    /// por <see cref="AgregarEtapa"/> y <see cref="Terminar"/>, que son los dos únicos momentos en
+    /// que una etapa en curso se cierra. Si <see cref="ProcesoProduccion.EtapaActualId"/> es nulo
+    /// no hay nada que cerrar (el proceso todavía no entró a ninguna etapa) y no hace nada, ni
+    /// siquiera mira <paramref name="cierre"/>.
+    /// </summary>
+    private void CerrarEtapaEnCurso(ProcesoProduccion proceso, ProcesoProduccion copia, EtapaProcesoProduccion cierre, int usuarioId)
+    {
+        if (proceso.EtapaActualId is null)
+            return;
+
         if (!ValidarLineas(cierre.Lineas.Select(ALinea), out var error))
             throw new InvalidOperationException(error);
 
@@ -231,25 +244,12 @@ public sealed class ProcesosProduccionService
             ConstruirSalidas(cierre.Lineas.Select(ALinea));
 
         RegistrarConsumo(proceso, consumoMateriaPrima, mermaMateriaPrima, consumoInventario, mermaInventario,
-            usuarioId, $"el cierre del proceso {proceso.Numero}");
+            usuarioId, $"la etapa {proceso.EtapaActualNombre} del proceso {proceso.Numero}");
 
-        var copia = proceso.Clonar();
-        copia.CantidadProducida = cantidadProducida;
-        copia.Estado = EstadoProcesoProduccion.Terminado;
-        copia.TerminadoPorId = usuarioId;
-        copia.TerminadoPorNombre = _sesion.UsuarioActual?.NombreCompleto ?? string.Empty;
-        copia.FechaTermino = DateTime.Now;
-
-        // Marcador atómico: los tres campos van juntos, nunca uno sin los otros — ver el
-        // comentario de EtapaProcesoProduccion.EsCierre.
-        cierre.EtapaProduccionId = 0;
-        cierre.EtapaProduccionNombre = "Cierre del proceso";
-        cierre.EsCierre = true;
+        cierre.EtapaProduccionId = proceso.EtapaActualId.Value;
+        cierre.EtapaProduccionNombre = proceso.EtapaActualNombre;
         cierre.FechaRegistro = DateTime.Now;
         copia.Etapas.Add(cierre);
-
-        _procesos.Update(copia);
-        return copia;
     }
 
     /// <summary>

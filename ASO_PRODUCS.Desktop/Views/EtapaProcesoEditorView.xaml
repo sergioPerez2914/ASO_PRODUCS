@@ -15,7 +15,129 @@
 
   <StackPanel>
 
-    <controls:FormField Etiqueta="Etapa"
+    <!-- Cómo salió la etapa en curso: solo aparece si de verdad hay una que cerrar (nunca se
+         pregunta por una etapa que recién va a empezar). -->
+    <StackPanel Visibility="{Binding MuestraCierreEtapaActual, Converter={StaticResource BoolToVis}}">
+
+      <TextBlock Text="{Binding EtapaActualNombre, StringFormat='Cómo salió: {0}'}"
+                 Style="{StaticResource CardTitleStyle}" Margin="0,0,0,8" />
+
+      <controls:FormField Etiqueta="Resultado">
+        <ComboBox Style="{StaticResource FormComboBoxStyle}"
+                  SelectedValuePath="Tag"
+                  SelectedValue="{Binding ResultadoSeleccionado}">
+          <ComboBoxItem Content="Normal" Tag="{x:Static models:ResultadoEtapa.Normal}" />
+          <ComboBoxItem Content="Con incidencia" Tag="{x:Static models:ResultadoEtapa.ConIncidencia}" />
+          <ComboBoxItem Content="Con merma" Tag="{x:Static models:ResultadoEtapa.ConMerma}" />
+        </ComboBox>
+      </controls:FormField>
+
+      <TextBlock Text="Consumo/merma de esta etapa (opcional)" Style="{StaticResource CardTitleStyle}" Margin="0,20,0,8" />
+
+      <Border Style="{StaticResource SectionCardStyle}" Padding="0">
+        <DataGrid Style="{StaticResource DataGridStyle}"
+                  ItemsSource="{Binding Lineas}"
+                  IsReadOnly="True"
+                  MaxHeight="260"
+                  HeadersVisibility="Column"
+                  CanUserSortColumns="False">
+          <DataGrid.Columns>
+            <DataGridTemplateColumn Header="Origen" Width="14*" MinWidth="110">
+              <DataGridTemplateColumn.CellTemplate>
+                <DataTemplate>
+                  <ComboBox Style="{StaticResource LineaComboBoxStyle}"
+                            SelectedValuePath="Tag"
+                            SelectedValue="{Binding OrigenSeleccionado, UpdateSourceTrigger=PropertyChanged}">
+                    <ComboBoxItem Content="Materia prima" Tag="{x:Static models:OrigenMaterial.MateriaPrima}" />
+                    <ComboBoxItem Content="Inventario" Tag="{x:Static models:OrigenMaterial.Articulo}" />
+                  </ComboBox>
+                </DataTemplate>
+              </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
+
+            <DataGridTemplateColumn Header="Material" Width="28*" MinWidth="200">
+              <DataGridTemplateColumn.CellTemplate>
+                <DataTemplate>
+                  <!-- Dos ComboBox superpuestos: la visibilidad es un binding LOCAL a la fila
+                       (EsMateriaPrima/EsArticulo), no necesita PuenteDeDatos. -->
+                  <Grid>
+                    <ComboBox Style="{StaticResource LineaComboBoxStyle}"
+                              ItemsSource="{Binding TiposMateriaPrima}"
+                              DisplayMemberPath="Nombre"
+                              SelectedItem="{Binding TipoSeleccionado, UpdateSourceTrigger=PropertyChanged}"
+                              Visibility="{Binding EsMateriaPrima, Converter={StaticResource BoolToVis}}" />
+                    <ComboBox Style="{StaticResource LineaComboBoxStyle}"
+                              ItemsSource="{Binding Articulos}"
+                              DisplayMemberPath="Etiqueta"
+                              SelectedItem="{Binding ArticuloSeleccionado, UpdateSourceTrigger=PropertyChanged}"
+                              Visibility="{Binding EsArticulo, Converter={StaticResource BoolToVis}}" />
+                  </Grid>
+                </DataTemplate>
+              </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
+
+            <DataGridTemplateColumn Header="Motivo" Width="14*" MinWidth="110">
+              <DataGridTemplateColumn.CellTemplate>
+                <DataTemplate>
+                  <ComboBox Style="{StaticResource LineaComboBoxStyle}"
+                            SelectedValuePath="Tag"
+                            SelectedValue="{Binding MotivoSeleccionado, UpdateSourceTrigger=PropertyChanged}">
+                    <ComboBoxItem Content="Consumo" Tag="{x:Static models:MotivoConsumoEtapa.Consumo}" />
+                    <ComboBoxItem Content="Merma/exceso" Tag="{x:Static models:MotivoConsumoEtapa.Merma}" />
+                  </ComboBox>
+                </DataTemplate>
+              </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
+
+            <controls:ColumnaTexto Header="Unidad" Binding="{Binding UnidadTexto}" Width="8*" MinWidth="70" />
+
+            <DataGridTemplateColumn Header="Cantidad" Width="14*" MinWidth="100">
+              <DataGridTemplateColumn.CellTemplate>
+                <DataTemplate>
+                  <TextBox Style="{StaticResource LineaTextBoxStyle}" TextAlignment="Right"
+                           Text="{Binding Cantidad, UpdateSourceTrigger=PropertyChanged}" />
+                </DataTemplate>
+              </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
+
+            <DataGridTemplateColumn Width="56">
+              <DataGridTemplateColumn.CellTemplate>
+                <DataTemplate>
+                  <Button Content="{x:Static controls:Iconos.Limpiar}"
+                          Style="{StaticResource LineaBotonQuitarStyle}"
+                          ToolTip="Quitar esta línea"
+                          Command="{Binding Datos.QuitarLineaCommand, Source={StaticResource Puente}}"
+                          CommandParameter="{Binding}" />
+                </DataTemplate>
+              </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
+          </DataGrid.Columns>
+        </DataGrid>
+      </Border>
+
+      <Grid Margin="0,12,0,0">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="Auto" />
+          <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <Button Grid.Column="0" Content="Agregar línea" Margin="0"
+                Style="{StaticResource SecondaryButtonStyle}"
+                Command="{Binding AgregarLineaCommand}" />
+      </Grid>
+
+      <controls:FormField Etiqueta="Observaciones">
+        <TextBox Style="{StaticResource FormTextBoxStyle}"
+                 AcceptsReturn="True" MinLines="2" TextWrapping="Wrap"
+                 VerticalContentAlignment="Top"
+                 Text="{Binding Observaciones, UpdateSourceTrigger=PropertyChanged}" />
+      </controls:FormField>
+
+      <Border Style="{StaticResource TabStripStyle}" Margin="0,20,0,20" />
+    </StackPanel>
+
+    <!-- Lo propio de cada modo: a qué etapa nueva pasa, o cuánto se produjo. -->
+    <controls:FormField Etiqueta="Etapa a la que pasa el proceso"
                         Visibility="{Binding MuestraSelectorEtapa, Converter={StaticResource BoolToVis}}">
       <ComboBox Style="{StaticResource FormComboBoxStyle}"
                 ItemsSource="{Binding Etapas}"
@@ -33,117 +155,5 @@
                  Text="{Binding CantidadProducida, UpdateSourceTrigger=PropertyChanged}" />
       </controls:FormField>
     </StackPanel>
-
-    <controls:FormField Etiqueta="Resultado de la etapa">
-      <ComboBox Style="{StaticResource FormComboBoxStyle}"
-                SelectedValuePath="Tag"
-                SelectedValue="{Binding ResultadoSeleccionado}">
-        <ComboBoxItem Content="Normal" Tag="{x:Static models:ResultadoEtapa.Normal}" />
-        <ComboBoxItem Content="Con incidencia" Tag="{x:Static models:ResultadoEtapa.ConIncidencia}" />
-        <ComboBoxItem Content="Con merma" Tag="{x:Static models:ResultadoEtapa.ConMerma}" />
-      </ComboBox>
-    </controls:FormField>
-
-    <!-- Consumo, en cualquiera de los dos modos: opcional. -->
-    <TextBlock Text="Consumo (opcional)" Style="{StaticResource CardTitleStyle}" Margin="0,20,0,8" />
-
-    <Border Style="{StaticResource SectionCardStyle}" Padding="0">
-      <DataGrid Style="{StaticResource DataGridStyle}"
-                ItemsSource="{Binding Lineas}"
-                IsReadOnly="True"
-                MaxHeight="260"
-                HeadersVisibility="Column"
-                CanUserSortColumns="False">
-        <DataGrid.Columns>
-          <DataGridTemplateColumn Header="Origen" Width="14*" MinWidth="110">
-            <DataGridTemplateColumn.CellTemplate>
-              <DataTemplate>
-                <ComboBox Style="{StaticResource LineaComboBoxStyle}"
-                          SelectedValuePath="Tag"
-                          SelectedValue="{Binding OrigenSeleccionado, UpdateSourceTrigger=PropertyChanged}">
-                  <ComboBoxItem Content="Materia prima" Tag="{x:Static models:OrigenMaterial.MateriaPrima}" />
-                  <ComboBoxItem Content="Inventario" Tag="{x:Static models:OrigenMaterial.Articulo}" />
-                </ComboBox>
-              </DataTemplate>
-            </DataGridTemplateColumn.CellTemplate>
-          </DataGridTemplateColumn>
-
-          <DataGridTemplateColumn Header="Material" Width="28*" MinWidth="200">
-            <DataGridTemplateColumn.CellTemplate>
-              <DataTemplate>
-                <!-- Dos ComboBox superpuestos: la visibilidad es un binding LOCAL a la fila
-                     (EsMateriaPrima/EsArticulo), no necesita PuenteDeDatos. -->
-                <Grid>
-                  <ComboBox Style="{StaticResource LineaComboBoxStyle}"
-                            ItemsSource="{Binding TiposMateriaPrima}"
-                            DisplayMemberPath="Nombre"
-                            SelectedItem="{Binding TipoSeleccionado, UpdateSourceTrigger=PropertyChanged}"
-                            Visibility="{Binding EsMateriaPrima, Converter={StaticResource BoolToVis}}" />
-                  <ComboBox Style="{StaticResource LineaComboBoxStyle}"
-                            ItemsSource="{Binding Articulos}"
-                            DisplayMemberPath="Etiqueta"
-                            SelectedItem="{Binding ArticuloSeleccionado, UpdateSourceTrigger=PropertyChanged}"
-                            Visibility="{Binding EsArticulo, Converter={StaticResource BoolToVis}}" />
-                </Grid>
-              </DataTemplate>
-            </DataGridTemplateColumn.CellTemplate>
-          </DataGridTemplateColumn>
-
-          <DataGridTemplateColumn Header="Motivo" Width="14*" MinWidth="110">
-            <DataGridTemplateColumn.CellTemplate>
-              <DataTemplate>
-                <ComboBox Style="{StaticResource LineaComboBoxStyle}"
-                          SelectedValuePath="Tag"
-                          SelectedValue="{Binding MotivoSeleccionado, UpdateSourceTrigger=PropertyChanged}">
-                  <ComboBoxItem Content="Consumo" Tag="{x:Static models:MotivoConsumoEtapa.Consumo}" />
-                  <ComboBoxItem Content="Merma/exceso" Tag="{x:Static models:MotivoConsumoEtapa.Merma}" />
-                </ComboBox>
-              </DataTemplate>
-            </DataGridTemplateColumn.CellTemplate>
-          </DataGridTemplateColumn>
-
-          <controls:ColumnaTexto Header="Unidad" Binding="{Binding UnidadTexto}" Width="8*" MinWidth="70" />
-
-          <DataGridTemplateColumn Header="Cantidad" Width="14*" MinWidth="100">
-            <DataGridTemplateColumn.CellTemplate>
-              <DataTemplate>
-                <TextBox Style="{StaticResource LineaTextBoxStyle}" TextAlignment="Right"
-                         Text="{Binding Cantidad, UpdateSourceTrigger=PropertyChanged}" />
-              </DataTemplate>
-            </DataGridTemplateColumn.CellTemplate>
-          </DataGridTemplateColumn>
-
-          <DataGridTemplateColumn Width="56">
-            <DataGridTemplateColumn.CellTemplate>
-              <DataTemplate>
-                <Button Content="{x:Static controls:Iconos.Limpiar}"
-                        Style="{StaticResource LineaBotonQuitarStyle}"
-                        ToolTip="Quitar esta línea"
-                        Command="{Binding Datos.QuitarLineaCommand, Source={StaticResource Puente}}"
-                        CommandParameter="{Binding}" />
-              </DataTemplate>
-            </DataGridTemplateColumn.CellTemplate>
-          </DataGridTemplateColumn>
-        </DataGrid.Columns>
-      </DataGrid>
-    </Border>
-
-    <Grid Margin="0,12,0,0">
-      <Grid.ColumnDefinitions>
-        <ColumnDefinition Width="Auto" />
-        <ColumnDefinition Width="*" />
-      </Grid.ColumnDefinitions>
-
-      <Button Grid.Column="0" Content="Agregar línea" Margin="0"
-              Style="{StaticResource SecondaryButtonStyle}"
-              Command="{Binding AgregarLineaCommand}" />
-    </Grid>
-
-    <controls:FormField Etiqueta="Observaciones">
-      <TextBox Style="{StaticResource FormTextBoxStyle}"
-               AcceptsReturn="True" MinLines="2" TextWrapping="Wrap"
-               VerticalContentAlignment="Top"
-               Text="{Binding Observaciones, UpdateSourceTrigger=PropertyChanged}" />
-    </controls:FormField>
   </StackPanel>
 </UserControl>

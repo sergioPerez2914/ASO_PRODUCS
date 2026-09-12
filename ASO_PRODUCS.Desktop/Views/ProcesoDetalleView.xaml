@@ -58,25 +58,25 @@
           <StackPanel Grid.Column="2">
             <TextBlock Text="Etapa actual" FontSize="{StaticResource FsCaption}"
                        Foreground="{DynamicResource TextMutedBrush}" />
-            <TextBlock Text="{Binding EtapaActual.EtapaProduccionNombre}" FontSize="{StaticResource FsBody}">
+            <TextBlock Text="{Binding Proceso.EtapaActualNombre}" FontSize="{StaticResource FsBody}">
               <TextBlock.Style>
                 <Style TargetType="TextBlock">
                   <Setter Property="Visibility" Value="Collapsed" />
                   <Style.Triggers>
-                    <DataTrigger Binding="{Binding TieneEtapas}" Value="True">
+                    <DataTrigger Binding="{Binding TieneEtapaActual}" Value="True">
                       <Setter Property="Visibility" Value="Visible" />
                     </DataTrigger>
                   </Style.Triggers>
                 </Style>
               </TextBlock.Style>
             </TextBlock>
-            <TextBlock Text="Aún no ha pasado por ninguna etapa" FontSize="{StaticResource FsBody}"
+            <TextBlock Text="Ninguna en curso" FontSize="{StaticResource FsBody}"
                        Foreground="{DynamicResource TextMutedBrush}" TextWrapping="Wrap">
               <TextBlock.Style>
                 <Style TargetType="TextBlock">
                   <Setter Property="Visibility" Value="Collapsed" />
                   <Style.Triggers>
-                    <DataTrigger Binding="{Binding TieneEtapas}" Value="False">
+                    <DataTrigger Binding="{Binding TieneEtapaActual}" Value="False">
                       <Setter Property="Visibility" Value="Visible" />
                     </DataTrigger>
                   </Style.Triggers>

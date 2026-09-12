@@ -530,6 +530,7 @@ public class AsoProductoresDbContext : DbContext
             entity.Property(p => p.MotivoAnulacion).HasMaxLength(500);
             entity.Property(p => p.CreadoPorNombre).HasMaxLength(150);
             entity.Property(p => p.TerminadoPorNombre).HasMaxLength(150);
+            entity.Property(p => p.EtapaActualNombre).HasMaxLength(150);
             entity.Property(p => p.CantidadPlaneada).HasColumnType("decimal(18,2)");
             entity.Property(p => p.CantidadProducida).HasColumnType("decimal(18,2)");
 

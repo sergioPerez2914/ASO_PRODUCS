@@ -83,8 +83,19 @@ public class ProcesoProduccion : IEntidad<int>, IDeOrganizacion
     /// <summary>Lo que se consumió al iniciar el proceso, antes de la primera etapa.</summary>
     public List<ProcesoProduccionLineaInicial> LineasIniciales { get; set; } = [];
 
-    /// <summary>Las etapas que fue atravesando el proceso, en el orden en que se agregaron.</summary>
+    /// <summary>Las etapas que fue atravesando el proceso, en el orden en que se agregaron. Solo
+    /// contiene etapas ya CERRADAS/confirmadas —la que está en curso ahora mismo, sin confirmar
+    /// todavía, vive en <see cref="EtapaActualId"/>, no acá.</summary>
     public List<EtapaProcesoProduccion> Etapas { get; set; } = [];
+
+    /// <summary>La etapa que el proceso está atravesando ahora mismo, todavía sin confirmar cómo
+    /// salió. Nulo si el proceso nunca entró a ninguna etapa, o si ya se cerró la última pendiente
+    /// (Terminar la deja en <c>null</c>). Se confirma —resultado, merma/exceso, observaciones— justo
+    /// antes de pasar a la siguiente etapa o de terminar el proceso; ver
+    /// <c>ProcesosProduccionService.AgregarEtapa</c>/<c>Terminar</c>.</summary>
+    public int? EtapaActualId { get; set; }
+
+    public string EtapaActualNombre { get; set; } = string.Empty;  // snapshot
 
     public EstadoProcesoProduccion Estado { get; set; }
     public string? MotivoAnulacion { get; set; }
@@ -103,14 +114,11 @@ public class ProcesoProduccion : IEntidad<int>, IDeOrganizacion
     /// anular devuelva la existencia del producto sin tocar ninguna otra fila.</summary>
     public bool CuentaEnExistencia => Estado == EstadoProcesoProduccion.Terminado;
 
-    /// <summary>En curso, muestra el nombre de la última etapa (o "En proceso" si todavía no pasó
-    /// por ninguna) en vez del texto genérico — es seguro porque el cierre que agrega
-    /// <c>Terminar</c> solo se suma en la MISMA llamada que cambia <see cref="Estado"/> a
-    /// Terminado, así que <c>Etapas[^1]</c> nunca es un cierre mientras el proceso sigue
-    /// EnProceso.</summary>
+    /// <summary>En curso, muestra el nombre de la etapa actual (o "En proceso" si todavía no entró
+    /// a ninguna) en vez del texto genérico.</summary>
     public string EstadoTexto => Estado switch
     {
-        EstadoProcesoProduccion.EnProceso => Etapas.Count > 0 ? Etapas[^1].EtapaProduccionNombre : "En proceso",
+        EstadoProcesoProduccion.EnProceso => EtapaActualId is not null ? EtapaActualNombre : "En proceso",
         EstadoProcesoProduccion.Terminado => "Terminado",
         _ => "Anulado"
     };
@@ -123,9 +131,7 @@ public class ProcesoProduccion : IEntidad<int>, IDeOrganizacion
         ? $"{cantidad:N2} {UnidadMedidaSnapshot}".Trim()
         : "—";
 
-    /// <summary>Cuenta solo etapas reales del catálogo; el cierre que agrega <c>Terminar</c> no es
-    /// una etapa de producción.</summary>
-    public int CantidadEtapas => Etapas.Count(e => !e.EsCierre);
+    public int CantidadEtapas => Etapas.Count;
 
     /// <summary>
     /// Copia HONDA: duplica de verdad <see cref="LineasIniciales"/>, <see cref="Etapas"/> y, dentro
@@ -166,9 +172,11 @@ public class ProcesoProduccionLineaInicial
 }
 
 /// <summary>
-/// Una etapa concreta dentro de un proceso, elegida del catálogo <see cref="EtapaProduccion"/>.
-/// Se agrega de a una, mientras el proceso está <see cref="EstadoProcesoProduccion.EnProceso"/>
-/// (ver <c>ProcesosProduccionService.AgregarEtapa</c>) — no se edita ni se quita después.
+/// Una etapa ya CERRADA de un proceso: el registro queda cuando se confirma cómo salió, justo
+/// antes de pasar a la siguiente etapa o de terminar el proceso (ver
+/// <c>ProcesosProduccionService.AgregarEtapa</c>/<c>Terminar</c>) — no se edita ni se quita
+/// después. Mientras la etapa sigue en curso y sin confirmar, no existe todavía como
+/// <see cref="EtapaProcesoProduccion"/>: solo es <see cref="ProcesoProduccion.EtapaActualId"/>.
 /// </summary>
 public class EtapaProcesoProduccion
 {
@@ -184,15 +192,9 @@ public class EtapaProcesoProduccion
     /// solo en <see cref="Observaciones"/>.</summary>
     public ResultadoEtapa Resultado { get; set; }
 
-    /// <summary>Marca la entrada sintética que agrega <c>ProcesosProduccionService.Terminar</c> al
-    /// cerrar el proceso — no es una etapa real del catálogo. Cuando es <c>true</c>,
-    /// <see cref="EtapaProduccionId"/> vale 0 (los ids del catálogo son IDENTITY, siempre &gt; 0) y
-    /// <see cref="EtapaProduccionNombre"/> es el texto fijo "Cierre del proceso". El servicio
-    /// estampa los tres campos juntos, nunca uno sin los otros: es un solo marcador atómico.</summary>
-    public bool EsCierre { get; set; }
-
-    /// <summary>Consumo opcional de esta etapa: el material nuevo que hizo falta en ese paso, si
-    /// hizo falta alguno.</summary>
+    /// <summary>Consumo/merma de esta etapa, confirmado al cerrarla: el material que hizo falta y,
+    /// si lo hubo, lo que se perdió o se consumió de más. Opcional: quedarse sin ninguna línea es
+    /// válido.</summary>
     public List<EtapaProcesoProduccionLinea> Lineas { get; set; } = [];
 
     public string FechaRegistroTexto => FechaRegistro.ToString("dd/MM/yyyy HH:mm");
