@@ -15,8 +15,21 @@
 
   <StackPanel>
 
+    <!-- La elección que reemplaza los botones "Agregar etapa"/"Terminar" de antes: vive dentro
+         del modal, no afuera. -->
+    <StackPanel Orientation="Horizontal">
+      <RadioButton Content="Pasar a otra etapa" GroupName="ModoAvanceProceso"
+                   Style="{StaticResource SegmentedTabStyle}"
+                   IsChecked="{Binding EsSiguienteEtapa, Mode=TwoWay}" />
+      <RadioButton Content="Terminar el proceso" GroupName="ModoAvanceProceso"
+                   Style="{StaticResource SegmentedTabStyle}"
+                   IsChecked="{Binding EsTerminar, Mode=TwoWay}" />
+    </StackPanel>
+
+    <Border Style="{StaticResource TabStripStyle}" Margin="0,0,0,20" />
+
     <!-- Cómo salió la etapa en curso: solo aparece si de verdad hay una que cerrar (nunca se
-         pregunta por una etapa que recién va a empezar). -->
+         pregunta por una etapa que recién va a empezar), sea cual sea la elección de arriba. -->
     <StackPanel Visibility="{Binding MuestraCierreEtapaActual, Converter={StaticResource BoolToVis}}">
 
       <TextBlock Text="{Binding EtapaActualNombre, StringFormat='Cómo salió: {0}'}"

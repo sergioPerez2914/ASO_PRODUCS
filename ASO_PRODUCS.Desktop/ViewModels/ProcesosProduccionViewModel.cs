@@ -127,9 +127,9 @@ public sealed class EtapaProduccionEditorViewModel : CrudEditorViewModelBase<Eta
 }
 
 /// <summary>
-/// Procesos · Producción: el historial de fabricación y las cuatro acciones propias del
-/// documento (iniciar, agregar etapa, terminar, anular). No hay Editar ni Eliminar: un proceso
-/// es un documento con máquina de estados.
+/// Procesos · Producción: el historial de fabricación y las tres acciones propias del documento
+/// (iniciar, continuar —agregar etapa o terminar, según lo que se elija dentro del modal— y
+/// anular). No hay Editar ni Eliminar: un proceso es un documento con máquina de estados.
 /// </summary>
 public sealed class ProcesosProduccionCrudViewModel : CrudViewModelBase<ProcesoProduccion, int>
 {
@@ -169,12 +169,12 @@ public sealed class ProcesosProduccionCrudViewModel : CrudViewModelBase<ProcesoP
             ItemsView.Refresh();
         });
 
-        AgregarEtapaCommand = new RelayCommand(AgregarEtapa,
+        // Un solo botón para las dos transiciones: PuedeAgregarEtapa/PuedeTerminar son la misma
+        // guarda (Estado == EnProceso), y se exigen los dos permisos porque el modal decide adentro
+        // cuál de las dos pasa a llamar — no hay forma de saber cuál será antes de abrirlo.
+        ContinuarProcesoCommand = new RelayCommand(ContinuarProceso,
             () => SelectedItem is { } p && _servicio.PuedeAgregarEtapa(p)
-                  && _sesionActual.Puede(Permisos.ProcesosProduccion.AgregarEtapa));
-
-        TerminarCommand = new RelayCommand(Terminar,
-            () => SelectedItem is { } p && _servicio.PuedeTerminar(p)
+                  && _sesionActual.Puede(Permisos.ProcesosProduccion.AgregarEtapa)
                   && _sesionActual.Puede(Permisos.ProcesosProduccion.Terminar));
 
         AnularCommand = new RelayCommand(Anular,
@@ -185,8 +185,7 @@ public sealed class ProcesosProduccionCrudViewModel : CrudViewModelBase<ProcesoP
     }
 
     public ICommand CambiarFiltroCommand { get; }
-    public ICommand AgregarEtapaCommand { get; }
-    public ICommand TerminarCommand { get; }
+    public ICommand ContinuarProcesoCommand { get; }
     public ICommand AnularCommand { get; }
 
     /// <summary>Solo la invoca el doble clic de la grilla (ver <c>ProcesosProduccionView.xaml.cs</c>),
@@ -250,39 +249,28 @@ public sealed class ProcesosProduccionCrudViewModel : CrudViewModelBase<ProcesoP
         Aplicar(() => _servicio.Iniciar(editor.ObtenerResultado(), _sesionActual.UsuarioActual?.Id ?? 0));
     }
 
-    private void AgregarEtapa()
-    {
-        if (SelectedItem is not { } proceso)
-            return;
-
-        var editor = new EtapaProcesoEditorViewModel(proceso, esCierre: false,
-            ListaEtapasActivas(), ListaTipos(), ListaArticulos());
-
-        if (!_dialogos.MostrarEditor(editor))
-            return;
-
-        Aplicar(() => _servicio.AgregarEtapa(proceso, editor.ObtenerResultado(), editor.EtapaSeleccionada!,
-                                            _sesionActual.UsuarioActual?.Id ?? 0));
-    }
-
     /// <summary>
-    /// "Terminar" abre el mismo formulario que "Agregar etapa" —confirmación de la etapa en curso,
-    /// si la hay, con su consumo/merma— solo que en vez de pedir la siguiente etapa pide la
-    /// cantidad producida; ver <see cref="EtapaProcesoEditorViewModel"/>.
+    /// Un solo botón para las dos transiciones que puede necesitar un proceso en curso: cierra la
+    /// etapa actual (si la había, con su resultado y consumo/merma) y, según lo que el propio
+    /// modal decida (<see cref="EtapaProcesoEditorViewModel.ContinuaOtraEtapa"/>), pasa a otra
+    /// etapa o termina el proceso — no hay un botón "Terminar" aparte ni una confirmación en un
+    /// paso separado.
     /// </summary>
-    private void Terminar()
+    private void ContinuarProceso()
     {
         if (SelectedItem is not { } proceso)
             return;
 
-        var editor = new EtapaProcesoEditorViewModel(proceso, esCierre: true,
-            [], ListaTipos(), ListaArticulos());
+        var editor = new EtapaProcesoEditorViewModel(proceso, ListaEtapasActivas(), ListaTipos(), ListaArticulos());
 
         if (!_dialogos.MostrarEditor(editor))
             return;
 
-        Aplicar(() => _servicio.Terminar(proceso, editor.CantidadProducidaValor, editor.ObtenerResultado(),
-                                         _sesionActual.UsuarioActual?.Id ?? 0));
+        Aplicar(() => editor.ContinuaOtraEtapa
+            ? _servicio.AgregarEtapa(proceso, editor.ObtenerResultado(), editor.EtapaSeleccionada!,
+                                     _sesionActual.UsuarioActual?.Id ?? 0)
+            : _servicio.Terminar(proceso, editor.CantidadProducidaValor, editor.ObtenerResultado(),
+                                 _sesionActual.UsuarioActual?.Id ?? 0));
     }
 
     private void Anular()
@@ -463,34 +451,32 @@ public sealed class IniciarProcesoEditorViewModel : CrudEditorViewModelBase<Proc
 }
 
 /// <summary>
-/// El modal compartido de "Agregar etapa"/"Terminar proceso". No es una jerarquía de clases: es UN
-/// solo formulario con una bandera de modo (<c>esCierre</c>) + propiedades "Muestra…" calculadas,
+/// El único modal para avanzar un proceso: cierra la etapa en curso (si la había, con su
+/// resultado y consumo/merma) y, según <see cref="ContinuaOtraEtapa"/> —una elección DENTRO del
+/// mismo modal, no un botón aparte—, pasa a otra etapa o termina el proceso. No hay un botón
+/// "Terminar" independiente ni una confirmación en un paso separado: es la misma acción,
 /// mismo idioma que ya usa <see cref="EntradaEditorViewModel"/>/<see cref="RecepcionMateriaPrimaEditorViewModel"/>
-/// para "un formulario, varios modos".
+/// para "un formulario, varios modos" con un campo que decide qué mostrar.
 ///
-/// Tiene DOS secciones independientes, no una por modo:
+/// Tiene DOS secciones independientes de esa elección:
 /// 1. "Cómo salió la etapa en curso" (resultado, consumo/merma, observaciones) — solo aparece si
 ///    <see cref="ProcesoProduccion.EtapaActualId"/> no es nulo, es decir, si de verdad hay algo que
 ///    cerrar. Nunca pregunta por una etapa que recién va a empezar.
-/// 2. Lo propio de cada modo: en "Agregar etapa", a qué etapa nueva pasa el proceso; en
-///    "Terminar", la cantidad producida.
+/// 2. Lo propio de la elección: a qué etapa nueva pasa, o la cantidad producida si termina.
 /// </summary>
 public sealed class EtapaProcesoEditorViewModel : CrudEditorViewModelBase<EtapaProcesoProduccion>
 {
-    private readonly bool _esCierre;
-    private readonly string _titulo;
+    private readonly string _numero;
     private readonly string _productoTexto;
     private readonly bool _muestraCierreEtapaActual;
     private readonly string _etapaActualNombre;
 
     public EtapaProcesoEditorViewModel(ProcesoProduccion proceso,
-                                       bool esCierre,
                                        IReadOnlyList<EtapaProduccion> etapas,
                                        IReadOnlyList<TipoMateriaPrima> tiposMateriaPrima,
                                        IReadOnlyList<Articulo> articulos)
     {
-        _esCierre = esCierre;
-        _titulo = esCierre ? $"Terminar proceso {proceso.Numero}" : $"Agregar etapa al proceso {proceso.Numero}";
+        _numero = proceso.Numero;
         _productoTexto = $"{proceso.ProductoNombre} — planeado {proceso.CantidadPlaneadaTexto}";
         _muestraCierreEtapaActual = proceso.EtapaActualId is not null;
         _etapaActualNombre = proceso.EtapaActualNombre;
@@ -512,23 +498,59 @@ public sealed class EtapaProcesoEditorViewModel : CrudEditorViewModelBase<EtapaP
         Lineas.Add(NuevaLinea());
     }
 
-    public override string Titulo => _titulo;
+    /// <summary>Título y texto del botón reaccionan a <see cref="ContinuaOtraEtapa"/>: cambian en
+    /// caliente al tocar el interruptor, no quedan fijos desde que se abrió el modal.</summary>
+    public override string Titulo => ContinuaOtraEtapa ? $"Agregar etapa al proceso {_numero}" : $"Terminar proceso {_numero}";
 
     /// <summary>Amplio: lleva una grilla de líneas dentro, en los dos modos.</summary>
     public override double AnchoEditor => Ancho.Amplio;
 
-    public override string TextoAccion => _esCierre ? "Terminar proceso" : "Agregar etapa";
+    public override string TextoAccion => ContinuaOtraEtapa ? "Agregar etapa" : "Terminar proceso";
 
-    /// <summary>Solo se usa en modo cierre; se muestra en vez del selector de etapa.</summary>
+    /// <summary>Solo se usa cuando no continúa a otra etapa; se muestra en vez del selector de etapa.</summary>
     public string ProductoTexto => _productoTexto;
 
-    public bool MuestraSelectorEtapa => !_esCierre;
-    public bool MuestraCantidadProducida => _esCierre;
+    /// <summary>
+    /// La elección que reemplaza los dos botones de antes ("Agregar etapa"/"Terminar"): vive
+    /// DENTRO del modal, no afuera. Por defecto continúa a otra etapa, el camino más frecuente.
+    /// </summary>
+    private bool _continuaOtraEtapa = true;
+    public bool ContinuaOtraEtapa
+    {
+        get => _continuaOtraEtapa;
+        set
+        {
+            // Notifica todas: Titulo/TextoAccion/MuestraSelectorEtapa/MuestraCantidadProducida
+            // dependen de este campo: enumerar un OnPropertyChanged por cada una es la lista que
+            // se queda corta el día que se agregue una más — mismo criterio que
+            // EntradaEditorViewModel.Tipo.
+            if (SetProperty(ref _continuaOtraEtapa, value))
+                OnTodasLasPropiedadesCambiaron();
+        }
+    }
+
+    /// <summary>Las dos pestañas, enlazadas en DOS VÍAS al <c>IsChecked</c> de su botón, igual que
+    /// <see cref="EntradaEditorViewModel.EsCompraProveedor"/>. El setter solo actúa al marcar: al
+    /// desmarcar ya hay otro botón del grupo encendiéndose.</summary>
+    public bool EsSiguienteEtapa
+    {
+        get => ContinuaOtraEtapa;
+        set { if (value) ContinuaOtraEtapa = true; }
+    }
+
+    public bool EsTerminar
+    {
+        get => !ContinuaOtraEtapa;
+        set { if (value) ContinuaOtraEtapa = false; }
+    }
+
+    public bool MuestraSelectorEtapa => ContinuaOtraEtapa;
+    public bool MuestraCantidadProducida => !ContinuaOtraEtapa;
 
     /// <summary>Si hay que preguntar "cómo salió" antes de continuar: solo cuando el proceso de
     /// verdad está atravesando una etapa sin confirmar todavía. Si es la primera etapa del
     /// proceso (o ya se cerró la última pendiente), no hay nada que cerrar y esta sección no se
-    /// muestra en ninguno de los dos modos.</summary>
+    /// muestra, elija lo que elija en <see cref="ContinuaOtraEtapa"/>.</summary>
     public bool MuestraCierreEtapaActual => _muestraCierreEtapaActual;
 
     public string EtapaActualNombre => _etapaActualNombre;
@@ -580,18 +602,18 @@ public sealed class EtapaProcesoEditorViewModel : CrudEditorViewModelBase<EtapaP
 
     protected override bool Validar(out string? error)
     {
-        if (_esCierre)
+        if (ContinuaOtraEtapa)
         {
-            if (!CantidadProducidaEsValida)
+            if (EtapaSeleccionada is null)
             {
-                error = "Indique cuánto se produjo, con un número mayor que cero. Puede diferir de lo " +
-                        "planeado: una merma es justo el dato que interesa registrar.";
+                error = "Seleccione la etapa a la que pasa el proceso.";
                 return false;
             }
         }
-        else if (EtapaSeleccionada is null)
+        else if (!CantidadProducidaEsValida)
         {
-            error = "Seleccione la etapa.";
+            error = "Indique cuánto se produjo, con un número mayor que cero. Puede diferir de lo " +
+                    "planeado: una merma es justo el dato que interesa registrar.";
             return false;
         }
 

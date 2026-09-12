@@ -75,10 +75,9 @@
                         Margin="0,12,0,0">
               <Button Content="Iniciar proceso" Style="{StaticResource PrimaryButtonStyle}"
                       Command="{Binding AgregarCommand}" />
-              <Button Content="Agregar etapa" Style="{StaticResource SecondaryButtonStyle}"
-                      Command="{Binding AgregarEtapaCommand}" />
-              <Button Content="Terminar" Style="{StaticResource SecondaryButtonStyle}"
-                      Command="{Binding TerminarCommand}" />
+              <Button Content="Continuar proceso" Style="{StaticResource SecondaryButtonStyle}"
+                      Command="{Binding ContinuarProcesoCommand}"
+                      ToolTip="Confirma cómo salió la etapa en curso (si hay una) y, en el mismo paso, pasa a la siguiente etapa o termina el proceso." />
               <Button Content="Anular" Style="{StaticResource SecondaryButtonStyle}"
                       Foreground="{DynamicResource DangerTextBrush}"
                       Command="{Binding AnularCommand}" />
