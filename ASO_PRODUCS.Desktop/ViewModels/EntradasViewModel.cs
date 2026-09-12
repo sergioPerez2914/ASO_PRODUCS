@@ -114,7 +114,10 @@ public sealed class EntradasViewModel : PantallaCrudViewModel<EntradaInventario,
         new EntradaEditorViewModel(item,
                                    [.. _proveedores.GetAll().Where(p => p.Activo).OrderBy(p => p.Nombre)],
                                    _inventario.ActivosConExistencia(),
-                                   _servicio);
+                                   _servicio,
+                                   _inventario,
+                                   _dialogos,
+                                   _sesionActual);
 
     /// <summary>
     /// El alta pasa por el servicio de dominio y no por la fuente de datos: registrar la entrada
@@ -180,13 +183,30 @@ public sealed class EntradaEditorViewModel : CrudEditorViewModelBase<EntradaInve
     public EntradaEditorViewModel(EntradaInventario original,
                                   IReadOnlyList<Proveedor> proveedores,
                                   IReadOnlyList<Articulo> articulos,
-                                  EntradasInventarioService servicio)
+                                  EntradasInventarioService servicio,
+                                  InventarioService inventario,
+                                  IServicioDialogo dialogos,
+                                  ISesionActual sesion)
     {
         _original = original;
         _servicio = servicio;
 
         Proveedores = proveedores;
-        Articulos = articulos;
+        Articulos = new ObservableCollection<Articulo>(articulos);
+
+        NuevoArticuloCommand = new RelayCommand<LineaEntradaEditorViewModel>(linea =>
+        {
+            var editor = new ArticuloEditorViewModel(new Articulo { Activo = true }, inventario);
+            if (!dialogos.MostrarEditor(editor))
+                return;
+
+            var nuevo = DataSourceFactory.CrearArticulos().Add(editor.ObtenerResultado());
+            Articulos.Add(nuevo);
+
+            if (linea is not null)
+                linea.ArticuloSeleccionado = nuevo;
+        },
+        _ => sesion.Puede(Permisos.Articulos.Crear));
 
         Fecha = original.Fecha == default ? DateTime.Today : original.Fecha;
         FechaVencimiento = original.FechaVencimiento ?? DateTime.Today.AddDays(30);
@@ -216,12 +236,13 @@ public sealed class EntradaEditorViewModel : CrudEditorViewModelBase<EntradaInve
     public override string TextoAccion => "Registrar entrada";
 
     public IReadOnlyList<Proveedor> Proveedores { get; }
-    public IReadOnlyList<Articulo> Articulos { get; }
+    public ObservableCollection<Articulo> Articulos { get; }
 
     public ObservableCollection<LineaEntradaEditorViewModel> Lineas { get; } = [];
 
     public ICommand AgregarLineaCommand { get; }
     public ICommand QuitarLineaCommand { get; }
+    public ICommand NuevoArticuloCommand { get; }
 
     // --- Modo ---
 

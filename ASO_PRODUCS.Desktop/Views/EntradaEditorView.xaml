@@ -118,13 +118,23 @@
                 HeadersVisibility="Column"
                 CanUserSortColumns="False">
         <DataGrid.Columns>
-          <DataGridTemplateColumn Header="Artículo" Width="34*" MinWidth="200">
+          <DataGridTemplateColumn Header="Artículo" Width="34*" MinWidth="230">
             <DataGridTemplateColumn.CellTemplate>
               <DataTemplate>
-                <ComboBox Style="{StaticResource LineaComboBoxStyle}"
-                          ItemsSource="{Binding Articulos}"
-                          DisplayMemberPath="Etiqueta"
-                          SelectedItem="{Binding ArticuloSeleccionado, UpdateSourceTrigger=PropertyChanged}" />
+                <Grid>
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                  </Grid.ColumnDefinitions>
+                  <ComboBox Grid.Column="0" Style="{StaticResource LineaComboBoxStyle}"
+                            ItemsSource="{Binding Articulos}"
+                            DisplayMemberPath="Etiqueta"
+                            SelectedItem="{Binding ArticuloSeleccionado, UpdateSourceTrigger=PropertyChanged}" />
+                  <Button Grid.Column="1" Content="+" Style="{StaticResource LineaBotonAgregarStyle}"
+                          ToolTip="Nuevo artículo"
+                          Command="{Binding Datos.NuevoArticuloCommand, Source={StaticResource Puente}}"
+                          CommandParameter="{Binding}" />
+                </Grid>
               </DataTemplate>
             </DataGridTemplateColumn.CellTemplate>
           </DataGridTemplateColumn>

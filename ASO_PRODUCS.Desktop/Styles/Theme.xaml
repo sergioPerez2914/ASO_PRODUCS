@@ -520,6 +520,13 @@
     <Setter Property="SnapsToDevicePixels" Value="True" />
   </Style>
 
+  <!-- Botón "+ nuevo artículo" junto al combo de una línea de Entradas: texto plano, no ícono. -->
+  <Style x:Key="LineaBotonAgregarStyle" TargetType="Button" BasedOn="{StaticResource SecondaryButtonStyle}">
+    <Setter Property="Margin" Value="2" />
+    <Setter Property="Padding" Value="6,4" />
+    <Setter Property="MinWidth" Value="0" />
+  </Style>
+
   <!-- Valor calculado de solo lectura dentro de un formulario (p. ej. el peso neto). -->
   <Style x:Key="FormValorCalculadoStyle" TargetType="TextBlock">
     <Setter Property="FontFamily" Value="{StaticResource AppFont}" />
