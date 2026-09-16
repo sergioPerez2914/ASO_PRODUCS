@@ -8,10 +8,11 @@
     <UseWPF>true</UseWPF>
     <RootNamespace>ASO_PRODUCS.Desktop</RootNamespace>
     <AssemblyName>ASO_PRODUCS.Desktop</AssemblyName>
-    <ApplicationTitle>ASO Productores</ApplicationTitle>
-    <Product>ASO Productores</Product>
+    <ApplicationTitle>ASO Producs</ApplicationTitle>
+    <Product>ASO Producs</Product>
     <Company>Empresa</Company>
     <Description>Aplicación de gestión para productores locales</Description>
+    <ApplicationIcon>Assets\Logo\aso-icon.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
@@ -42,9 +43,14 @@
     <Resource Include="Assets\Fonts\Satoshi-Bold.ttf" />
   </ItemGroup>
 
-  <!-- Assets/Logo/ vacío a propósito: este scaffold no trae logo de ningún cliente (ver
-       Controls/Sidebar.xaml). Al adoptar el scaffold, poner el logo real ahí y volver a declarar
-       ApplicationIcon + los Resource + Icon= de cada Window (ver CLAUDE.md "Logo"). -->
+  <!-- Logo real (2026-09-15): vaca de docs/vecteezy_...cow-silhouette....eps, ver CLAUDE.md
+       "Marca". aso-cow-mark.png va dentro del badge de Sidebar/Login (reemplaza el monograma de
+       texto); aso-icon.ico es el compuesto autocontenido (badge + vaca) para ApplicationIcon y el
+       Icon= de cada Window, que no pueden resolver DynamicResource. -->
+  <ItemGroup>
+    <Resource Include="Assets\Logo\aso-cow-mark.png" />
+    <Resource Include="Assets\Logo\aso-icon.ico" />
+  </ItemGroup>
 
   <ItemGroup>
     <None Update="appsettings.json">

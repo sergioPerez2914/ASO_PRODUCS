@@ -125,7 +125,7 @@ public partial class App : Application
             MessageBox.Show(
                 $"No se pudo actualizar la base de datos.\n\n{ex.Message}\n\n" +
                 "Revisa la cadena de conexión en appsettings.local.json.",
-                "ASO Productores", MessageBoxButton.OK, MessageBoxImage.Error);
+                "ASO Producs", MessageBoxButton.OK, MessageBoxImage.Error);
             return false;
         }
     }
@@ -146,7 +146,7 @@ public partial class App : Application
             MessageBox.Show(
                 $"No se pudo conectar con la base de datos.\n\n{ex.Message}\n\n" +
                 "Revisa la cadena de conexión en appsettings.local.json.",
-                "ASO Productores", MessageBoxButton.OK, MessageBoxImage.Error);
+                "ASO Producs", MessageBoxButton.OK, MessageBoxImage.Error);
             return false;
         }
 

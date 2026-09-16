@@ -1,4 +1,4 @@
-# ASO Productores — gestión para productores locales
+# ASO Producs — gestión para productores locales
 
 Aplicación de gestión de escritorio para **productores locales de distinta índole**: **WPF ·
 .NET 8** (`net8.0-windows`), instalación local en LAN, una sola organización por instalación.
@@ -454,29 +454,54 @@ siguen aplicando al escribir XAML nuevo:
    el color que se espera. Ver el comentario de cabecera de `Colors.xaml` para el detalle de
    contraste de cada escalón de la familia.
 
-## Marca
+## Marca (2026-09-15)
 
-`Colors.xaml`/`ColorsOscuro.xaml` traen una paleta ámbar/azul **placeholder**, con los contrastes
-ya calculados (ver su comentario de cabecera). `Assets/Logo/` está vacía a propósito: el sidebar
-(`Controls/Sidebar.xaml`) y el login (`Views/LoginView.xaml`) muestran un monograma de texto ("A"
-sobre `PrimaryButtonBrush`) en vez de una imagen, para no arrastrar el arte de ningún cliente
-anterior.
+`Colors.xaml`/`ColorsOscuro.xaml` traen la paleta real: **bronce/dorado `#AD8631`** de principal,
+**azul `#5279CE`** de complemento, con los contrastes recalculados (ver el comentario de cabecera
+de `Colors.xaml` para el detalle de cada escalón y sus ratios WCAG). Ya no es la paleta ámbar/azul
+placeholder del scaffold.
 
-Al adoptar este scaffold para un negocio real:
+`Assets/Logo/` trae el logo real: una vaca de cuerpo completo (silueta, cuernos, ubre, cola en
+espiral) tomada de `docs/vecteezy_a-cow-silhouette-logo-art-illustration-design_49947858.eps`
+(fuente original, no la lee el proyecto — queda ahí solo como referencia). De ese `.eps` se
+extrajo y recortó la variante elegida a dos rasters:
 
-1. Sustituir la familia de marca en las dos paletas (`PrimaryButtonColor`, `PrimaryColor`,
-   `AccentBlueColor`, `InfoColor`, `NavIndicatorColor`, `FocusRingColor`, y los neutros de
-   navegación con tinte de marca) y **recalcular los contrastes** descritos en el comentario de
-   `Colors.xaml` — no basta con cambiar los hex, hay que verificar que sigan pasando AA.
-2. Si hay logo real: ponerlo en `Assets/Logo/` (rasterizado — no hay lector de SVG en el
-   proyecto), declararlo `<Resource>` en el `.csproj`, volver a poner `ApplicationIcon` en el
-   `.csproj`, y reemplazar el monograma de texto por la `<Image>` en `Sidebar.xaml`/`LoginView.xaml`
-   más el `Icon=` de `MainWindow.xaml`/`LoginView.xaml`/`PrimerArranqueView.xaml`/
-   `CrudEditorWindow.xaml` (esto último es lo que Windows pinta de verdad en la barra de tareas,
-   Alt+Tab y el Administrador de tareas — no el ícono del `.exe`).
-3. Cambiar el texto "ASO Productores" (placeholder) en `Sidebar.xaml`, `LoginView.xaml`, `MainWindow.xaml`
-   (`Title`) y `PrimerArranqueView.xaml` (`Title`), y `Product`/`Company`/`Description` en el
-   `.csproj`.
+  El `.eps` trae un preview embebido (para verlo sin abrir Illustrator) pero es de muy baja
+  calidad — paleta de 6 tonos de gris nada más, se nota a simple vista como bordes dentados en
+  cualquier curva. Los rasters de acá salen de **renderizar el PostScript real** con Ghostscript
+  (`gswin64c -dEPSCrop -sDEVICE=pngalpha -r100`, instalado para esto — no es una dependencia del
+  proyecto en tiempo de ejecución, solo hizo falta para generar estos dos archivos una vez) y
+  recortar a mano la variante de arriba a la izquierda. Si hay que retocar el recorte o el color
+  del logo más adelante, repetir desde el `.eps`, no desde estos PNG/ICO (se pierde nitidez).
+
+- **`aso-cow-mark.png`** — la vaca de cuerpo completo, transparente, en `OnAccentColor`
+  (`#2B1C00`). La usan el sidebar (`Controls/Sidebar.xaml`, badge de 36px) y el login
+  (`Views/LoginView.xaml`, badge de 56px) DENTRO del badge de `PrimaryButtonBrush` de siempre (ya
+  no el monograma de texto "A"). El `<Image>` lleva
+  `RenderOptions.BitmapScalingMode="HighQuality"`: sin eso, WPF reduce el mapa de bits con un
+  algoritmo de baja calidad y el trazo se ve sucio aunque el PNG en sí esté perfecto.
+- **`aso-icon.ico`** — compuesto autocontenido (badge + logo, no puede usar `DynamicResource`),
+  multi-resolución (16/24/32/48/256). Es el `ApplicationIcon` del `.csproj` y el `Icon=` de
+  `MainWindow.xaml`, `LoginView.xaml`, `PrimerArranqueView.xaml` y `CrudEditorWindow.xaml` — lo
+  que Windows pinta de verdad en la barra de tareas, Alt+Tab y el Administrador de tareas, no el
+  ícono del `.exe`. A diferencia de `aso-cow-mark.png`, acá va **solo la cabeza con los cuernos**
+  (recorte propio, sin cuerpo/cola/ubre): a 16-24px la vaca completa se volvía una mancha
+  ilegible, y una forma con menos elementos —pero más grandes— se reconoce mejor de chica. El
+  fondo cuadrado-redondeado del `.ico` se dibuja a 4x de resolución y se reduce con LANCZOS antes
+  de exportar los tamaños finales — dibujarlo directo con `ImageDraw` de Pillow no antialiasea
+  las esquinas y quedaban con un escalón de píxeles duro.
+
+El texto "ASO Productores" (`Sidebar.xaml`/`LoginView.xaml`/`MainWindow.xaml` `Title`/
+`PrimerArranqueView.xaml` `Title`/`ApplicationTitle`+`Product` del `.csproj`/los `MessageBox` de
+`App.xaml.cs`) pasó a **"ASO Producs"** (2026-09-16). Sigue siendo placeholder (punto 4 de
+PROVISIONAL) — no es la razón social real todavía. `Company` en el `.csproj` sigue sin tocar
+("Empresa"). **A propósito NO se tocó** la carpeta `%AppData%\ASO Productores\` (`AppConfig.cs`,
+`AjustesStoreJson.cs`): es el mismo criterio que ya separa `ASO_PRODUCS` (técnico) del nombre
+visible — cambiar esa carpeta mueve dónde vive el `.mdf` de LocalDB, y como el nombre lógico de
+la base (`Database=AsoProductores` en la cadena de conexión) no cambia con la carpeta, la
+instalación de LocalDB de esta máquina choca ("database already exists") contra el registro
+viejo. Si el nombre visible se vuelve a tocar, la carpeta de datos se deja como está salvo que
+haga falta migrarla a propósito.
 
 ## Configuración y preferencias
 
@@ -490,7 +515,9 @@ propio porque no decide nada del negocio). Las preferencias NO van a la base de 
 Los módulos de los productores están por definir. Lo siguiente son placeholders deliberados, fáciles
 de revisar y cambiar; no son bugs:
 
-1. **Marca**: paleta ámbar/azul placeholder y monograma de texto sin logo — ver "Marca" arriba.
+1. **Marca**: RESUELTO — paleta (`#AD8631`/`#5279CE`) y logo real ya puestos, ver "Marca" arriba.
+   Sigue placeholder el nombre visible "ASO Producs" y `Company` en el `.csproj` (parte del
+   punto 4).
 2. **Roles genéricos**: `Operador` / `Supervisor` / `AdministradorOrganizacion` / `Desarrollador`
    no están atados a ningún puesto real. Ajustar los nombres y los conjuntos base en
    `Models/Rol.cs` / `Services/MatrizPermisos.cs` en cuanto el negocio real esté definido — son
@@ -499,9 +526,12 @@ de revisar y cambiar; no son bugs:
 3. **Jerarquía física**: hoy es "una organización, sin nivel intermedio". Si el negocio real
    tiene varias plantas o líneas de producción bajo la misma organización, diseñar ese nivel
    cuando se conozca la necesidad real — no está prefigurado en el modelo de datos actual.
-4. **Nombre del producto / razón social**: "ASO Productores" (títulos de ventana, sidebar, login,
-   `%AppData%`) y "Empresa" en `Company` del `.csproj` son placeholders. Si cambia el nombre
-   visible, la carpeta de `%AppData%` cambia con él y las preferencias guardadas se pierden.
+4. **Nombre del producto / razón social**: el nombre visible "ASO Producs" (títulos de ventana,
+   sidebar, login) y "Empresa" en `Company` del `.csproj` son placeholders. La carpeta
+   `%AppData%\ASO Productores\` (dato interno, no lo ve el usuario) se dejó fija a propósito —
+   ver la nota en "Marca" arriba sobre por qué moverla choca con LocalDB en esta máquina; si
+   hace falta migrarla de verdad algún día, hacerlo aparte, no como consecuencia automática de
+   cambiar el nombre visible.
 5. **Módulos de negocio**: además de los tres heredados del scaffold (Finanzas, Inventario,
    Materia Prima), ya se agregó **Procesos** (Producción y Despacho) construido de cero con la
    receta de "Cómo se agrega un submódulo" — ver la sección "Procesos" arriba. Sigue sin haber
@@ -530,6 +560,7 @@ de revisar y cambiar; no son bugs:
    Inventario, Materia Prima y ahora Procesos ya dejan los patrones y los almacenes de los que
    tirarán los demás.
 2. **Decidir los roles reales** del negocio y reemplazar los cuatro genéricos.
-3. **Elegir el color de marca y el logo real** y actualizar lo descrito en "Marca".
+3. ~~Elegir el color de marca y el logo real~~ — hecho, ver "Marca" arriba (2026-09-15). Queda
+   el nombre visible "ASO Producs" (punto 4 de PROVISIONAL) si el negocio pide otro.
 4. **Llevar la comprobación de permisos a los servicios de dominio** de cada módulo nuevo desde
    el principio (no repetir el hueco que tiene hoy el CRUD genérico).
