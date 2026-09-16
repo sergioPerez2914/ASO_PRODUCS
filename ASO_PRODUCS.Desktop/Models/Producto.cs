@@ -24,6 +24,13 @@ public class Producto : IEntidad<int>, IDeOrganizacion
 
     public bool Activo { get; set; } = true;
 
+    /// <summary>Precio de referencia por unidad, para proponerlo al despachar (el operador puede
+    /// cambiarlo por línea). Cero significa "sin precio configurado" — el despacho sigue pidiéndolo
+    /// a mano en ese caso.</summary>
+    public decimal PrecioUnitario { get; set; }
+
+    public string PrecioUnitarioTexto => PrecioUnitario.ToString("N2");
+
     /// <summary>
     /// NO se persiste (va con <c>Ignore</c> en el DbContext): depende de dos tablas enteras y el
     /// modelo no tiene acceso a la base. La rellena <c>ProductosService.RellenarExistencias</c>

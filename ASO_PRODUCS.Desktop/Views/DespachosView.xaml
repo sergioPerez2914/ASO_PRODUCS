@@ -186,6 +186,7 @@
               <DataGrid.Columns>
                 <controls:ColumnaTexto Header="Producto" Binding="{Binding Nombre}" Width="34*" MinWidth="180" />
                 <controls:ColumnaTexto Header="Unidad" Binding="{Binding UnidadMedida}" Width="16*" MinWidth="90" />
+                <controls:ColumnaNumero Header="Precio" Binding="{Binding PrecioUnitarioTexto}" Width="14*" MinWidth="90" />
                 <controls:ColumnaNumero Header="Existencia" Binding="{Binding ExistenciaTexto}" Width="18*" MinWidth="110">
                   <controls:ColumnaNumero.ElementStyle>
                     <Style TargetType="TextBlock">

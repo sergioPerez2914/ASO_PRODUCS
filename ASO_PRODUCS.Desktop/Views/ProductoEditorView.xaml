@@ -18,6 +18,12 @@
                Text="{Binding UnidadMedida, UpdateSourceTrigger=PropertyChanged}" />
     </controls:FormField>
 
+    <controls:FormField Etiqueta="Precio por unidad"
+                        Ayuda="Precio sugerido al despachar este producto; se puede cambiar en cada despacho.">
+      <TextBox Style="{StaticResource FormTextBoxStyle}"
+               Text="{Binding Precio, UpdateSourceTrigger=PropertyChanged}" />
+    </controls:FormField>
+
     <CheckBox Content="Activo" Margin="0,16,0,0" Cursor="Hand"
               Foreground="{DynamicResource TextPrimaryBrush}"
               IsChecked="{Binding Activo}" />

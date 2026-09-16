@@ -509,6 +509,7 @@ public class AsoProductoresDbContext : DbContext
             entity.HasKey(p => p.Id);
             entity.Property(p => p.Nombre).IsRequired().HasMaxLength(150);
             entity.Property(p => p.UnidadMedida).HasMaxLength(30);
+            entity.Property(p => p.PrecioUnitario).HasColumnType("decimal(18,2)");
 
             // Existencia NO se persiste: es la suma de procesos terminados menos despachos, la
             // rellena ProductosService.
@@ -516,6 +517,7 @@ public class AsoProductoresDbContext : DbContext
             entity.Ignore(p => p.SinExistencia);
             entity.Ignore(p => p.EstadoTexto);
             entity.Ignore(p => p.ExistenciaTexto);
+            entity.Ignore(p => p.PrecioUnitarioTexto);
         });
 
         modelBuilder.Entity<ProcesoProduccion>(entity =>

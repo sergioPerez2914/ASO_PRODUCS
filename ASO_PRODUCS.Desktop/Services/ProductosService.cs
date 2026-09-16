@@ -46,6 +46,12 @@ public sealed class ProductosService
             return false;
         }
 
+        if (producto.PrecioUnitario < 0)
+        {
+            error = "El precio no puede ser negativo.";
+            return false;
+        }
+
         error = null;
         return true;
     }

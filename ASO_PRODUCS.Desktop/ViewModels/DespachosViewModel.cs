@@ -118,6 +118,7 @@ public sealed class ProductoEditorViewModel : CrudEditorViewModelBase<Producto>
 
         Nombre = original.Nombre;
         UnidadMedida = original.UnidadMedida;
+        Precio = original.PrecioUnitario > 0 ? original.PrecioUnitario.ToString("0.####") : string.Empty;
         Activo = original.Id == 0 || original.Activo;
     }
 
@@ -139,6 +140,16 @@ public sealed class ProductoEditorViewModel : CrudEditorViewModelBase<Producto>
         set => SetProperty(ref _unidadMedida, value);
     }
 
+    /// <summary>Precio de referencia por unidad; opcional (vacío/0 = sin precio configurado, el
+    /// despacho lo sigue pidiendo a mano en ese caso). La validación de que no sea negativo la hace
+    /// <see cref="ProductosService.Validar"/>, no acá.</summary>
+    private string _precio = string.Empty;
+    public string Precio
+    {
+        get => _precio;
+        set => SetProperty(ref _precio, value);
+    }
+
     private bool _activo = true;
     public bool Activo
     {
@@ -153,6 +164,7 @@ public sealed class ProductoEditorViewModel : CrudEditorViewModelBase<Producto>
         var producto = _original.Clonar();
         producto.Nombre = Nombre.Trim();
         producto.UnidadMedida = UnidadMedida.Trim();
+        producto.PrecioUnitario = decimal.TryParse(Precio, out var precio) ? precio : 0m;
         producto.Activo = Activo;
         return producto;
     }
@@ -567,7 +579,18 @@ public sealed class LineaDespachoEditorViewModel : ViewModelBase
     public Producto? ProductoSeleccionado
     {
         get => _productoSeleccionado;
-        set { if (SetProperty(ref _productoSeleccionado, value)) Recalcular(); }
+        set
+        {
+            if (!SetProperty(ref _productoSeleccionado, value))
+                return;
+
+            // Propone el precio del catálogo solo si el operador todavía no escribió nada en esta
+            // línea; si ya había un precio a mano, cambiar de producto no lo pisa.
+            if (value is { PrecioUnitario: > 0 } && string.IsNullOrWhiteSpace(PrecioUnitario))
+                PrecioUnitario = value.PrecioUnitario.ToString("0.####");
+
+            Recalcular();
+        }
     }
 
     /// <summary>Solo los procesos que fabricaron el producto elegido en esta línea — la lista se
