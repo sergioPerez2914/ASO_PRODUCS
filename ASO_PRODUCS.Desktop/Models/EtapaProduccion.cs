@@ -16,10 +16,6 @@ public class EtapaProduccion : IEntidad<int>, IDeOrganizacion
 
     public string Descripcion { get; set; } = string.Empty;
 
-    /// <summary>Orden sugerido al listar el catálogo en el selector; no obliga a nada, un proceso
-    /// puede agregar sus etapas en cualquier orden real.</summary>
-    public int Orden { get; set; }
-
     public bool Activo { get; set; } = true;
 
     public string EstadoTexto => Activo ? "Activo" : "Inactivo";

@@ -37,24 +37,23 @@ public static class CatalogoLacteoSugerido
     /// Pasteurización→Enfriado→Inoculación→Cuajado→Corte de cuajada→Desuerado→Moldeado→Prensado→
     /// Salado→Envasado. Queso Amarillo = igual + Maduración antes de Envasado. Mantequilla =
     /// Pasteurización→Enfriado→Descremado→Batido→Amasado y lavado→Envasado. Crema de Leche =
-    /// Pasteurización→Enfriado→Descremado→Envasado. El <c>Orden</c> deja huecos de 10 para poder
-    /// insertar etapas nuevas después sin renumerar las existentes.
+    /// Pasteurización→Enfriado→Descremado→Envasado.
     /// </summary>
-    public static IReadOnlyList<(string Nombre, string Descripcion, int Orden)> EtapasProduccion { get; } =
+    public static IReadOnlyList<(string Nombre, string Descripcion)> EtapasProduccion { get; } =
     [
-        ("Pasteurización", "Calentamiento de la leche para eliminar patógenos antes de procesar.", 10),
-        ("Enfriado", "Bajar la leche pasteurizada a la temperatura de trabajo antes de inocular o cuajar.", 20),
-        ("Inoculación", "Adición del fermento/cultivo láctico.", 30),
-        ("Cuajado", "Adición del cuajo y reposo hasta formar la cuajada.", 40),
-        ("Corte de cuajada", "División de la cuajada en granos para facilitar el desuerado.", 50),
-        ("Desuerado", "Separación del suero líquido de la cuajada sólida.", 60),
-        ("Moldeado", "Vaciado de la cuajada en moldes para darle forma.", 70),
-        ("Prensado", "Prensado del queso moldeado para compactarlo y terminar de expulsar el suero.", 80),
-        ("Salado", "Salado en seco o en salmuera.", 90),
-        ("Maduración", "Reposo controlado para desarrollar sabor y textura (quesos madurados, como el Amarillo).", 100),
-        ("Descremado", "Separación de la nata/crema de la leche entera.", 110),
-        ("Batido", "Batido de la crema hasta separar la mantequilla del suero de mantequilla.", 120),
-        ("Amasado y lavado", "Lavado y amasado de la mantequilla para retirar el suero de mantequilla residual.", 130),
-        ("Envasado", "Empacado del producto terminado.", 140),
+        ("Pasteurización", "Calentamiento de la leche para eliminar patógenos antes de procesar."),
+        ("Enfriado", "Bajar la leche pasteurizada a la temperatura de trabajo antes de inocular o cuajar."),
+        ("Inoculación", "Adición del fermento/cultivo láctico."),
+        ("Cuajado", "Adición del cuajo y reposo hasta formar la cuajada."),
+        ("Corte de cuajada", "División de la cuajada en granos para facilitar el desuerado."),
+        ("Desuerado", "Separación del suero líquido de la cuajada sólida."),
+        ("Moldeado", "Vaciado de la cuajada en moldes para darle forma."),
+        ("Prensado", "Prensado del queso moldeado para compactarlo y terminar de expulsar el suero."),
+        ("Salado", "Salado en seco o en salmuera."),
+        ("Maduración", "Reposo controlado para desarrollar sabor y textura (quesos madurados, como el Amarillo)."),
+        ("Descremado", "Separación de la nata/crema de la leche entera."),
+        ("Batido", "Batido de la crema hasta separar la mantequilla del suero de mantequilla."),
+        ("Amasado y lavado", "Lavado y amasado de la mantequilla para retirar el suero de mantequilla residual."),
+        ("Envasado", "Empacado del producto terminado."),
     ];
 }

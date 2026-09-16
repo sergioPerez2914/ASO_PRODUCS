@@ -173,7 +173,6 @@
               <DataGrid.Columns>
                 <controls:ColumnaTexto Header="Etapa" Binding="{Binding Nombre}" Width="28*" MinWidth="160" />
                 <controls:ColumnaTexto Header="Descripción" Binding="{Binding Descripcion}" Width="40*" MinWidth="180" />
-                <controls:ColumnaNumero Header="Orden" Binding="{Binding Orden}" Width="10*" MinWidth="70" />
                 <DataGridTemplateColumn Header="Estado" Width="104">
                   <DataGridTemplateColumn.CellTemplate>
                     <DataTemplate>

@@ -77,7 +77,6 @@ public sealed class EtapaProduccionEditorViewModel : CrudEditorViewModelBase<Eta
 
         Nombre = original.Nombre;
         Descripcion = original.Descripcion;
-        Orden = original.Orden;
         Activo = original.Id == 0 || original.Activo;
     }
 
@@ -99,13 +98,6 @@ public sealed class EtapaProduccionEditorViewModel : CrudEditorViewModelBase<Eta
         set => SetProperty(ref _descripcion, value);
     }
 
-    private int _orden;
-    public int Orden
-    {
-        get => _orden;
-        set => SetProperty(ref _orden, value);
-    }
-
     private bool _activo = true;
     public bool Activo
     {
@@ -120,7 +112,6 @@ public sealed class EtapaProduccionEditorViewModel : CrudEditorViewModelBase<Eta
         var etapa = _original.Clonar();
         etapa.Nombre = Nombre.Trim();
         etapa.Descripcion = Descripcion.Trim();
-        etapa.Orden = Orden;
         etapa.Activo = Activo;
         return etapa;
     }
@@ -232,7 +223,7 @@ public sealed class ProcesosProduccionCrudViewModel : CrudViewModelBase<ProcesoP
         [.. _articulos.GetActivos().OrderBy(a => a.Nombre)];
 
     private IReadOnlyList<EtapaProduccion> ListaEtapasActivas() =>
-        [.. _etapas.GetActivas().OrderBy(e => e.Orden).ThenBy(e => e.Nombre)];
+        [.. _etapas.GetActivas().OrderBy(e => e.Nombre)];
 
     /// <summary>
     /// Iniciar pasa por el servicio de dominio, igual que las Recepciones/Salidas de Materia

@@ -9,8 +9,8 @@ namespace ASO_PRODUCS.Desktop.BD;
 public class SqlEtapaProduccionDataSource : SqlCrudDataSource<EtapaProduccion, int>, IEtapaProduccionDataSource
 {
     protected override IQueryable<EtapaProduccion> Ordenar(IQueryable<EtapaProduccion> consulta)
-        => consulta.OrderBy(e => e.Orden).ThenBy(e => e.Nombre);
+        => consulta.OrderBy(e => e.Nombre);
 
     public IEnumerable<EtapaProduccion> GetActivas()
-        => Consultar(q => q.Where(e => e.Activo).OrderBy(e => e.Orden).ThenBy(e => e.Nombre));
+        => Consultar(q => q.Where(e => e.Activo).OrderBy(e => e.Nombre));
 }
