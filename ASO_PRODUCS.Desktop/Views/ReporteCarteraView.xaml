@@ -70,10 +70,21 @@
     <!-- ===================== Por cliente (CxC) ===================== -->
     <Grid Grid.Row="4" Margin="0,16,0,0"
           Visibility="{Binding MostrarPorCliente, Converter={StaticResource BoolToVis}}">
-      <Border Style="{StaticResource SectionCardStyle}" Padding="0">
+      <Grid.RowDefinitions>
+        <RowDefinition Height="Auto" />
+        <RowDefinition Height="*" />
+      </Grid.RowDefinitions>
+
+      <TextBlock Grid.Row="0" Text="Doble clic en una fila para ver el detalle completo de la factura."
+                 Margin="0,0,0,4" FontSize="{StaticResource FsCaption}"
+                 Foreground="{DynamicResource TextMutedBrush}" />
+
+      <Border Grid.Row="1" Style="{StaticResource SectionCardStyle}" Padding="0">
         <Grid>
           <DataGrid x:Name="TablaPorCliente" Style="{StaticResource DataGridStyle}"
-                    ItemsSource="{Binding PorCliente}" IsReadOnly="True">
+                    ItemsSource="{Binding PorCliente}" IsReadOnly="True"
+                    SelectedItem="{Binding SeleccionadaCliente}"
+                    MouseDoubleClick="TablaPorCliente_MouseDoubleClick">
             <DataGrid.Columns>
               <controls:ColumnaTexto Header="Documento" Binding="{Binding Documento}" Width="16*" MinWidth="110" />
               <controls:ColumnaTexto Header="Cliente" Binding="{Binding Nombre}" Width="26*" MinWidth="160" />
@@ -95,10 +106,21 @@
     <!-- ===================== Por proveedor (CxP) ===================== -->
     <Grid Grid.Row="4" Margin="0,16,0,0"
           Visibility="{Binding MostrarPorProveedor, Converter={StaticResource BoolToVis}}">
-      <Border Style="{StaticResource SectionCardStyle}" Padding="0">
+      <Grid.RowDefinitions>
+        <RowDefinition Height="Auto" />
+        <RowDefinition Height="*" />
+      </Grid.RowDefinitions>
+
+      <TextBlock Grid.Row="0" Text="Doble clic en una fila para ver el detalle completo de la factura."
+                 Margin="0,0,0,4" FontSize="{StaticResource FsCaption}"
+                 Foreground="{DynamicResource TextMutedBrush}" />
+
+      <Border Grid.Row="1" Style="{StaticResource SectionCardStyle}" Padding="0">
         <Grid>
           <DataGrid x:Name="TablaPorProveedor" Style="{StaticResource DataGridStyle}"
-                    ItemsSource="{Binding PorProveedor}" IsReadOnly="True">
+                    ItemsSource="{Binding PorProveedor}" IsReadOnly="True"
+                    SelectedItem="{Binding SeleccionadaProveedor}"
+                    MouseDoubleClick="TablaPorProveedor_MouseDoubleClick">
             <DataGrid.Columns>
               <controls:ColumnaTexto Header="Documento" Binding="{Binding Documento}" Width="16*" MinWidth="110" />
               <controls:ColumnaTexto Header="Proveedor" Binding="{Binding Nombre}" Width="26*" MinWidth="160" />

@@ -54,11 +54,35 @@ public sealed class ReporteCarteraViewModel : PantallaViewModelBase
         _fechaHasta = DateTime.Today;
 
         ExportarExcelCommand = new RelayCommand(ExportarExcel);
+        VerDetalleClienteCommand = new RelayCommand(VerDetalleCliente);
+        VerDetalleProveedorCommand = new RelayCommand(VerDetalleProveedor);
 
         Recalcular();
     }
 
     public ICommand ExportarExcelCommand { get; }
+
+    /// <summary>Solo las invoca el doble clic de cada grilla (ver
+    /// <c>ReporteCarteraView.xaml.cs</c>), nunca un botón. Cada una abre la factura real detrás de
+    /// la fila, mismo criterio que <see cref="CuentasPorCobrarViewModel"/>/
+    /// <see cref="CuentasPorPagarViewModel"/> — dos comandos porque son dos grillas independientes,
+    /// no una sola con pestañas de selección compartida.</summary>
+    public ICommand VerDetalleClienteCommand { get; }
+    public ICommand VerDetalleProveedorCommand { get; }
+
+    private FilaCarteraDetalle? _seleccionadaCliente;
+    public FilaCarteraDetalle? SeleccionadaCliente
+    {
+        get => _seleccionadaCliente;
+        set => SetProperty(ref _seleccionadaCliente, value);
+    }
+
+    private FilaCarteraDetalle? _seleccionadaProveedor;
+    public FilaCarteraDetalle? SeleccionadaProveedor
+    {
+        get => _seleccionadaProveedor;
+        set => SetProperty(ref _seleccionadaProveedor, value);
+    }
 
     private DateTime _fechaDesde;
     public DateTime FechaDesde
@@ -121,7 +145,7 @@ public sealed class ReporteCarteraViewModel : PantallaViewModelBase
         var porCliente = cxcEnRango
             .OrderBy(f => f.FechaVencimiento ?? DateTime.MaxValue)
             .Select(f => new FilaCarteraDetalle(f.NumeroDocumento, f.ClienteNombre, f.FechaEmision,
-                f.VencimientoTexto, f.PlazoTexto, f.Monto))
+                f.VencimientoTexto, f.PlazoTexto, f.Monto, f))
             .ToList();
 
         PorCliente.Clear();
@@ -136,7 +160,7 @@ public sealed class ReporteCarteraViewModel : PantallaViewModelBase
         var porProveedor = cxpEnRango
             .OrderBy(f => f.FechaVencimiento ?? DateTime.MaxValue)
             .Select(f => new FilaCarteraDetalle(f.NumeroDocumento, f.ProveedorNombre, f.FechaEmision,
-                f.VencimientoTexto, f.PlazoTexto, f.Monto))
+                f.VencimientoTexto, f.PlazoTexto, f.Monto, f))
             .ToList();
 
         PorProveedor.Clear();
@@ -197,17 +221,32 @@ public sealed class ReporteCarteraViewModel : PantallaViewModelBase
 
         _dialogos.Informar("Reporte exportado", $"El archivo se guardó en:\n{ruta}");
     }
+
+    private void VerDetalleCliente()
+    {
+        if (SeleccionadaCliente?.Origen is FacturaCliente factura)
+            _dialogos.MostrarEditor(new FacturaClienteDetalleViewModel(factura));
+    }
+
+    private void VerDetalleProveedor()
+    {
+        if (SeleccionadaProveedor?.Origen is FacturaProveedor factura)
+            _dialogos.MostrarEditor(new FacturaProveedorDetalleViewModel(factura));
+    }
 }
 
 /// <summary>Fila de una factura pendiente (cliente o proveedor según la vista), sin agrupar: el
-/// Documento y las fechas identifican exactamente cuál es, en vez de un total por tercero.</summary>
+/// Documento y las fechas identifican exactamente cuál es, en vez de un total por tercero.
+/// <paramref name="Origen"/> es la <see cref="FacturaCliente"/> o <see cref="FacturaProveedor"/>
+/// real detrás de la fila (según la vista), para abrir su ficha de detalle.</summary>
 public sealed record FilaCarteraDetalle(
     string Documento,
     string Nombre,
     DateTime FechaEmision,
     string VencimientoTexto,
     string PlazoTexto,
-    decimal Monto)
+    decimal Monto,
+    object Origen)
 {
     public string FechaEmisionTexto => FechaEmision.ToString("dd/MM/yyyy");
     public string MontoTexto => Monto.ToString("N2");

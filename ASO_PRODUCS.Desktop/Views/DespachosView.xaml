@@ -39,6 +39,7 @@
       <Grid DataContext="{Binding Despachos}">
         <Grid.RowDefinitions>
           <RowDefinition Height="Auto" />
+          <RowDefinition Height="Auto" />
           <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
@@ -82,7 +83,11 @@
           </Grid>
         </Border>
 
-        <Border Grid.Row="1" Style="{StaticResource SectionCardStyle}" Padding="0">
+        <TextBlock Grid.Row="1" Text="Doble clic en una fila para ver el detalle completo del despacho."
+                   Margin="0,12,0,4" FontSize="{StaticResource FsCaption}"
+                   Foreground="{DynamicResource TextMutedBrush}" />
+
+        <Border Grid.Row="2" Style="{StaticResource SectionCardStyle}" Padding="0">
           <Grid>
             <DataGrid x:Name="TablaDespachos" Style="{StaticResource DataGridStyle}"
                       ItemsSource="{Binding ItemsView}"

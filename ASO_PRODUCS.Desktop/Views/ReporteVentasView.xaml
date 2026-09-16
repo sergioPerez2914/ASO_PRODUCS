@@ -56,26 +56,39 @@
     </ItemsControl>
 
     <!-- Una sola tabla: no hace falta pestaña. -->
-    <Border Grid.Row="3" Style="{StaticResource SectionCardStyle}" Padding="0" Margin="0,16,0,0">
-      <Grid>
-        <DataGrid x:Name="TablaDetalle" Style="{StaticResource DataGridStyle}"
-                  ItemsSource="{Binding Detalle}" IsReadOnly="True">
-          <DataGrid.Columns>
-            <controls:ColumnaTexto Header="Fecha" Binding="{Binding FechaTexto}" Width="12*" MinWidth="90" />
-            <controls:ColumnaTexto Header="Despacho" Binding="{Binding DespachoNumero}" Width="14*" MinWidth="100" />
-            <controls:ColumnaTexto Header="Cliente" Binding="{Binding ClienteNombre}" Width="22*" MinWidth="150" />
-            <controls:ColumnaTexto Header="Producto" Binding="{Binding ProductoNombre}" Width="20*" MinWidth="150" />
-            <controls:ColumnaNumero Header="Cantidad" Binding="{Binding CantidadTexto}" Width="14*" MinWidth="110" />
-            <controls:ColumnaNumero Header="Precio unitario" Binding="{Binding PrecioUnitarioTexto}" Width="12*" MinWidth="100" />
-            <controls:ColumnaNumero Header="Subtotal" Binding="{Binding SubtotalTexto}" Width="12*" MinWidth="100" />
-          </DataGrid.Columns>
-        </DataGrid>
+    <Grid Grid.Row="3" Margin="0,16,0,0">
+      <Grid.RowDefinitions>
+        <RowDefinition Height="Auto" />
+        <RowDefinition Height="*" />
+      </Grid.RowDefinitions>
 
-        <controls:EmptyState Icono="{x:Static controls:Iconos.Despacho}"
-                             Titulo="No hay ventas en el período"
-                             Detalle="Cambia el rango de fechas o registra despachos tipo Venta en Procesos · Despacho."
-                             Visibility="{Binding HasItems, ElementName=TablaDetalle, Converter={StaticResource SinItemsAVis}}" />
-      </Grid>
-    </Border>
+      <TextBlock Grid.Row="0" Text="Doble clic en una fila para ver el detalle completo del despacho."
+                 Margin="0,0,0,4" FontSize="{StaticResource FsCaption}"
+                 Foreground="{DynamicResource TextMutedBrush}" />
+
+      <Border Grid.Row="1" Style="{StaticResource SectionCardStyle}" Padding="0">
+        <Grid>
+          <DataGrid x:Name="TablaDetalle" Style="{StaticResource DataGridStyle}"
+                    ItemsSource="{Binding Detalle}" IsReadOnly="True"
+                    SelectedItem="{Binding Seleccionada}"
+                    MouseDoubleClick="TablaDetalle_MouseDoubleClick">
+            <DataGrid.Columns>
+              <controls:ColumnaTexto Header="Fecha" Binding="{Binding FechaTexto}" Width="12*" MinWidth="90" />
+              <controls:ColumnaTexto Header="Despacho" Binding="{Binding DespachoNumero}" Width="14*" MinWidth="100" />
+              <controls:ColumnaTexto Header="Cliente" Binding="{Binding ClienteNombre}" Width="22*" MinWidth="150" />
+              <controls:ColumnaTexto Header="Producto" Binding="{Binding ProductoNombre}" Width="20*" MinWidth="150" />
+              <controls:ColumnaNumero Header="Cantidad" Binding="{Binding CantidadTexto}" Width="14*" MinWidth="110" />
+              <controls:ColumnaNumero Header="Precio unitario" Binding="{Binding PrecioUnitarioTexto}" Width="12*" MinWidth="100" />
+              <controls:ColumnaNumero Header="Subtotal" Binding="{Binding SubtotalTexto}" Width="12*" MinWidth="100" />
+            </DataGrid.Columns>
+          </DataGrid>
+
+          <controls:EmptyState Icono="{x:Static controls:Iconos.Despacho}"
+                               Titulo="No hay ventas en el período"
+                               Detalle="Cambia el rango de fechas o registra despachos tipo Venta en Procesos · Despacho."
+                               Visibility="{Binding HasItems, ElementName=TablaDetalle, Converter={StaticResource SinItemsAVis}}" />
+        </Grid>
+      </Border>
+    </Grid>
   </Grid>
 </UserControl>

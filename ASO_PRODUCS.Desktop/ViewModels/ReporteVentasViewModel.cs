@@ -47,11 +47,24 @@ public sealed class ReporteVentasViewModel : PantallaViewModelBase
         _fechaHasta = DateTime.Today;
 
         ExportarExcelCommand = new RelayCommand(ExportarExcel);
+        VerDetalleCommand = new RelayCommand(VerDetalle);
 
         Recalcular();
     }
 
     public ICommand ExportarExcelCommand { get; }
+
+    /// <summary>Solo la invoca el doble clic de la grilla (ver <c>ReporteVentasView.xaml.cs</c>),
+    /// nunca un botón. Abre el despacho real detrás de la línea, mismo criterio que
+    /// <see cref="DespachosCrudViewModel.VerDetalleCommand"/>.</summary>
+    public ICommand VerDetalleCommand { get; }
+
+    private FilaVentaDetalle? _seleccionada;
+    public FilaVentaDetalle? Seleccionada
+    {
+        get => _seleccionada;
+        set => SetProperty(ref _seleccionada, value);
+    }
 
     private DateTime _fechaDesde;
     public DateTime FechaDesde
@@ -90,7 +103,7 @@ public sealed class ReporteVentasViewModel : PantallaViewModelBase
             .SelectMany(d => d.Lineas.Select(l => new FilaVentaDetalle(
                 d.Fecha, d.Numero, d.ClienteNombre, l.ProductoNombre,
                 $"{l.Cantidad:N2} {l.UnidadMedidaSnapshot}".Trim(),
-                l.PrecioUnitario, l.Subtotal)))
+                l.PrecioUnitario, l.Subtotal, d)))
             .OrderByDescending(f => f.Fecha)
             .ToList();
 
@@ -141,6 +154,12 @@ public sealed class ReporteVentasViewModel : PantallaViewModelBase
 
         _dialogos.Informar("Reporte exportado", $"El archivo se guardó en:\n{ruta}");
     }
+
+    private void VerDetalle()
+    {
+        if (Seleccionada is { } fila)
+            _dialogos.MostrarEditor(new DespachoDetalleViewModel(fila.Despacho));
+    }
 }
 
 /// <summary>
@@ -155,7 +174,8 @@ public sealed record FilaVentaDetalle(
     string ProductoNombre,
     string CantidadTexto,
     decimal PrecioUnitario,
-    decimal Subtotal)
+    decimal Subtotal,
+    Despacho Despacho)
 {
     public string FechaTexto => Fecha.ToString("dd/MM/yyyy");
     public string PrecioUnitarioTexto => PrecioUnitario.ToString("N2");

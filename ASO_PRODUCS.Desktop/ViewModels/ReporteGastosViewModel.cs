@@ -48,11 +48,24 @@ public sealed class ReporteGastosViewModel : PantallaViewModelBase
         _fechaHasta = DateTime.Today;
 
         ExportarExcelCommand = new RelayCommand(ExportarExcel);
+        VerDetalleCommand = new RelayCommand(VerDetalle);
 
         Recalcular();
     }
 
     public ICommand ExportarExcelCommand { get; }
+
+    /// <summary>Solo la invoca el doble clic de la grilla (ver <c>ReporteGastosView.xaml.cs</c>),
+    /// nunca un botón. Abre el asiento de banco real detrás de la fila, mismo criterio que
+    /// <see cref="MovimientosViewModel.VerDetalleCommand"/>.</summary>
+    public ICommand VerDetalleCommand { get; }
+
+    private FilaGasto? _seleccionado;
+    public FilaGasto? Seleccionado
+    {
+        get => _seleccionado;
+        set => SetProperty(ref _seleccionado, value);
+    }
 
     private DateTime _fechaDesde;
     public DateTime FechaDesde
@@ -88,7 +101,7 @@ public sealed class ReporteGastosViewModel : PantallaViewModelBase
 
         Gastos.Clear();
         foreach (var m in gastosEnRango)
-            Gastos.Add(new FilaGasto(m.Fecha, m.CategoriaTexto, m.Concepto, m.Monto));
+            Gastos.Add(new FilaGasto(m.Fecha, m.CategoriaTexto, m.Concepto, m.Monto, m));
 
         Indicadores.Clear();
         Indicadores.Add(new Indicador("Total gastado", totalGastado.ToString("N2"), "en el período"));
@@ -122,11 +135,17 @@ public sealed class ReporteGastosViewModel : PantallaViewModelBase
 
         _dialogos.Informar("Reporte exportado", $"El archivo se guardó en:\n{ruta}");
     }
+
+    private void VerDetalle()
+    {
+        if (Seleccionado is { } fila)
+            _dialogos.MostrarEditor(new MovimientoBancoDetalleViewModel(fila.Movimiento));
+    }
 }
 
 /// <summary>Fila de un gasto (salida de banco) tal cual, sin agrupar — el Concepto es lo que
 /// identifica a quién se le pagó o para qué, ver el comentario de cabecera de la clase.</summary>
-public sealed record FilaGasto(DateTime Fecha, string Categoria, string Concepto, decimal Monto)
+public sealed record FilaGasto(DateTime Fecha, string Categoria, string Concepto, decimal Monto, MovimientoBanco Movimiento)
 {
     public string FechaTexto => Fecha.ToString("dd/MM/yyyy");
     public string MontoTexto => Monto.ToString("N2");
