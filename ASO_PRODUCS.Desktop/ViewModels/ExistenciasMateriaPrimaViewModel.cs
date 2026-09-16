@@ -63,7 +63,8 @@ public sealed class ExistenciasMateriaPrimaViewModel : PantallaCrudViewModel<Tip
     public ICommand CargarSugeridosCommand { get; }
 
     public string Resumen =>
-        $"{Items.Count(t => t.Activo)} tipos activos · {Items.Count(t => t.SinExistencia)} sin existencia";
+        $"{Items.Count(t => t.Activo)} tipos activos · {Items.Count(t => t.SinExistencia)} sin existencia · " +
+        $"{Items.Count(t => t.BajoMinimo)} bajo mínimo";
 
     protected override string ModuloPermiso => "TiposMateriaPrima";
 
@@ -72,7 +73,7 @@ public sealed class ExistenciasMateriaPrimaViewModel : PantallaCrudViewModel<Tip
 
     protected override bool PasaFiltroExtra(TipoMateriaPrima item) => _filtro switch
     {
-        "Con existencia" => item.Existencia > 0,
+        "Bajo mínimo" => item.BajoMinimo,
         "Sin existencia" => item.SinExistencia,
         "Inactivos" => !item.Activo,
         _ => true
@@ -126,6 +127,7 @@ public sealed class TipoMateriaPrimaEditorViewModel : CrudEditorViewModelBase<Ti
 
         Nombre = original.Nombre;
         UnidadMedida = original.UnidadMedida;
+        Minimo = original.Minimo == 0 ? string.Empty : original.Minimo.ToString("0.##");
         Activo = original.Id == 0 || original.Activo;
     }
 
@@ -148,6 +150,13 @@ public sealed class TipoMateriaPrimaEditorViewModel : CrudEditorViewModelBase<Ti
         set => SetProperty(ref _unidadMedida, value);
     }
 
+    private string _minimo = string.Empty;
+    public string Minimo
+    {
+        get => _minimo;
+        set => SetProperty(ref _minimo, value);
+    }
+
     private bool _activo = true;
     public bool Activo
     {
@@ -155,13 +164,24 @@ public sealed class TipoMateriaPrimaEditorViewModel : CrudEditorViewModelBase<Ti
         set => SetProperty(ref _activo, value);
     }
 
-    protected override bool Validar(out string? error) => _servicio.Validar(ObtenerResultado(), out error);
+    protected override bool Validar(out string? error)
+    {
+        if (!string.IsNullOrWhiteSpace(Minimo)
+            && (!decimal.TryParse(Minimo, out var minimo) || minimo < 0))
+        {
+            error = "El mínimo debe ser un número mayor o igual a cero.";
+            return false;
+        }
+
+        return _servicio.Validar(ObtenerResultado(), out error);
+    }
 
     public override TipoMateriaPrima ObtenerResultado()
     {
         var tipo = _original.Clonar();
         tipo.Nombre = Nombre.Trim();
         tipo.UnidadMedida = UnidadMedida.Trim();
+        tipo.Minimo = decimal.TryParse(Minimo, out var minimo) ? minimo : 0m;
         tipo.Activo = Activo;
         return tipo;
     }

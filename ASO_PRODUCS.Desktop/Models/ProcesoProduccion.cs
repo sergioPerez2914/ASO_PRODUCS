@@ -109,6 +109,12 @@ public class ProcesoProduccion : IEntidad<int>, IDeOrganizacion
     public string TerminadoPorNombre { get; set; } = string.Empty;  // snapshot
     public DateTime? FechaTermino { get; set; }
 
+    /// <summary>Vencimiento del lote que produjo este proceso (el lote es el proceso mismo, con
+    /// su <see cref="Numero"/>). Se fija al terminar; nulo si el producto no vence.</summary>
+    public DateTime? FechaVencimiento { get; set; }
+
+    public string FechaVencimientoTexto => FechaVencimiento?.ToString("dd/MM/yyyy") ?? "—";
+
     /// <summary>Si este proceso suma a la existencia del producto. Solo un proceso Terminado
     /// cuenta; uno anulado —haya o no llegado a Terminado— deja de contar, que es lo que hace que
     /// anular devuelva la existencia del producto sin tocar ninguna otra fila.</summary>

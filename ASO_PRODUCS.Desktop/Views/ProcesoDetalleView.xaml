@@ -41,7 +41,14 @@
             <ColumnDefinition Width="*" />
             <ColumnDefinition Width="*" />
             <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="*" />
           </Grid.ColumnDefinitions>
+
+          <StackPanel Grid.Column="3">
+            <TextBlock Text="Vence" FontSize="{StaticResource FsCaption}"
+                       Foreground="{DynamicResource TextMutedBrush}" />
+            <TextBlock Text="{Binding Proceso.FechaVencimientoTexto}" FontSize="{StaticResource FsBody}" />
+          </StackPanel>
 
           <StackPanel Grid.Column="0">
             <TextBlock Text="Planeado" FontSize="{StaticResource FsCaption}"

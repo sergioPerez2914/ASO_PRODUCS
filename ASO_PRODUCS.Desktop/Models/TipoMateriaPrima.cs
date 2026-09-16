@@ -23,6 +23,10 @@ public class TipoMateriaPrima : IEntidad<int>, IDeOrganizacion
 
     public bool Activo { get; set; } = true;
 
+    /// <summary>Existencia por debajo de la cual el tipo se marca en la pantalla. Cero significa
+    /// "no vigilar" — mismo criterio que <see cref="Articulo.Minimo"/>.</summary>
+    public decimal Minimo { get; set; }
+
     /// <summary>
     /// NO se persiste (va con <c>Ignore</c> en el DbContext): depende de dos tablas enteras y el
     /// modelo no tiene acceso a la base. La rellena
@@ -31,11 +35,21 @@ public class TipoMateriaPrima : IEntidad<int>, IDeOrganizacion
     /// </summary>
     public decimal Existencia { get; set; }
 
+    public bool BajoMinimo => Activo && Minimo > 0 && Existencia < Minimo;
+
     public bool SinExistencia => Activo && Existencia <= 0;
 
-    public string EstadoTexto => !Activo ? "Inactivo" : SinExistencia ? "Sin existencia" : "Disponible";
+    public string EstadoTexto => !Activo
+        ? "Inactivo"
+        : SinExistencia
+            ? "Sin existencia"
+            : BajoMinimo
+                ? "Bajo mínimo"
+                : "Disponible";
 
     public string ExistenciaTexto => $"{Existencia:N2} {UnidadMedida}".Trim();
+
+    public string MinimoTexto => Minimo > 0 ? $"{Minimo:N2} {UnidadMedida}".Trim() : "—";
 
     /// <summary>Copia superficial (solo hay tipos de valor y cadenas) para no mutar el original
     /// en la lista.</summary>

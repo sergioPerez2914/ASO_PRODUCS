@@ -131,10 +131,9 @@ public class DespachoLinea
     public decimal Subtotal { get; set; }
 
     /// <summary>
-    /// De qué <see cref="ProcesoProduccion"/> salió lo despachado, si el operador lo indicó al
-    /// despachar. Nulo si no se especificó — es un dato INFORMATIVO, elegido a mano: no se valida
-    /// contra la existencia del proceso ni descuenta nada de él, porque la existencia de
-    /// <see cref="Producto"/> sigue siendo un total global derivado, sin manejo de lotes.
+    /// El lote despachado: el <see cref="ProcesoProduccion"/> Terminado del que sale. Obligatorio
+    /// al registrar y descuenta la existencia de ese lote (ver <c>ProductosService.Lotes</c>). Solo
+    /// es nulo en despachos anteriores al manejo de lotes.
     /// </summary>
     public int? ProcesoProduccionId { get; set; }
     public string ProcesoProduccionNumero { get; set; } = string.Empty;  // snapshot
@@ -145,7 +144,7 @@ public class DespachoLinea
 
     public string ProcesoOrigenTexto => string.IsNullOrWhiteSpace(ProcesoProduccionNumero)
         ? "Sin especificar"
-        : $"Proceso {ProcesoProduccionNumero}";
+        : $"Lote {ProcesoProduccionNumero}";
 
     public DespachoLinea Clonar() => (DespachoLinea)MemberwiseClone();
 }

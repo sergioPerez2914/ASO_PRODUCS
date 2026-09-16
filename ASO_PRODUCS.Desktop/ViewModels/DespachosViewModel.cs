@@ -57,7 +57,8 @@ public sealed class ProductosCrudViewModel : CrudViewModelBase<Producto, int>
     public ICommand CargarSugeridosCommand { get; }
 
     public string Resumen =>
-        $"{_servicio.TotalProductosActivos()} productos activos · {_servicio.ProductosSinExistencia()} sin existencia";
+        $"{_servicio.TotalProductosActivos()} productos activos · {_servicio.ProductosSinExistencia()} sin existencia · " +
+        $"{_servicio.ProductosBajoMinimo()} bajo mínimo";
 
     protected override string ModuloPermiso => "Productos";
 
@@ -66,7 +67,7 @@ public sealed class ProductosCrudViewModel : CrudViewModelBase<Producto, int>
 
     protected override bool PasaFiltroExtra(Producto item) => _filtro switch
     {
-        "Con existencia" => item.Existencia > 0,
+        "Bajo mínimo" => item.BajoMinimo,
         "Sin existencia" => item.SinExistencia,
         "Inactivos" => !item.Activo,
         _ => true
@@ -119,6 +120,8 @@ public sealed class ProductoEditorViewModel : CrudEditorViewModelBase<Producto>
         Nombre = original.Nombre;
         UnidadMedida = original.UnidadMedida;
         Precio = original.PrecioUnitario > 0 ? original.PrecioUnitario.ToString("0.####") : string.Empty;
+        DiasVidaUtil = original.DiasVidaUtil?.ToString() ?? string.Empty;
+        Minimo = original.Minimo == 0 ? string.Empty : original.Minimo.ToString("0.##");
         Activo = original.Id == 0 || original.Activo;
     }
 
@@ -150,6 +153,22 @@ public sealed class ProductoEditorViewModel : CrudEditorViewModelBase<Producto>
         set => SetProperty(ref _precio, value);
     }
 
+    /// <summary>Vacío = el producto no vence. Un texto que no es número entero se rechaza en
+    /// <see cref="Validar"/>, para no tomarlo en silencio como "no vence".</summary>
+    private string _diasVidaUtil = string.Empty;
+    public string DiasVidaUtil
+    {
+        get => _diasVidaUtil;
+        set => SetProperty(ref _diasVidaUtil, value);
+    }
+
+    private string _minimo = string.Empty;
+    public string Minimo
+    {
+        get => _minimo;
+        set => SetProperty(ref _minimo, value);
+    }
+
     private bool _activo = true;
     public bool Activo
     {
@@ -157,7 +176,23 @@ public sealed class ProductoEditorViewModel : CrudEditorViewModelBase<Producto>
         set => SetProperty(ref _activo, value);
     }
 
-    protected override bool Validar(out string? error) => _servicio.Validar(ObtenerResultado(), out error);
+    protected override bool Validar(out string? error)
+    {
+        if (!string.IsNullOrWhiteSpace(DiasVidaUtil) && !int.TryParse(DiasVidaUtil, out _))
+        {
+            error = "Los días de vida útil deben ser un número entero.";
+            return false;
+        }
+
+        if (!string.IsNullOrWhiteSpace(Minimo)
+            && (!decimal.TryParse(Minimo, out var minimo) || minimo < 0))
+        {
+            error = "El mínimo debe ser un número mayor o igual a cero.";
+            return false;
+        }
+
+        return _servicio.Validar(ObtenerResultado(), out error);
+    }
 
     public override Producto ObtenerResultado()
     {
@@ -165,6 +200,8 @@ public sealed class ProductoEditorViewModel : CrudEditorViewModelBase<Producto>
         producto.Nombre = Nombre.Trim();
         producto.UnidadMedida = UnidadMedida.Trim();
         producto.PrecioUnitario = decimal.TryParse(Precio, out var precio) ? precio : 0m;
+        producto.DiasVidaUtil = int.TryParse(DiasVidaUtil, out var dias) ? dias : null;
+        producto.Minimo = decimal.TryParse(Minimo, out var minimo) ? minimo : 0m;
         producto.Activo = Activo;
         return producto;
     }
@@ -184,7 +221,6 @@ public sealed class DespachosCrudViewModel : CrudViewModelBase<Despacho, int>
 
     private readonly ProductosService _productos;
     private readonly IReadOnlyList<Cliente> _clientes;
-    private readonly IReadOnlyList<ProcesoProduccion> _procesosTerminados;
     private readonly IServicioDialogo _dialogos;
     private readonly ISesionActual _sesionActual;
     private readonly DespachosService _servicio;
@@ -194,7 +230,6 @@ public sealed class DespachosCrudViewModel : CrudViewModelBase<Despacho, int>
     public DespachosCrudViewModel(IDespachoDataSource despachos,
                                   ProductosService productos,
                                   IClienteDataSource clientes,
-                                  IProcesoProduccionDataSource procesos,
                                   DespachosService servicio,
                                   IServicioDialogo dialogos,
                                   ISesionActual sesion)
@@ -202,12 +237,6 @@ public sealed class DespachosCrudViewModel : CrudViewModelBase<Despacho, int>
     {
         _productos = productos;
         _clientes = [.. clientes.GetAll().Where(c => c.Activo).OrderBy(c => c.Nombre)];
-        // Solo procesos Terminado: son los únicos que de verdad produjeron algo que se pueda
-        // haber despachado. El vínculo es informativo, así que no hace falta filtrar además por
-        // si ya se "agotó" — no hay manejo de lotes.
-        _procesosTerminados = [.. procesos.GetAll()
-            .Where(p => p.Estado == EstadoProcesoProduccion.Terminado)
-            .OrderByDescending(p => p.Fecha)];
         _servicio = servicio;
         _dialogos = dialogos;
         _sesionActual = sesion;
@@ -263,7 +292,7 @@ public sealed class DespachosCrudViewModel : CrudViewModelBase<Despacho, int>
     };
 
     protected override CrudEditorViewModelBase<Despacho> CrearEditor(Despacho item) =>
-        new DespachoEditorViewModel(item, _productos.ActivosConExistencia(), _clientes, _procesosTerminados,
+        new DespachoEditorViewModel(item, _productos.ActivosConExistencia(), _clientes, _productos.LotesConExistencia(),
                                     _sesionActual.UsuarioActual?.NombreCompleto ?? string.Empty, _servicio);
 
     /// <summary>
@@ -360,25 +389,21 @@ public sealed class DespachoDetalleViewModel : CrudEditorViewModelBase
 public sealed class DespachoEditorViewModel : CrudEditorViewModelBase<Despacho>
 {
     private readonly Despacho _original;
-    private readonly IReadOnlyDictionary<int, decimal> _existencias;
     private readonly DespachosService _servicio;
 
-    private readonly IReadOnlyList<ProcesoProduccion> _procesosTerminados;
+    /// <summary>Lotes con existencia en orden FEFO, leídos al abrir el modal.</summary>
+    private readonly IReadOnlyList<LoteProducto> _lotes;
 
     public DespachoEditorViewModel(Despacho original,
                                    IReadOnlyList<Producto> productos,
                                    IReadOnlyList<Cliente> clientes,
-                                   IReadOnlyList<ProcesoProduccion> procesosTerminados,
+                                   IReadOnlyList<LoteProducto> lotes,
                                    string autorizadoPorNombre,
                                    DespachosService servicio)
     {
         _original = original;
         _servicio = servicio;
-        _procesosTerminados = procesosTerminados;
-
-        // Los productos ya llegan con su existencia rellena (ActivosConExistencia), así que el
-        // disponible de cada línea sale de esa misma lista sin otra consulta.
-        _existencias = productos.ToDictionary(p => p.Id, p => p.Existencia);
+        _lotes = lotes;
 
         Productos = productos;
         Clientes = clientes;
@@ -504,6 +529,12 @@ public sealed class DespachoEditorViewModel : CrudEditorViewModelBase<Despacho>
             return false;
         }
 
+        if (Lineas.Any(l => l.ProductoSeleccionado is not null && l.LoteSeleccionado is null))
+        {
+            error = "Seleccione el lote de cada producto.";
+            return false;
+        }
+
         // La autoridad es el servicio, que vuelve a mirar la existencia real en el momento de
         // guardar: entre que se abrió el despacho y se emite, otro puesto pudo haber despachado.
         return _servicio.Validar(ObtenerResultado(), out error);
@@ -530,7 +561,7 @@ public sealed class DespachoEditorViewModel : CrudEditorViewModelBase<Despacho>
 
     private LineaDespachoEditorViewModel NuevaLinea()
     {
-        var linea = new LineaDespachoEditorViewModel(Productos, _existencias, _procesosTerminados);
+        var linea = new LineaDespachoEditorViewModel(Productos, _lotes);
         linea.Cambio += AlCambiarLinea;
         return linea;
     }
@@ -561,16 +592,12 @@ public sealed class LineaDespachoEditorViewModel : ViewModelBase
 {
     public event EventHandler? Cambio;
 
-    private readonly IReadOnlyDictionary<int, decimal> _existencias;
-    private readonly IReadOnlyList<ProcesoProduccion> _procesosTerminados;
+    private readonly IReadOnlyList<LoteProducto> _lotes;
 
-    public LineaDespachoEditorViewModel(IReadOnlyList<Producto> productos,
-                                        IReadOnlyDictionary<int, decimal> existencias,
-                                        IReadOnlyList<ProcesoProduccion> procesosTerminados)
+    public LineaDespachoEditorViewModel(IReadOnlyList<Producto> productos, IReadOnlyList<LoteProducto> lotes)
     {
         Productos = productos;
-        _existencias = existencias;
-        _procesosTerminados = procesosTerminados;
+        _lotes = lotes;
     }
 
     public IReadOnlyList<Producto> Productos { get; }
@@ -589,24 +616,29 @@ public sealed class LineaDespachoEditorViewModel : ViewModelBase
             if (value is { PrecioUnitario: > 0 } && string.IsNullOrWhiteSpace(PrecioUnitario))
                 PrecioUnitario = value.PrecioUnitario.ToString("0.####");
 
+            OnPropertyChanged(nameof(LotesDelProducto));
+
+            // Propone el lote que vence primero; si el lote ya elegido es de otro producto, se
+            // reemplaza.
+            if (LoteSeleccionado is null || LoteSeleccionado.ProductoId != value?.Id)
+                LoteSeleccionado = LotesDelProducto.FirstOrDefault();
+
             Recalcular();
         }
     }
 
-    /// <summary>Solo los procesos que fabricaron el producto elegido en esta línea — la lista se
-    /// reduce en el acto al cambiar de producto, igual que <see cref="Disponible"/>.</summary>
-    public IReadOnlyList<ProcesoProduccion> ProcesosDelProducto =>
+    /// <summary>Lotes con existencia del producto elegido, en orden FEFO.</summary>
+    public IReadOnlyList<LoteProducto> LotesDelProducto =>
         ProductoSeleccionado is null
             ? []
-            : [.. _procesosTerminados.Where(p => p.ProductoId == ProductoSeleccionado.Id)];
+            : [.. _lotes.Where(l => l.ProductoId == ProductoSeleccionado.Id)];
 
-    /// <summary>De qué proceso salió lo despachado, si el operador lo sabe. Opcional a propósito:
-    /// no se valida ni se descuenta nada de él — ver el comentario de <see cref="DespachoLinea.ProcesoProduccionId"/>.</summary>
-    private ProcesoProduccion? _procesoSeleccionado;
-    public ProcesoProduccion? ProcesoSeleccionado
+    /// <summary>El lote del que sale esta línea: obligatorio, descuenta su existencia.</summary>
+    private LoteProducto? _loteSeleccionado;
+    public LoteProducto? LoteSeleccionado
     {
-        get => _procesoSeleccionado;
-        set => SetProperty(ref _procesoSeleccionado, value);
+        get => _loteSeleccionado;
+        set { if (SetProperty(ref _loteSeleccionado, value)) Recalcular(); }
     }
 
     private string _cantidad = string.Empty;
@@ -637,7 +669,7 @@ public sealed class LineaDespachoEditorViewModel : ViewModelBase
 
     public string SubtotalTexto => Subtotal.ToString("N2");
 
-    public decimal Disponible => ProductoSeleccionado is { } producto ? _existencias.GetValueOrDefault(producto.Id) : 0;
+    public decimal Disponible => LoteSeleccionado?.Existencia ?? 0;
 
     public string DisponibleTexto => ProductoSeleccionado is null ? string.Empty : $"{Disponible:N2}";
 
@@ -654,8 +686,8 @@ public sealed class LineaDespachoEditorViewModel : ViewModelBase
         Cantidad = CantidadValor,
         PrecioUnitario = conPrecios ? PrecioValor : 0m,
         Subtotal = conPrecios ? Subtotal : 0m,
-        ProcesoProduccionId = ProcesoSeleccionado?.Id,
-        ProcesoProduccionNumero = ProcesoSeleccionado?.Numero ?? string.Empty
+        ProcesoProduccionId = LoteSeleccionado?.ProcesoId,
+        ProcesoProduccionNumero = LoteSeleccionado?.Numero ?? string.Empty
     };
 
     private void Recalcular()
@@ -665,24 +697,74 @@ public sealed class LineaDespachoEditorViewModel : ViewModelBase
         OnPropertyChanged(nameof(SePasa));
         OnPropertyChanged(nameof(Subtotal));
         OnPropertyChanged(nameof(SubtotalTexto));
-        OnPropertyChanged(nameof(ProcesosDelProducto));
-
-        // Un proceso elegido para un producto ya no aplica si la línea cambió de producto.
-        if (ProcesoSeleccionado is { } proceso && !ProcesosDelProducto.Contains(proceso))
-            ProcesoSeleccionado = null;
 
         Cambio?.Invoke(this, EventArgs.Empty);
     }
 }
 
 /// <summary>
-/// Procesos · Despacho: el catálogo de productos y el historial de despachos, en una pantalla
-/// conmutable, mismo patrón que <see cref="ProcesosProduccionViewModel"/>.
+/// Procesos · Despacho, pestaña Lotes: la existencia por lote con su vencimiento, de solo lectura.
+/// </summary>
+public sealed class LotesViewModel : ViewModelBase
+{
+    private const string FiltroTodos = "Todos";
+
+    private readonly ProductosService _productos;
+    private IReadOnlyList<LoteProducto> _todos = [];
+    private string _filtro = FiltroTodos;
+
+    public LotesViewModel(ProductosService productos)
+    {
+        _productos = productos;
+
+        CambiarFiltroCommand = new RelayCommand<string>(filtro =>
+        {
+            _filtro = filtro;
+            Filtrar();
+        });
+
+        Recargar();
+    }
+
+    public ICommand CambiarFiltroCommand { get; }
+
+    public ObservableCollection<LoteProducto> Items { get; } = [];
+
+    public string Resumen =>
+        $"{_todos.Count} lotes con existencia · " +
+        $"{_todos.Count(l => l.Estado == EstadoVencimientoLote.PorVencer)} por vencer · " +
+        $"{_todos.Count(l => l.Estado == EstadoVencimientoLote.Vencido)} vencidos";
+
+    public void Recargar()
+    {
+        _todos = _productos.LotesConExistencia();
+        Filtrar();
+        OnPropertyChanged(nameof(Resumen));
+    }
+
+    private void Filtrar()
+    {
+        Items.Clear();
+
+        foreach (var lote in _todos.Where(l => _filtro switch
+                 {
+                     "Por vencer" => l.Estado == EstadoVencimientoLote.PorVencer,
+                     "Vencidos" => l.Estado == EstadoVencimientoLote.Vencido,
+                     _ => true
+                 }))
+            Items.Add(lote);
+    }
+}
+
+/// <summary>
+/// Procesos · Despacho: el catálogo de productos, el historial de despachos y la existencia por
+/// lote, en una pantalla conmutable, mismo patrón que <see cref="ProcesosProduccionViewModel"/>.
 /// </summary>
 public sealed class DespachosViewModel : PantallaViewModelBase
 {
     public const string VistaProductos = "Productos";
     public const string VistaDespachos = "Despachos";
+    public const string VistaLotes = "Lotes";
 
     public DespachosViewModel(Modulo modulo, Submodulo submodulo)
         : this(modulo, submodulo, new ServicioDialogo(), SesionActual.Instancia)
@@ -714,20 +796,23 @@ public sealed class DespachosViewModel : PantallaViewModelBase
                                             cuentasPorCobrar, sesion);
 
         Productos = new ProductosCrudViewModel(productosDs, productosServicio, dialogos, sesion);
-        Despachos = new DespachosCrudViewModel(despachosDs, productosServicio, clientesDs, procesosDs, servicio, dialogos, sesion);
+        Despachos = new DespachosCrudViewModel(despachosDs, productosServicio, clientesDs, servicio, dialogos, sesion);
+        Lotes = new LotesViewModel(productosServicio);
 
         CambiarVistaCommand = new RelayCommand<string>(vista => VistaActual = vista);
     }
 
     public ProductosCrudViewModel Productos { get; }
     public DespachosCrudViewModel Despachos { get; }
+    public LotesViewModel Lotes { get; }
 
-    /// <summary>Los dos listados, aunque solo se vea uno: un producto nuevo tiene que ofrecerse
-    /// al despachar, y un despacho nuevo cambia la existencia que muestra la otra pestaña.</summary>
+    /// <summary>Todos los listados, aunque solo se vea uno: un producto nuevo tiene que ofrecerse
+    /// al despachar, y un despacho nuevo cambia la existencia que muestran las otras pestañas.</summary>
     public override void Recargar()
     {
         Productos.Recargar();
         Despachos.Recargar();
+        Lotes.Recargar();
     }
 
     private string _vistaActual = VistaDespachos;
@@ -743,6 +828,13 @@ public sealed class DespachosViewModel : PantallaViewModelBase
 
     public bool MostrarProductos => VistaActual == VistaProductos;
     public bool MostrarDespachos => VistaActual == VistaDespachos;
+    public bool MostrarLotes => VistaActual == VistaLotes;
+
+    public bool EsLotes
+    {
+        get => MostrarLotes;
+        set { if (value) VistaActual = VistaLotes; }
+    }
 
     public bool EsProductos
     {

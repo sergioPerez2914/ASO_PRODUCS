@@ -46,6 +46,12 @@ public sealed class MateriaPrimaService
             return false;
         }
 
+        if (tipo.Minimo < 0)
+        {
+            error = "El mínimo no puede ser negativo.";
+            return false;
+        }
+
         error = null;
         return true;
     }
@@ -139,5 +145,12 @@ public sealed class MateriaPrimaService
         var tipos = _tipos.GetAll().ToList();
         RellenarExistencias(tipos);
         return tipos.Count(t => t.SinExistencia);
+    }
+
+    public int TiposBajoMinimo()
+    {
+        var tipos = _tipos.GetAll().ToList();
+        RellenarExistencias(tipos);
+        return tipos.Count(t => t.BajoMinimo);
     }
 }

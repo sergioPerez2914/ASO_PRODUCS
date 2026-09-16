@@ -27,6 +27,9 @@
       <RadioButton Content="Productos" GroupName="VistaDespacho"
                    Style="{StaticResource SegmentedTabStyle}"
                    IsChecked="{Binding EsProductos, Mode=TwoWay}" />
+      <RadioButton Content="Lotes" GroupName="VistaDespacho"
+                   Style="{StaticResource SegmentedTabStyle}"
+                   IsChecked="{Binding EsLotes, Mode=TwoWay}" />
     </StackPanel>
 
     <Border Grid.Row="1" Style="{StaticResource TabStripStyle}" VerticalAlignment="Bottom" />
@@ -151,7 +154,7 @@
                                        Margin="0,0,12,0" VerticalAlignment="Center"
                                        Command="{Binding CambiarFiltroCommand}">
                 <ComboBoxItem Content="Todos" />
-                <ComboBoxItem Content="Con existencia" />
+                <ComboBoxItem Content="Bajo mínimo" />
                 <ComboBoxItem Content="Sin existencia" />
                 <ComboBoxItem Content="Inactivos" />
               </controls:FiltroDropdown>
@@ -187,6 +190,8 @@
                 <controls:ColumnaTexto Header="Producto" Binding="{Binding Nombre}" Width="34*" MinWidth="180" />
                 <controls:ColumnaTexto Header="Unidad" Binding="{Binding UnidadMedida}" Width="16*" MinWidth="90" />
                 <controls:ColumnaNumero Header="Precio" Binding="{Binding PrecioUnitarioTexto}" Width="14*" MinWidth="90" />
+                <controls:ColumnaNumero Header="Vida útil" Binding="{Binding VidaUtilTexto}" Width="12*" MinWidth="80" />
+                <controls:ColumnaNumero Header="Mínimo" Binding="{Binding MinimoTexto}" Width="12*" MinWidth="80" />
                 <controls:ColumnaNumero Header="Existencia" Binding="{Binding ExistenciaTexto}" Width="18*" MinWidth="110">
                   <controls:ColumnaNumero.ElementStyle>
                     <Style TargetType="TextBlock">
@@ -210,6 +215,75 @@
                                  Titulo="No hay productos"
                                  Detalle="Da de alta los productos que fabrica la organización; su existencia sale sola de los procesos terminados y los despachos."
                                  Visibility="{Binding HasItems, ElementName=TablaProductos, Converter={StaticResource SinItemsAVis}}" />
+          </Grid>
+        </Border>
+      </Grid>
+    </Grid>
+
+    <!-- ===================== Lotes: existencia por lote y vencimiento ===================== -->
+    <Grid Grid.Row="2" Margin="0,16,0,0"
+          Visibility="{Binding MostrarLotes, Converter={StaticResource BoolToVis}}">
+      <Grid DataContext="{Binding Lotes}">
+        <Grid.RowDefinitions>
+          <RowDefinition Height="Auto" />
+          <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <Border Grid.Row="0" Style="{StaticResource ToolbarStyle}">
+          <Grid>
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="*" />
+              <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <controls:FiltroDropdown Grid.Column="0" Style="{StaticResource FiltroDropdownStyle}" SelectedIndex="0"
+                                     HorizontalAlignment="Left" VerticalAlignment="Center"
+                                     Command="{Binding CambiarFiltroCommand}">
+              <ComboBoxItem Content="Todos" />
+              <ComboBoxItem Content="Por vencer" />
+              <ComboBoxItem Content="Vencidos" />
+            </controls:FiltroDropdown>
+
+            <TextBlock Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center"
+                       Text="{Binding Resumen}" FontSize="{StaticResource FsBody}"
+                       Foreground="{DynamicResource TextSecondaryBrush}" />
+          </Grid>
+        </Border>
+
+        <Border Grid.Row="1" Style="{StaticResource SectionCardStyle}" Padding="0">
+          <Grid>
+            <DataGrid x:Name="TablaLotes" Style="{StaticResource DataGridStyle}"
+                      ItemsSource="{Binding Items}" IsReadOnly="True">
+              <DataGrid.Columns>
+                <controls:ColumnaTexto Header="Lote" Binding="{Binding Numero}" Width="12*" MinWidth="90" />
+                <controls:ColumnaTexto Header="Producto" Binding="{Binding ProductoNombre}" Width="20*" MinWidth="130" />
+                <controls:ColumnaTexto Header="Terminado" Binding="{Binding FechaTerminoTexto}" Width="10*" MinWidth="80" />
+                <controls:ColumnaTexto Header="Vence" Binding="{Binding FechaVencimientoTexto}" Width="10*" MinWidth="80" />
+                <controls:ColumnaNumero Header="Producido" Binding="{Binding ProducidoTexto}" Width="12*" MinWidth="90" />
+                <controls:ColumnaNumero Header="Despachado" Binding="{Binding DespachadoTexto}" Width="12*" MinWidth="90" />
+                <controls:ColumnaNumero Header="Existencia" Binding="{Binding ExistenciaTexto}" Width="12*" MinWidth="90">
+                  <controls:ColumnaNumero.ElementStyle>
+                    <Style TargetType="TextBlock">
+                      <Setter Property="FontWeight" Value="{StaticResource FwMedium}" />
+                    </Style>
+                  </controls:ColumnaNumero.ElementStyle>
+                </controls:ColumnaNumero>
+                <DataGridTemplateColumn Header="Estado" Width="120">
+                  <DataGridTemplateColumn.CellTemplate>
+                    <DataTemplate>
+                      <Border Style="{StaticResource ChipVencimientoLoteStyle}">
+                        <TextBlock Text="{Binding EstadoTexto}" FontSize="{StaticResource FsCaption}" />
+                      </Border>
+                    </DataTemplate>
+                  </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+              </DataGrid.Columns>
+            </DataGrid>
+
+            <controls:EmptyState Icono="{x:Static controls:Iconos.Produccion}"
+                                 Titulo="No hay lotes con existencia"
+                                 Detalle="Cada proceso terminado es un lote; aparece aquí mientras le quede producto sin despachar."
+                                 Visibility="{Binding HasItems, ElementName=TablaLotes, Converter={StaticResource SinItemsAVis}}" />
           </Grid>
         </Border>
       </Grid>

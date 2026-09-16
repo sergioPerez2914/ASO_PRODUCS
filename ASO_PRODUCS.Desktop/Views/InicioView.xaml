@@ -10,16 +10,64 @@
   <Grid>
     <Grid.RowDefinitions>
       <RowDefinition Height="Auto" />
+      <RowDefinition Height="Auto" />
       <RowDefinition Height="*" />
     </Grid.RowDefinitions>
 
     <controls:PageHeader Grid.Row="0" Titulo="Inicio"
                          Descripcion="Elige un módulo para ver su resumen y entrar a sus submódulos." />
 
+    <!-- Tarjeta de alertas: bajo mínimo de los tres catálogos y lotes por vencer. Oculta si no
+         hay ninguna — un lanzador con una tarjeta vacía es peor que no tener tarjeta. -->
+    <Border Grid.Row="1" Style="{StaticResource SectionCardStyle}" Margin="0,16,0,0"
+            Visibility="{Binding TieneAlertas, Converter={StaticResource BoolToVis}}">
+      <StackPanel>
+        <TextBlock Text="Alertas" Style="{StaticResource CardTitleStyle}" />
+
+        <ItemsControl ItemsSource="{Binding Alertas}" Margin="0,8,0,0">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <StackPanel />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate>
+              <Button Style="{StaticResource CardButtonStyle}" Padding="8" HorizontalContentAlignment="Stretch"
+                      Command="{Binding DataContext.AbrirAlertaCommand,
+                                        RelativeSource={RelativeSource AncestorType=UserControl}}"
+                      CommandParameter="{Binding}">
+                <Grid>
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                  </Grid.ColumnDefinitions>
+
+                  <Border Grid.Column="0" Padding="8,1" VerticalAlignment="Center"
+                          CornerRadius="{StaticResource RadPill}"
+                          Background="{DynamicResource WarningSoftBrush}">
+                    <TextBlock Text="{Binding Cantidad}" FontSize="{StaticResource FsCaption}"
+                               FontWeight="{StaticResource FwMedium}"
+                               Foreground="{DynamicResource WarningTextBrush}" />
+                  </Border>
+
+                  <StackPanel Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding Titulo}" FontSize="{StaticResource FsBody}"
+                               Foreground="{DynamicResource TextPrimaryBrush}" />
+                    <TextBlock Text="{Binding Detalle}" FontSize="{StaticResource FsCaption}"
+                               Foreground="{DynamicResource TextMutedBrush}" />
+                  </StackPanel>
+                </Grid>
+              </Button>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </StackPanel>
+    </Border>
+
     <!-- WrapPanel y no UniformGrid Columns="3": eran tres columnas fijas para cinco modulos,
          asi que salia una fila de tres y otra de dos con un hueco, y en la ventana minima las
          tarjetas se estrechaban en vez de bajar de fila. -->
-    <ItemsControl Grid.Row="1" ItemsSource="{Binding Modulos}" VerticalAlignment="Top">
+    <ItemsControl Grid.Row="2" ItemsSource="{Binding Modulos}" VerticalAlignment="Top" Margin="0,16,0,0">
       <ItemsControl.ItemsPanel>
         <ItemsPanelTemplate>
           <WrapPanel />

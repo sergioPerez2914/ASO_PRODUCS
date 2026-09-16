@@ -24,6 +24,17 @@
                Text="{Binding Precio, UpdateSourceTrigger=PropertyChanged}" />
     </controls:FormField>
 
+    <controls:FormField Etiqueta="Días de vida útil"
+                        Ayuda="Para proponer el vencimiento al terminar un proceso. Vacío si no vence.">
+      <TextBox Style="{StaticResource FormTextBoxStyle}"
+               Text="{Binding DiasVidaUtil, UpdateSourceTrigger=PropertyChanged}" />
+    </controls:FormField>
+
+    <controls:FormField Etiqueta="Mínimo" Ayuda="Cero significa no vigilar.">
+      <TextBox Style="{StaticResource FormTextBoxStyle}"
+               Text="{Binding Minimo, UpdateSourceTrigger=PropertyChanged}" />
+    </controls:FormField>
+
     <CheckBox Content="Activo" Margin="0,16,0,0" Cursor="Hand"
               Foreground="{DynamicResource TextPrimaryBrush}"
               IsChecked="{Binding Activo}" />

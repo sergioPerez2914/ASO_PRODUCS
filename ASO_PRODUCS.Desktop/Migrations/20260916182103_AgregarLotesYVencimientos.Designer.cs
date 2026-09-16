@@ -4,6 +4,7 @@ using ASO_PRODUCS.Desktop.BD;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace ASO_PRODUCS.Desktop.Migrations
 {
     [DbContext(typeof(AsoProductoresDbContext))]
-    partial class AsoProductoresDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260916182103_AgregarLotesYVencimientos")]
+    partial class AgregarLotesYVencimientos
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -829,9 +832,6 @@ namespace ASO_PRODUCS.Desktop.Migrations
                     b.Property<int?>("DiasVidaUtil")
                         .HasColumnType("int");
 
-                    b.Property<decimal>("Minimo")
-                        .HasColumnType("decimal(18,2)");
-
                     b.Property<string>("Nombre")
                         .IsRequired()
                         .HasMaxLength(150)
@@ -1140,9 +1140,6 @@ namespace ASO_PRODUCS.Desktop.Migrations
 
                     b.Property<bool>("Activo")
                         .HasColumnType("bit");
-
-                    b.Property<decimal>("Minimo")
-                        .HasColumnType("decimal(18,2)");
 
                     b.Property<string>("Nombre")
                         .IsRequired()

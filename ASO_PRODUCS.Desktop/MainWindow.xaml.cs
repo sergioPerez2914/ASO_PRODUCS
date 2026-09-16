@@ -207,6 +207,7 @@ public partial class MainWindow : Window
     {
         var inicio = new InicioViewModel();
         inicio.ModuloSolicitado += (_, m) => Navegar(m, null);
+        inicio.SubmoduloSolicitado += (_, e) => Navegar(e.Modulo, e.Submodulo);
         return inicio;
     }
 

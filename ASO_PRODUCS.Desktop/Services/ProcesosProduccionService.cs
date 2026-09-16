@@ -198,7 +198,8 @@ public sealed class ProcesosProduccionService
     /// motivo: es la última confirmación antes de dejar de fabricar—; si no había ninguna en
     /// curso, <paramref name="cierre"/> se ignora.
     /// </summary>
-    public ProcesoProduccion Terminar(ProcesoProduccion proceso, decimal cantidadProducida, EtapaProcesoProduccion cierre, int usuarioId)
+    public ProcesoProduccion Terminar(ProcesoProduccion proceso, decimal cantidadProducida, DateTime? fechaVencimiento,
+                                      EtapaProcesoProduccion cierre, int usuarioId)
     {
         if (!PuedeTerminar(proceso))
             throw new InvalidOperationException("Solo se puede terminar un proceso en curso.");
@@ -209,10 +210,14 @@ public sealed class ProcesosProduccionService
         if (cantidadProducida <= 0)
             throw new InvalidOperationException("Indique cuánto se produjo.");
 
+        if (fechaVencimiento is { } vence && vence.Date < DateTime.Today)
+            throw new InvalidOperationException("La fecha de vencimiento no puede ser anterior a hoy.");
+
         var copia = proceso.Clonar();
         CerrarEtapaEnCurso(proceso, copia, cierre, usuarioId);
 
         copia.CantidadProducida = cantidadProducida;
+        copia.FechaVencimiento = fechaVencimiento?.Date;
         copia.Estado = EstadoProcesoProduccion.Terminado;
         copia.TerminadoPorId = usuarioId;
         copia.TerminadoPorNombre = _sesion.UsuarioActual?.NombreCompleto ?? string.Empty;
@@ -275,14 +280,11 @@ public sealed class ProcesosProduccionService
         if (string.IsNullOrWhiteSpace(motivo))
             throw new InvalidOperationException("Indique el motivo de la anulación.");
 
-        if (proceso.Estado == EstadoProcesoProduccion.Terminado)
+        if (proceso.Estado == EstadoProcesoProduccion.Terminado
+            && _productos.Lotes().FirstOrDefault(l => l.ProcesoId == proceso.Id) is { Despachado: > 0 } lote)
         {
-            var existencias = _productos.ExistenciasPorProducto();
-            var quedaria = existencias.GetValueOrDefault(proceso.ProductoId) - (proceso.CantidadProducida ?? 0);
-
-            if (quedaria < 0)
-                throw new InvalidOperationException(
-                    $"No se puede anular: de {proceso.ProductoNombre} ya se despachó lo que produjo este proceso.");
+            throw new InvalidOperationException(
+                $"No se puede anular: ya se despacharon {lote.DespachadoTexto} del lote {proceso.Numero}.");
         }
 
         var copia = proceso.Clonar();

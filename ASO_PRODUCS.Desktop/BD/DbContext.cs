@@ -400,13 +400,16 @@ public class AsoProductoresDbContext : DbContext
             entity.HasKey(t => t.Id);
             entity.Property(t => t.Nombre).IsRequired().HasMaxLength(150);
             entity.Property(t => t.UnidadMedida).HasMaxLength(30);
+            entity.Property(t => t.Minimo).HasColumnType("decimal(18,2)").IsRequired();
 
             // Existencia NO se persiste: es la suma de recepciones menos salidas, la rellena
             // MateriaPrimaService.
             entity.Ignore(t => t.Existencia);
+            entity.Ignore(t => t.BajoMinimo);
             entity.Ignore(t => t.SinExistencia);
             entity.Ignore(t => t.EstadoTexto);
             entity.Ignore(t => t.ExistenciaTexto);
+            entity.Ignore(t => t.MinimoTexto);
         });
 
         modelBuilder.Entity<RecepcionMateriaPrima>(entity =>
@@ -510,14 +513,18 @@ public class AsoProductoresDbContext : DbContext
             entity.Property(p => p.Nombre).IsRequired().HasMaxLength(150);
             entity.Property(p => p.UnidadMedida).HasMaxLength(30);
             entity.Property(p => p.PrecioUnitario).HasColumnType("decimal(18,2)");
+            entity.Property(p => p.Minimo).HasColumnType("decimal(18,2)").IsRequired();
 
             // Existencia NO se persiste: es la suma de procesos terminados menos despachos, la
             // rellena ProductosService.
             entity.Ignore(p => p.Existencia);
+            entity.Ignore(p => p.BajoMinimo);
             entity.Ignore(p => p.SinExistencia);
             entity.Ignore(p => p.EstadoTexto);
             entity.Ignore(p => p.ExistenciaTexto);
             entity.Ignore(p => p.PrecioUnitarioTexto);
+            entity.Ignore(p => p.VidaUtilTexto);
+            entity.Ignore(p => p.MinimoTexto);
         });
 
         modelBuilder.Entity<ProcesoProduccion>(entity =>
@@ -544,6 +551,7 @@ public class AsoProductoresDbContext : DbContext
             entity.Ignore(p => p.CantidadPlaneadaTexto);
             entity.Ignore(p => p.CantidadProducidaTexto);
             entity.Ignore(p => p.CantidadEtapas);
+            entity.Ignore(p => p.FechaVencimientoTexto);
 
             entity.OwnsMany(p => p.LineasIniciales, linea =>
             {

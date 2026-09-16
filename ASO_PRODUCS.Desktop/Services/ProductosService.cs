@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using ASO_PRODUCS.Desktop.Models;
@@ -49,6 +50,18 @@ public sealed class ProductosService
         if (producto.PrecioUnitario < 0)
         {
             error = "El precio no puede ser negativo.";
+            return false;
+        }
+
+        if (producto.DiasVidaUtil is <= 0)
+        {
+            error = "Los días de vida útil deben ser mayores que cero, o déjelos vacíos si no vence.";
+            return false;
+        }
+
+        if (producto.Minimo < 0)
+        {
+            error = "El mínimo no puede ser negativo.";
             return false;
         }
 
@@ -113,6 +126,68 @@ public sealed class ProductosService
 
     public decimal Existencia(int productoId) => ExistenciasPorProducto().GetValueOrDefault(productoId);
 
+    public Producto? Buscar(int productoId) => _productos.GetById(productoId);
+
+    /// <summary>
+    /// Cada proceso Terminado es un lote: lo producido menos las líneas de despacho que lo citan,
+    /// en orden FEFO (vence antes primero; los que no vencen al final, por fecha de término).
+    ///
+    /// Las líneas de despacho anteriores al manejo de lotes no traen lote: se descuentan en
+    /// memoria de los lotes de su producto en ese mismo orden, sin tocar la base. Así la suma por
+    /// lote sigue cuadrando con <see cref="ExistenciasPorProducto"/>.
+    /// </summary>
+    public IReadOnlyList<LoteProducto> Lotes()
+    {
+        var lotes = _procesos.GetAll()
+            .Where(p => p.CuentaEnExistencia)
+            .Select(p => new LoteProducto
+            {
+                ProcesoId = p.Id,
+                Numero = p.Numero,
+                ProductoId = p.ProductoId,
+                ProductoNombre = p.ProductoNombre,
+                Unidad = p.UnidadMedidaSnapshot,
+                FechaTermino = p.FechaTermino,
+                FechaVencimiento = p.FechaVencimiento,
+                Producido = p.CantidadProducida ?? 0
+            })
+            .OrderBy(l => l.FechaVencimiento is null)
+            .ThenBy(l => l.FechaVencimiento)
+            .ThenBy(l => l.FechaTermino)
+            .ToList();
+
+        var porId = lotes.ToDictionary(l => l.ProcesoId);
+        var sinLote = new Dictionary<int, decimal>();
+
+        foreach (var despacho in _despachos.GetAll().Where(d => d.CuentaEnExistencia))
+            foreach (var linea in despacho.Lineas)
+            {
+                if (linea.ProcesoProduccionId is { } id && porId.TryGetValue(id, out var lote))
+                    lote.Despachado += linea.Cantidad;
+                else
+                    sinLote[linea.ProductoId] = sinLote.GetValueOrDefault(linea.ProductoId) + linea.Cantidad;
+            }
+
+        foreach (var (productoId, cantidad) in sinLote)
+        {
+            var pendiente = cantidad;
+
+            foreach (var lote in lotes.Where(l => l.ProductoId == productoId && l.Existencia > 0))
+            {
+                if (pendiente <= 0)
+                    break;
+
+                var tomado = Math.Min(pendiente, lote.Existencia);
+                lote.Despachado += tomado;
+                pendiente -= tomado;
+            }
+        }
+
+        return lotes;
+    }
+
+    public IReadOnlyList<LoteProducto> LotesConExistencia() => [.. Lotes().Where(l => l.Existencia > 0)];
+
     /// <summary>
     /// Rellena <see cref="Producto.Existencia"/> sobre los productos que ya están en pantalla.
     ///
@@ -145,5 +220,12 @@ public sealed class ProductosService
         var productos = _productos.GetAll().ToList();
         RellenarExistencias(productos);
         return productos.Count(p => p.SinExistencia);
+    }
+
+    public int ProductosBajoMinimo()
+    {
+        var productos = _productos.GetAll().ToList();
+        RellenarExistencias(productos);
+        return productos.Count(p => p.BajoMinimo);
     }
 }

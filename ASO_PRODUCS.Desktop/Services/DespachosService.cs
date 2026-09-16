@@ -84,20 +84,32 @@ public sealed class DespachosService
             return false;
         }
 
-        var existencias = _productos.ExistenciasPorProducto();
-
-        // Se agrupa por producto antes de comparar: dos líneas del mismo producto que por
-        // separado caben, juntas pueden no caber.
-        foreach (var grupo in despacho.Lineas.GroupBy(l => l.ProductoId))
+        if (despacho.Lineas.FirstOrDefault(l => l.ProcesoProduccionId is null) is { } sinLote)
         {
-            var pedido = grupo.Sum(l => l.Cantidad);
-            var disponible = existencias.GetValueOrDefault(grupo.Key);
+            error = $"Indique el lote de {sinLote.ProductoNombre}.";
+            return false;
+        }
 
-            if (pedido > disponible)
+        var lotes = _productos.Lotes().ToDictionary(l => l.ProcesoId);
+
+        // Se agrupa por lote antes de comparar: dos líneas del mismo lote que por separado caben,
+        // juntas pueden no caber.
+        foreach (var grupo in despacho.Lineas.GroupBy(l => l.ProcesoProduccionId!.Value))
+        {
+            var linea = grupo.First();
+
+            if (!lotes.TryGetValue(grupo.Key, out var lote) || lote.ProductoId != linea.ProductoId)
             {
-                var linea = grupo.First();
-                error = $"No hay existencia suficiente de {linea.ProductoNombre}: " +
-                        $"hay {disponible:N2} y se piden {pedido:N2}.";
+                error = $"El lote elegido para {linea.ProductoNombre} no es un lote terminado de ese producto.";
+                return false;
+            }
+
+            var pedido = grupo.Sum(l => l.Cantidad);
+
+            if (pedido > lote.Existencia)
+            {
+                error = $"El lote {lote.Numero} de {linea.ProductoNombre} solo tiene {lote.ExistenciaTexto} " +
+                        $"y se piden {pedido:N2}.";
                 return false;
             }
         }

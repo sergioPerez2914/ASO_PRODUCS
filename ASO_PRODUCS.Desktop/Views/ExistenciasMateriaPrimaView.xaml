@@ -43,7 +43,7 @@
                                      Margin="0,0,12,0" VerticalAlignment="Center"
                                      Command="{Binding CambiarFiltroCommand}">
               <ComboBoxItem Content="Todos" />
-              <ComboBoxItem Content="Con existencia" />
+              <ComboBoxItem Content="Bajo mínimo" />
               <ComboBoxItem Content="Sin existencia" />
               <ComboBoxItem Content="Inactivos" />
             </controls:FiltroDropdown>
@@ -78,6 +78,7 @@
             <DataGrid.Columns>
               <controls:ColumnaTexto Header="Tipo de materia prima" Binding="{Binding Nombre}" Width="34*" MinWidth="180" />
               <controls:ColumnaTexto Header="Unidad" Binding="{Binding UnidadMedida}" Width="16*" MinWidth="90" />
+              <controls:ColumnaNumero Header="Mínimo" Binding="{Binding MinimoTexto}" Width="16*" MinWidth="100" />
               <controls:ColumnaNumero Header="Existencia" Binding="{Binding ExistenciaTexto}" Width="18*" MinWidth="110">
                 <controls:ColumnaNumero.ElementStyle>
                   <Style TargetType="TextBlock">

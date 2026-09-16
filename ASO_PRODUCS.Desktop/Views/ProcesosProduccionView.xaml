@@ -102,6 +102,7 @@
                 <controls:ColumnaTexto Header="Producto" Binding="{Binding ProductoNombre}" Width="20*" MinWidth="140" />
                 <controls:ColumnaNumero Header="Planeado" Binding="{Binding CantidadPlaneadaTexto}" Width="13*" MinWidth="100" />
                 <controls:ColumnaNumero Header="Producido" Binding="{Binding CantidadProducidaTexto}" Width="13*" MinWidth="100" />
+                <controls:ColumnaTexto Header="Vence" Binding="{Binding FechaVencimientoTexto}" Width="9*" MinWidth="76" />
                 <controls:ColumnaNumero Header="Etapas" Binding="{Binding CantidadEtapas}" Width="8*" MinWidth="60" />
                 <DataGridTemplateColumn Header="Estado" Width="104">
                   <DataGridTemplateColumn.CellTemplate>

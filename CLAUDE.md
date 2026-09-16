@@ -361,6 +361,25 @@ anterior: se construyó de cero contra este armazón.
   El margen usa el precio ACTUAL del producto, no uno histórico. Solo materiales: no hay mano de
   obra ni costos indirectos. Se ve en la ficha de detalle del proceso y en Reporte de Procesos ·
   Costos.
+- **Lotes y vencimientos** (2026-09-16, migración `AgregarLotesYVencimientos`). Un lote ES un
+  proceso Terminado: el código de lote es su `Numero`. Al terminar, el vencimiento se propone con
+  `Producto.DiasVidaUtil` (hoy + días), es editable y queda nulo si el producto no vence. La
+  existencia por lote se deriva en `ProductosService.Lotes()` (producido menos las líneas de
+  despacho que citan ese `ProcesoProduccionId`), en orden FEFO. Las líneas de despacho anteriores
+  a esto no tienen lote: se descuentan en memoria de los lotes de su producto en orden FEFO, sin
+  tocar la base, para que la suma por lote cuadre con `ExistenciasPorProducto`. Desde ahora el
+  lote es **obligatorio** en cada línea de despacho: el editor propone el que vence primero y
+  `DespachosService.Validar` comprueba la existencia por lote. Anular un proceso Terminado se niega
+  si ya se despachó algo de su lote. "Por vencer" = `LoteProducto.DiasPorVencer` (7 días). Despachar
+  un lote vencido NO se bloquea: solo se marca en rojo. La pestaña Despacho · Lotes lista la
+  existencia por lote con su estado.
+- **Stock mínimo con alertas** (2026-09-16, migración `AgregarMinimoAMateriaPrimaYProducto`).
+  `TipoMateriaPrima`/`Producto` ganaron `Minimo`/`BajoMinimo`/`MinimoTexto`, calcados de
+  `Articulo.Minimo` (cero = no vigilar). El panel de cada módulo (Inventario, Materia Prima,
+  Procesos) suma un indicador "Bajo mínimo", y el panel de Inicio (`InicioViewModel`) trae además
+  una tarjeta de alertas —bajo mínimo de los tres catálogos y lotes por vencer, cada una con
+  acceso directo al submódulo— calculada fuera del hilo de interfaz, mismo criterio que
+  `ModuloDashboardViewModel`.
 
 ## Persistencia
 

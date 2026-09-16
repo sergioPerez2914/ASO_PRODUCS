@@ -304,6 +304,23 @@
     </Style.Triggers>
   </Style>
 
+  <!-- Chip de vencimiento de un lote de producto terminado. Vigente y Sin vencimiento quedan en
+       el neutro de la base: solo avisa lo que está por vencer o ya venció. -->
+  <Style x:Key="ChipVencimientoLoteStyle" TargetType="Border" BasedOn="{StaticResource ChipBaseStyle}">
+    <Style.Triggers>
+      <DataTrigger Binding="{Binding Estado}" Value="{x:Static models:EstadoVencimientoLote.PorVencer}">
+        <Setter Property="Background" Value="{DynamicResource WarningSoftBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource WarningBordeBrush}" />
+        <Setter Property="TextElement.Foreground" Value="{DynamicResource WarningTextBrush}" />
+      </DataTrigger>
+      <DataTrigger Binding="{Binding Estado}" Value="{x:Static models:EstadoVencimientoLote.Vencido}">
+        <Setter Property="Background" Value="{DynamicResource DangerSoftBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource DangerBordeBrush}" />
+        <Setter Property="TextElement.Foreground" Value="{DynamicResource DangerTextBrush}" />
+      </DataTrigger>
+    </Style.Triggers>
+  </Style>
+
   <!-- Chip de estado de una entrada y de un boleto de salida. Solo hay dos estados: en pie o
        deshecho, así que el azul de información basta y lo anulado se apaga al neutro de la base. -->
   <Style x:Key="ChipEstadoEntradaStyle" TargetType="Border" BasedOn="{StaticResource ChipBaseStyle}">

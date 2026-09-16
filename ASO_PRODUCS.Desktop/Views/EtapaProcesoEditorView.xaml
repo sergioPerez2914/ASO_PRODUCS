@@ -167,6 +167,12 @@
         <TextBox Style="{StaticResource FormTextBoxStyle}" HorizontalAlignment="Left" Width="160"
                  Text="{Binding CantidadProducida, UpdateSourceTrigger=PropertyChanged}" />
       </controls:FormField>
+
+      <controls:FormField Etiqueta="Fecha de vencimiento"
+                          Ayuda="Propuesta según la vida útil del producto; déjela vacía si no vence.">
+        <DatePicker Style="{StaticResource FormDatePickerStyle}" HorizontalAlignment="Left" Width="160"
+                    SelectedDate="{Binding FechaVencimiento}" />
+      </controls:FormField>
     </StackPanel>
   </StackPanel>
 </UserControl>

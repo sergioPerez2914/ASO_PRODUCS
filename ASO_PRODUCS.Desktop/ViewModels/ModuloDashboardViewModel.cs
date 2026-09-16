@@ -246,10 +246,13 @@ public sealed class ModuloDashboardViewModel : ViewModelBase, IRecargable
 
         var servicioSalidas = new SalidasMateriaPrimaService(salidas, materiaPrima, sesion);
 
+        var bajoMinimo = materiaPrima.TiposBajoMinimo();
         var sinExistencia = materiaPrima.TiposSinExistencia();
 
         return
         [
+            new Indicador("Bajo mínimo", $"{bajoMinimo}", "tipos por reponer",
+                SegunCuenta(bajoMinimo, 5)),
             new Indicador("Sin existencia", $"{sinExistencia}", "tipos agotados",
                 SegunCuenta(sinExistencia, 3)),
             new Indicador("Tipos", $"{materiaPrima.TotalTiposActivos()}", "activos en el catálogo"),
@@ -289,11 +292,14 @@ public sealed class ModuloDashboardViewModel : ViewModelBase, IRecargable
         var despachos = new DespachosService(despachosDs, productos, facturasClienteDs, cuentasPorCobrar, sesion);
 
         var enProceso = procesos.EnProcesoCount();
+        var bajoMinimo = productos.ProductosBajoMinimo();
         var sinExistencia = productos.ProductosSinExistencia();
 
         return
         [
             new Indicador("En proceso", $"{enProceso}", "fabricaciones en curso"),
+            new Indicador("Bajo mínimo", $"{bajoMinimo}", "productos por reponer",
+                SegunCuenta(bajoMinimo, 5)),
             new Indicador("Sin existencia", $"{sinExistencia}", "productos agotados",
                 SegunCuenta(sinExistencia, 3)),
             new Indicador("Terminados este mes", $"{procesos.DelMes().Count(p => p.Estado == EstadoProcesoProduccion.Terminado)}",

@@ -125,13 +125,23 @@
                                   Visibility="{Binding Datos.MuestraPrecios, Source={StaticResource Puente},
                                                        Converter={StaticResource BoolToVis}}" />
 
-          <DataGridTemplateColumn Header="Proceso de origen (opcional)" Width="24*" MinWidth="180">
+          <DataGridTemplateColumn Header="Lote" Width="30*" MinWidth="220">
             <DataGridTemplateColumn.CellTemplate>
               <DataTemplate>
-                <ComboBox Style="{StaticResource LineaComboBoxStyle}"
-                          ItemsSource="{Binding ProcesosDelProducto}"
-                          DisplayMemberPath="Numero"
-                          SelectedItem="{Binding ProcesoSeleccionado, UpdateSourceTrigger=PropertyChanged}" />
+                <ComboBox ItemsSource="{Binding LotesDelProducto}"
+                          DisplayMemberPath="Etiqueta"
+                          SelectedItem="{Binding LoteSeleccionado, UpdateSourceTrigger=PropertyChanged}">
+                  <ComboBox.Style>
+                    <Style TargetType="ComboBox" BasedOn="{StaticResource LineaComboBoxStyle}">
+                      <Style.Triggers>
+                        <DataTrigger Binding="{Binding LoteSeleccionado.EstadoTexto}" Value="Vencido">
+                          <Setter Property="Foreground" Value="{DynamicResource DangerTextBrush}" />
+                          <Setter Property="ToolTip" Value="Este lote ya venció." />
+                        </DataTrigger>
+                      </Style.Triggers>
+                    </Style>
+                  </ComboBox.Style>
+                </ComboBox>
               </DataTemplate>
             </DataGridTemplateColumn.CellTemplate>
           </DataGridTemplateColumn>

@@ -255,7 +255,8 @@ public sealed class ProcesosProduccionCrudViewModel : CrudViewModelBase<ProcesoP
         if (SelectedItem is not { } proceso)
             return;
 
-        var editor = new EtapaProcesoEditorViewModel(proceso, ListaEtapasActivas(), ListaTipos(), ListaArticulos());
+        var editor = new EtapaProcesoEditorViewModel(proceso, ListaEtapasActivas(), ListaTipos(), ListaArticulos(),
+                                                     _productos.Buscar(proceso.ProductoId)?.DiasVidaUtil);
 
         if (!_dialogos.MostrarEditor(editor))
             return;
@@ -263,8 +264,8 @@ public sealed class ProcesosProduccionCrudViewModel : CrudViewModelBase<ProcesoP
         Aplicar(() => editor.ContinuaOtraEtapa
             ? _servicio.AgregarEtapa(proceso, editor.ObtenerResultado(), editor.EtapaSeleccionada!,
                                      _sesionActual.UsuarioActual?.Id ?? 0)
-            : _servicio.Terminar(proceso, editor.CantidadProducidaValor, editor.ObtenerResultado(),
-                                 _sesionActual.UsuarioActual?.Id ?? 0));
+            : _servicio.Terminar(proceso, editor.CantidadProducidaValor, editor.FechaVencimiento,
+                                 editor.ObtenerResultado(), _sesionActual.UsuarioActual?.Id ?? 0));
     }
 
     private void Anular()
@@ -468,9 +469,11 @@ public sealed class EtapaProcesoEditorViewModel : CrudEditorViewModelBase<EtapaP
     public EtapaProcesoEditorViewModel(ProcesoProduccion proceso,
                                        IReadOnlyList<EtapaProduccion> etapas,
                                        IReadOnlyList<TipoMateriaPrima> tiposMateriaPrima,
-                                       IReadOnlyList<Articulo> articulos)
+                                       IReadOnlyList<Articulo> articulos,
+                                       int? diasVidaUtil)
     {
         _numero = proceso.Numero;
+        _fechaVencimiento = diasVidaUtil is { } dias ? DateTime.Today.AddDays(dias) : null;
         _productoTexto = $"{proceso.ProductoNombre} — planeado {proceso.CantidadPlaneadaTexto}";
         _muestraCierreEtapaActual = proceso.EtapaActualId is not null;
         _etapaActualNombre = proceso.EtapaActualNombre;
@@ -587,6 +590,15 @@ public sealed class EtapaProcesoEditorViewModel : CrudEditorViewModelBase<EtapaP
 
     public decimal CantidadProducidaValor => decimal.TryParse(CantidadProducida, out var valor) ? valor : 0m;
 
+    /// <summary>Vencimiento del lote: propuesto con la vida útil del producto, editable, y vacío
+    /// si el producto no vence.</summary>
+    private DateTime? _fechaVencimiento;
+    public DateTime? FechaVencimiento
+    {
+        get => _fechaVencimiento;
+        set => SetProperty(ref _fechaVencimiento, value);
+    }
+
     private string _observaciones = string.Empty;
     public string Observaciones
     {
@@ -608,6 +620,11 @@ public sealed class EtapaProcesoEditorViewModel : CrudEditorViewModelBase<EtapaP
         {
             error = "Indique cuánto se produjo, con un número mayor que cero. Puede diferir de lo " +
                     "planeado: una merma es justo el dato que interesa registrar.";
+            return false;
+        }
+        else if (FechaVencimiento is { } vence && vence.Date < DateTime.Today)
+        {
+            error = "La fecha de vencimiento no puede ser anterior a hoy.";
             return false;
         }
 
