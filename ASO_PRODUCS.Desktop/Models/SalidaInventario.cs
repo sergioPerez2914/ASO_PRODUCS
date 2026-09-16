@@ -5,29 +5,19 @@ using System.Linq;
 namespace ASO_PRODUCS.Desktop.Models;
 
 /// <summary>
-/// A qué proceso de la planta va lo que sale del almacén. Lista fija en código, no catálogo:
-/// mientras los procesos reales no estén cerrados, un enum se revisa de un vistazo y no hay que
-/// mantener una pantalla para él. Se persiste como ORDINAL: miembros nuevos al final.
+/// Por qué sale. Se persiste como ORDINAL: miembros nuevos al final. <see cref="Devolucion"/> y
+/// <see cref="Traslado"/> no aplican al negocio real y ya no se ofrecen en ningún desplegable,
+/// pero quedan declarados (en su mismo lugar) para no correr el ordinal de los que ya están
+/// persistidos en filas viejas. <see cref="UsoInterno"/> es el motivo para una salida manual que
+/// no es pérdida ni va a un proceso de producción (limpieza, mantenimiento, oficina).
 /// </summary>
-public enum AreaDestino
-{
-    ControlDeCalidad,
-    Lavado,
-    Empacado,
-    Etiquetado,
-    Mantenimiento,
-    Administracion,
-    Otro,
-    Produccion
-}
-
-/// <summary>Por qué sale. Se persiste como ORDINAL: miembros nuevos al final.</summary>
 public enum MotivoSalida
 {
     Consumo,
     Merma,
     Devolucion,
-    Traslado
+    Traslado,
+    UsoInterno
 }
 
 /// <summary>Estados de una salida. Se persiste como ORDINAL: miembros nuevos al final.</summary>
@@ -57,12 +47,6 @@ public class SalidaInventario : IEntidad<int>, IDeOrganizacion
     public string Numero { get; set; } = string.Empty;
 
     public DateTime Fecha { get; set; }
-
-    public AreaDestino Destino { get; set; }
-
-    /// <summary>Detalle libre del destino; obligatorio cuando <see cref="Destino"/> es
-    /// <see cref="AreaDestino.Otro"/>.</summary>
-    public string DestinoDetalle { get; set; } = string.Empty;
 
     public MotivoSalida Motivo { get; set; }
 
@@ -99,26 +83,13 @@ public class SalidaInventario : IEntidad<int>, IDeOrganizacion
     /// es lo que hace que anular devuelva el stock sin tocar ninguna otra fila.</summary>
     public bool CuentaEnKardex => Estado == EstadoSalida.Registrada;
 
-    public string DestinoTexto => Destino == AreaDestino.Otro && !string.IsNullOrWhiteSpace(DestinoDetalle)
-        ? DestinoDetalle
-        : Destino switch
-        {
-            AreaDestino.ControlDeCalidad => "Control de calidad",
-            AreaDestino.Lavado => "Lavado",
-            AreaDestino.Empacado => "Empacado",
-            AreaDestino.Etiquetado => "Etiquetado",
-            AreaDestino.Mantenimiento => "Mantenimiento",
-            AreaDestino.Administracion => "Administración",
-            AreaDestino.Produccion => "Producción",
-            _ => "Otro"
-        };
-
     public string MotivoTexto => Motivo switch
     {
         MotivoSalida.Consumo => "Consumo",
         MotivoSalida.Merma => "Merma",
         MotivoSalida.Devolucion => "Devolución",
-        _ => "Traslado"
+        MotivoSalida.Traslado => "Traslado",
+        _ => "Uso interno"
     };
 
     /// <summary>"Consumo"/"Merma" a secas no distingue una salida cargada a mano de una que

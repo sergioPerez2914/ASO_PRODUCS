@@ -80,7 +80,6 @@ public sealed class SalidasViewModel : PantallaCrudViewModel<SalidaInventario, i
 
     protected override bool CoincideBusqueda(SalidaInventario item, string texto) =>
         item.Numero.Contains(texto, StringComparison.OrdinalIgnoreCase)
-        || item.DestinoTexto.Contains(texto, StringComparison.OrdinalIgnoreCase)
         || item.RetiradoPor.Contains(texto, StringComparison.OrdinalIgnoreCase)
         || item.AutorizadoPorNombre.Contains(texto, StringComparison.OrdinalIgnoreCase)
         || item.Lineas.Any(l => l.ArticuloNombre.Contains(texto, StringComparison.OrdinalIgnoreCase)
@@ -90,8 +89,7 @@ public sealed class SalidasViewModel : PantallaCrudViewModel<SalidaInventario, i
     {
         "Consumo" => item.Motivo == MotivoSalida.Consumo,
         "Merma" => item.Motivo == MotivoSalida.Merma,
-        "Devolución" => item.Motivo == MotivoSalida.Devolucion,
-        "Traslado" => item.Motivo == MotivoSalida.Traslado,
+        "Uso interno" => item.Motivo == MotivoSalida.UsoInterno,
         "Anulados" => item.Estado == EstadoSalida.Anulada,
         _ => true
     };
@@ -134,7 +132,7 @@ public sealed class SalidasViewModel : PantallaCrudViewModel<SalidaInventario, i
 
         var editor = new MotivoEditorViewModel(
             $"Anular boleto {salida.Numero}",
-            $"{salida.DestinoTexto} — {salida.MotivoTexto} — retiró {salida.RetiradoPor}",
+            $"{salida.MotivoTexto} — retiró {salida.RetiradoPor}",
             "Motivo de la anulación",
             "Indique el motivo de la anulación.");
 
@@ -196,9 +194,6 @@ public sealed class SalidaDetalleViewModel : CrudEditorViewModelBase
 }
 
 /// <summary>Opción de un desplegable de enum, con su texto legible.</summary>
-public sealed record OpcionAreaDestino(AreaDestino Valor, string Texto);
-
-/// <summary>Opción de un desplegable de enum, con su texto legible.</summary>
 public sealed record OpcionMotivoSalida(MotivoSalida Valor, string Texto);
 
 /// <summary>
@@ -225,12 +220,10 @@ public sealed class SalidaEditorViewModel : CrudEditorViewModelBase<SalidaInvent
         AutorizadoPorNombre = autorizadoPorNombre;
 
         Fecha = original.Fecha == default ? DateTime.Today : original.Fecha;
-        DestinoDetalle = original.DestinoDetalle;
         RetiradoPor = original.RetiradoPor;
         Observaciones = original.Observaciones;
 
-        AreaSeleccionada = Areas.First(a => a.Valor == original.Destino);
-        MotivoSeleccionado = Motivos.First(m => m.Valor == original.Motivo);
+        MotivoSeleccionado = Motivos.FirstOrDefault(m => m.Valor == original.Motivo) ?? Motivos[0];
 
         Lineas.CollectionChanged += AlCambiarLineas;
 
@@ -257,43 +250,18 @@ public sealed class SalidaEditorViewModel : CrudEditorViewModelBase<SalidaInvent
     /// <summary>Quién autoriza: el usuario de la sesión, de solo lectura.</summary>
     public string AutorizadoPorNombre { get; }
 
-    public IReadOnlyList<OpcionAreaDestino> Areas { get; } =
-    [
-        new(AreaDestino.ControlDeCalidad, "Control de calidad"),
-        new(AreaDestino.Lavado, "Lavado"),
-        new(AreaDestino.Empacado, "Empacado"),
-        new(AreaDestino.Etiquetado, "Etiquetado"),
-        new(AreaDestino.Mantenimiento, "Mantenimiento"),
-        new(AreaDestino.Administracion, "Administración"),
-        new(AreaDestino.Otro, "Otro")
-    ];
-
+    /// <summary>Solo las dos que puede elegir una persona a mano: "Consumo" queda reservado para
+    /// las salidas que genera Procesos automáticamente.</summary>
     public IReadOnlyList<OpcionMotivoSalida> Motivos { get; } =
     [
-        new(MotivoSalida.Consumo, "Consumo"),
         new(MotivoSalida.Merma, "Merma"),
-        new(MotivoSalida.Devolucion, "Devolución"),
-        new(MotivoSalida.Traslado, "Traslado")
+        new(MotivoSalida.UsoInterno, "Uso interno")
     ];
 
     public ObservableCollection<LineaSalidaEditorViewModel> Lineas { get; } = [];
 
     public ICommand AgregarLineaCommand { get; }
     public ICommand QuitarLineaCommand { get; }
-
-    private OpcionAreaDestino _areaSeleccionada = null!;
-    public OpcionAreaDestino AreaSeleccionada
-    {
-        get => _areaSeleccionada;
-        set
-        {
-            if (SetProperty(ref _areaSeleccionada, value))
-                OnPropertyChanged(nameof(MuestraDetalleDestino));
-        }
-    }
-
-    /// <summary>El detalle libre solo tiene sentido cuando el destino no está en la lista.</summary>
-    public bool MuestraDetalleDestino => AreaSeleccionada?.Valor == AreaDestino.Otro;
 
     private OpcionMotivoSalida _motivoSeleccionado = null!;
     public OpcionMotivoSalida MotivoSeleccionado
@@ -307,13 +275,6 @@ public sealed class SalidaEditorViewModel : CrudEditorViewModelBase<SalidaInvent
     {
         get => _fecha;
         set => SetProperty(ref _fecha, value);
-    }
-
-    private string _destinoDetalle = string.Empty;
-    public string DestinoDetalle
-    {
-        get => _destinoDetalle;
-        set => SetProperty(ref _destinoDetalle, value);
     }
 
     private string _retiradoPor = string.Empty;
@@ -351,8 +312,6 @@ public sealed class SalidaEditorViewModel : CrudEditorViewModelBase<SalidaInvent
     {
         var salida = _original.Clonar();
         salida.Fecha = Fecha.Date;
-        salida.Destino = AreaSeleccionada.Valor;
-        salida.DestinoDetalle = MuestraDetalleDestino ? DestinoDetalle.Trim() : string.Empty;
         salida.Motivo = MotivoSeleccionado.Valor;
         salida.RetiradoPor = RetiradoPor.Trim();
         salida.Observaciones = Observaciones.Trim();

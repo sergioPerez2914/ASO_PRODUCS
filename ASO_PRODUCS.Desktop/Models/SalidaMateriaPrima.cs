@@ -23,10 +23,10 @@ public enum MotivoSalidaMateriaPrima
 /// <summary>
 /// Documento de salida de materia prima: lo que salió, de cada tipo.
 ///
-/// No tiene documento aguas abajo: a diferencia de <see cref="SalidaInventario"/> tampoco hace
-/// falta un área de destino aquí — si el negocio real necesita registrar a quién o a dónde va la
-/// materia prima, agregar ese campo siguiendo el ejemplo de <see cref="SalidaInventario.Destino"/>.
-/// Anularla solo devuelve la existencia, porque el kardex no cuenta lo anulado.
+/// No tiene documento aguas abajo, y tampoco hace falta un área de destino aquí — si el negocio
+/// real necesita registrar a quién o a dónde va la materia prima, agregar ese campo cuando se
+/// conozca la necesidad real. Anularla solo devuelve la existencia, porque el kardex no cuenta lo
+/// anulado.
 ///
 /// Es la raíz de un agregado (ver <see cref="Lineas"/>).
 /// </summary>

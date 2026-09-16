@@ -23,8 +23,6 @@
         <ColumnDefinition Width="*" />
         <ColumnDefinition Width="12" />
         <ColumnDefinition Width="*" />
-        <ColumnDefinition Width="12" />
-        <ColumnDefinition Width="*" />
       </Grid.ColumnDefinitions>
 
       <StackPanel Grid.Column="0">
@@ -35,15 +33,6 @@
       </StackPanel>
 
       <StackPanel Grid.Column="2">
-        <controls:FormField Etiqueta="Destino">
-          <ComboBox Style="{StaticResource FormComboBoxStyle}"
-                    ItemsSource="{Binding Areas}"
-                    DisplayMemberPath="Texto"
-                    SelectedItem="{Binding AreaSeleccionada}" />
-        </controls:FormField>
-      </StackPanel>
-
-      <StackPanel Grid.Column="4">
         <controls:FormField Etiqueta="Motivo">
           <ComboBox Style="{StaticResource FormComboBoxStyle}"
                     ItemsSource="{Binding Motivos}"
@@ -52,12 +41,6 @@
         </controls:FormField>
       </StackPanel>
     </Grid>
-
-    <controls:FormField Etiqueta="¿A dónde va?"
-                        Visibility="{Binding MuestraDetalleDestino, Converter={StaticResource BoolToVis}}">
-      <TextBox Style="{StaticResource FormTextBoxStyle}"
-               Text="{Binding DestinoDetalle, UpdateSourceTrigger=PropertyChanged}" />
-    </controls:FormField>
 
     <Grid>
       <Grid.ColumnDefinitions>

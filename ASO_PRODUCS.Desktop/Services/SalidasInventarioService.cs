@@ -66,12 +66,6 @@ public sealed class SalidasInventarioService
             return false;
         }
 
-        if (salida.Destino == AreaDestino.Otro && string.IsNullOrWhiteSpace(salida.DestinoDetalle))
-        {
-            error = "Describa a dónde va el material.";
-            return false;
-        }
-
         var existencias = _inventario.ExistenciasPorArticulo();
 
         // Se agrupa por artículo antes de comparar: dos líneas del mismo artículo que por

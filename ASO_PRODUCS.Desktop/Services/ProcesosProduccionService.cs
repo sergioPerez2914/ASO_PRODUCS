@@ -361,7 +361,6 @@ public sealed class ProcesosProduccionService
         return new SalidaInventario
         {
             Fecha = DateTime.Today,
-            Destino = AreaDestino.Produccion,
             Motivo = motivoSalida,
             RetiradoPor = "Producción",
             Lineas = filtradas.Select(l => new SalidaInventarioLinea

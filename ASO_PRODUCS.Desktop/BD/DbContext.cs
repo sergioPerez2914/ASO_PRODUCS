@@ -360,7 +360,6 @@ public class AsoProductoresDbContext : DbContext
         {
             entity.HasKey(s => s.Id);
             entity.Property(s => s.Numero).IsRequired().HasMaxLength(20);
-            entity.Property(s => s.DestinoDetalle).HasMaxLength(150);
             entity.Property(s => s.RetiradoPor).IsRequired().HasMaxLength(150);
             entity.Property(s => s.AutorizadoPorNombre).HasMaxLength(150);
             entity.Property(s => s.Observaciones).HasMaxLength(500);
@@ -373,7 +372,6 @@ public class AsoProductoresDbContext : DbContext
             entity.HasIndex(s => s.ProcesoProduccionId);
 
             entity.Ignore(s => s.CuentaEnKardex);
-            entity.Ignore(s => s.DestinoTexto);
             entity.Ignore(s => s.MotivoTexto);
             entity.Ignore(s => s.EstadoTexto);
             entity.Ignore(s => s.FechaTexto);
