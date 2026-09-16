@@ -19,14 +19,12 @@
           </Grid.ColumnDefinitions>
 
           <StackPanel Grid.Column="0">
-            <TextBlock Text="{Binding Salida.DestinoTexto}" Style="{StaticResource CardTitleStyle}" />
+            <TextBlock Text="{Binding Salida.MotivoDetalleTexto}" Style="{StaticResource CardTitleStyle}" />
             <TextBlock FontSize="{StaticResource FsCaption}" Margin="0,4,0,0"
                        Foreground="{DynamicResource TextSecondaryBrush}">
               <Run Text="{Binding Salida.Numero, Mode=OneWay}" />
               <Run Text=" · " />
               <Run Text="{Binding Salida.FechaTexto, Mode=OneWay}" />
-              <Run Text=" · " />
-              <Run Text="{Binding Salida.MotivoDetalleTexto, Mode=OneWay}" />
             </TextBlock>
           </StackPanel>
 
