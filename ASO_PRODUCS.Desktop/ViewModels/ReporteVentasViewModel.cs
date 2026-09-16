@@ -16,14 +16,12 @@ namespace ASO_PRODUCS.Desktop.ViewModels;
 ///
 /// De solo lectura, igual que <see cref="ReporteProcesosViewModel"/>: hereda de
 /// <see cref="PantallaViewModelBase"/> y se arma con <see cref="Despacho"/> tipo Venta y sus
-/// <see cref="FacturaCliente"/>, sin ningún dato ni migración nueva.
+/// <see cref="FacturaCliente"/>, sin ningún dato ni migración nueva. Una sola tabla (detalle por
+/// línea de despacho, sin agrupar): no hace falta pestaña, mismo criterio que
+/// <see cref="ReporteGastosViewModel"/> para su vista "Por categoría".
 /// </summary>
 public sealed class ReporteVentasViewModel : PantallaViewModelBase
 {
-    public const string VistaPorProducto = "PorProducto";
-    public const string VistaPorCliente = "PorCliente";
-    public const string VistaDetalle = "Detalle";
-
     private readonly IDespachoDataSource _despachos;
     private readonly IFacturaClienteDataSource _facturasCliente;
     private readonly IServicioDialogo _dialogos;
@@ -70,42 +68,7 @@ public sealed class ReporteVentasViewModel : PantallaViewModelBase
     }
 
     public ObservableCollection<Indicador> Indicadores { get; } = [];
-    public ObservableCollection<FilaVentaPorProducto> PorProducto { get; } = [];
-    public ObservableCollection<FilaVentaPorCliente> PorCliente { get; } = [];
     public ObservableCollection<FilaVentaDetalle> Detalle { get; } = [];
-
-    private string _vistaActual = VistaPorProducto;
-    public string VistaActual
-    {
-        get => _vistaActual;
-        set
-        {
-            if (SetProperty(ref _vistaActual, value))
-                OnTodasLasPropiedadesCambiaron();
-        }
-    }
-
-    public bool MostrarPorProducto => VistaActual == VistaPorProducto;
-    public bool MostrarPorCliente => VistaActual == VistaPorCliente;
-    public bool MostrarDetalle => VistaActual == VistaDetalle;
-
-    public bool EsPorProducto
-    {
-        get => MostrarPorProducto;
-        set { if (value) VistaActual = VistaPorProducto; }
-    }
-
-    public bool EsPorCliente
-    {
-        get => MostrarPorCliente;
-        set { if (value) VistaActual = VistaPorCliente; }
-    }
-
-    public bool EsDetalle
-    {
-        get => MostrarDetalle;
-        set { if (value) VistaActual = VistaDetalle; }
-    }
 
     public override void Recargar() => Recalcular();
 
@@ -121,38 +84,13 @@ public sealed class ReporteVentasViewModel : PantallaViewModelBase
 
         var totalVendido = despachosEnRango.Sum(d => d.Total);
 
-        // Agrupa también por unidad, mismo criterio que ReporteProcesosViewModel: dos productos
-        // con el mismo nombre pero distinta unidad no deberían sumarse en una sola fila.
-        var porProducto = despachosEnRango
-            .SelectMany(d => d.Lineas)
-            .GroupBy(l => (l.ProductoNombre, l.UnidadMedidaSnapshot))
-            .Select(g => new FilaVentaPorProducto(g.Key.ProductoNombre, g.Key.UnidadMedidaSnapshot,
-                g.Sum(l => l.Cantidad), g.Sum(l => l.Subtotal)))
-            .OrderByDescending(f => f.Monto)
-            .ToList();
-
-        PorProducto.Clear();
-        foreach (var fila in porProducto)
-            PorProducto.Add(fila);
-
-        var porCliente = despachosEnRango
-            .GroupBy(d => d.ClienteNombre)
-            .Select(g => new FilaVentaPorCliente(g.Key, g.Count(), g.Sum(d => d.Total)))
-            .OrderByDescending(f => f.Monto)
-            .ToList();
-
-        PorCliente.Clear();
-        foreach (var fila in porCliente)
-            PorCliente.Add(fila);
-
-        // Sin agrupar: una fila por cada línea de despacho, con su cliente, su unidad y el
-        // proceso de producción que la originó (si se indicó al despachar) — es lo que hace
-        // falta para rastrear una venta exacta, en vez de un total agregado.
+        // Sin agrupar: una fila por cada línea de despacho, con su cliente y su unidad — es lo
+        // que hace falta para rastrear una venta exacta, en vez de un total agregado.
         var detalle = despachosEnRango
             .SelectMany(d => d.Lineas.Select(l => new FilaVentaDetalle(
                 d.Fecha, d.Numero, d.ClienteNombre, l.ProductoNombre,
                 $"{l.Cantidad:N2} {l.UnidadMedidaSnapshot}".Trim(),
-                l.PrecioUnitario, l.Subtotal, l.ProcesoOrigenTexto)))
+                l.PrecioUnitario, l.Subtotal)))
             .OrderByDescending(f => f.Fecha)
             .ToList();
 
@@ -182,52 +120,22 @@ public sealed class ReporteVentasViewModel : PantallaViewModelBase
             vencido > 0 ? EstadoIndicador.Critico : EstadoIndicador.Normal));
     }
 
-    /// <summary>
-    /// Exporta SOLO la vista que está abierta en pantalla (Por producto / Por cliente / Detalle),
-    /// no las tres a la vez: el archivo tiene que coincidir con lo que la persona está mirando
-    /// cuando aprieta el botón, no siempre lo primero.
-    /// </summary>
     private void ExportarExcel()
     {
-        string nombreVista;
-        IReadOnlyList<string> encabezados;
-        IReadOnlyList<IReadOnlyList<string>> filas;
-
-        switch (VistaActual)
-        {
-            case VistaPorCliente:
-                nombreVista = "Por cliente";
-                encabezados = ["Cliente", "Despachos", "Monto"];
-                filas = PorCliente.Select(f => (IReadOnlyList<string>)
-                    [f.ClienteNombre, f.CantidadDespachos.ToString(), f.MontoTexto]).ToList();
-                break;
-
-            case VistaDetalle:
-                nombreVista = "Detalle";
-                encabezados = ["Fecha", "Despacho", "Cliente", "Producto", "Cantidad", "Precio unitario", "Subtotal", "Proceso de origen"];
-                filas = Detalle.Select(f => (IReadOnlyList<string>)
-                    [f.FechaTexto, f.DespachoNumero, f.ClienteNombre, f.ProductoNombre, f.CantidadTexto,
-                     f.PrecioUnitarioTexto, f.SubtotalTexto, f.ProcesoOrigenTexto]).ToList();
-                break;
-
-            default:
-                nombreVista = "Por producto";
-                encabezados = ["Producto", "Cantidad", "Monto"];
-                filas = PorProducto.Select(f => (IReadOnlyList<string>)
-                    [f.ProductoNombre, f.CantidadTexto, f.MontoTexto]).ToList();
-                break;
-        }
-
-        var ruta = _dialogos.GuardarArchivo("Exportar reporte de ventas",
-            $"ReporteVentas_{nombreVista.Replace(" ", "")}.xlsx", "Libro de Excel (*.xlsx)|*.xlsx");
+        var ruta = _dialogos.GuardarArchivo("Exportar reporte de ventas", "ReporteVentas.xlsx",
+            "Libro de Excel (*.xlsx)|*.xlsx");
 
         if (ruta is null)
             return;
 
         ExportadorExcel.Exportar(ruta,
         [
-            new HojaExcel(nombreVista, encabezados, filas,
-                Titulo: $"{Submodulo?.Nombre ?? "Reporte de Ventas"} · {nombreVista}",
+            new HojaExcel("Ventas",
+                ["Fecha", "Despacho", "Cliente", "Producto", "Cantidad", "Precio unitario", "Subtotal"],
+                Detalle.Select(f => (IReadOnlyList<string>)
+                    [f.FechaTexto, f.DespachoNumero, f.ClienteNombre, f.ProductoNombre, f.CantidadTexto,
+                     f.PrecioUnitarioTexto, f.SubtotalTexto]).ToList(),
+                Titulo: Submodulo?.Nombre ?? "Reporte de Ventas",
                 Periodo: $"Período: {FechaDesde:dd/MM/yyyy} - {FechaHasta:dd/MM/yyyy}")
         ]);
 
@@ -235,23 +143,10 @@ public sealed class ReporteVentasViewModel : PantallaViewModelBase
     }
 }
 
-/// <summary>Fila del desglose "Ventas por producto".</summary>
-public sealed record FilaVentaPorProducto(string ProductoNombre, string UnidadMedida, decimal Cantidad, decimal Monto)
-{
-    public string CantidadTexto => $"{Cantidad:N2} {UnidadMedida}".Trim();
-    public string MontoTexto => Monto.ToString("N2");
-}
-
-/// <summary>Fila del desglose "Ventas por cliente".</summary>
-public sealed record FilaVentaPorCliente(string ClienteNombre, int CantidadDespachos, decimal Monto)
-{
-    public string MontoTexto => Monto.ToString("N2");
-}
-
 /// <summary>
-/// Fila de la vista "Detalle": una línea de despacho tal cual, sin agrupar — cliente, producto,
-/// cantidad con su unidad, y de qué proceso salió (si se indicó). Es la respuesta directa a "no
-/// se puede rastrear el origen de una venta".
+/// Fila de la tabla de Reportes · Ventas: una línea de despacho tal cual, sin agrupar — cliente,
+/// producto y cantidad con su unidad. Es la respuesta directa a "no se puede rastrear el origen
+/// de una venta".
 /// </summary>
 public sealed record FilaVentaDetalle(
     DateTime Fecha,
@@ -260,8 +155,7 @@ public sealed record FilaVentaDetalle(
     string ProductoNombre,
     string CantidadTexto,
     decimal PrecioUnitario,
-    decimal Subtotal,
-    string ProcesoOrigenTexto)
+    decimal Subtotal)
 {
     public string FechaTexto => Fecha.ToString("dd/MM/yyyy");
     public string PrecioUnitarioTexto => PrecioUnitario.ToString("N2");

@@ -74,7 +74,7 @@ public sealed class ReporteProcesosViewModel : PantallaViewModelBase
     }
 
     public ObservableCollection<Indicador> Indicadores { get; } = [];
-    public ObservableCollection<FilaProduccionPorProducto> Produccion { get; } = [];
+    public ObservableCollection<FilaProduccionPorDia> Produccion { get; } = [];
     public ObservableCollection<FilaConsumoInsumo> Consumo { get; } = [];
 
     private string _vistaActual = VistaProduccion;
@@ -117,44 +117,50 @@ public sealed class ReporteProcesosViewModel : PantallaViewModelBase
 
         var terminados = procesosEnRango.Count(p => p.Estado == EstadoProcesoProduccion.Terminado);
 
-        var porProducto = procesosEnRango
-            .GroupBy(p => (p.ProductoId, p.ProductoNombre, p.UnidadMedidaSnapshot))
-            .Select(g => new FilaProduccionPorProducto(
-                g.Key.ProductoNombre,
-                g.Key.UnidadMedidaSnapshot,
-                g.Sum(p => p.CantidadPlaneada),
-                g.Sum(p => p.CantidadProducida ?? 0)))
-            .OrderByDescending(f => f.CantidadProducida)
+        // Se agrupa por FechaTermino (cuándo se supo cuánto se produjo de verdad), no por Fecha de
+        // inicio: un proceso EnProceso no tiene FechaTermino y no aparece en esta tabla hasta que
+        // termine. Se agrupa también por producto+unidad: sumar cantidades de productos con
+        // distinta unidad en una sola fila daría un total sin sentido.
+        var porDia = procesosEnRango
+            .Where(p => p.Estado == EstadoProcesoProduccion.Terminado && p.FechaTermino is not null)
+            .GroupBy(p => (Fecha: p.FechaTermino!.Value.Date, p.ProductoNombre, p.UnidadMedidaSnapshot))
+            .Select(g => new FilaProduccionPorDia(g.Key.Fecha, g.Key.ProductoNombre, g.Key.UnidadMedidaSnapshot,
+                g.Sum(p => p.CantidadPlaneada), g.Sum(p => p.CantidadProducida ?? 0)))
+            .OrderBy(f => f.Fecha).ThenByDescending(f => f.CantidadProducida)
             .ToList();
 
         Produccion.Clear();
-        foreach (var fila in porProducto)
+        foreach (var fila in porDia)
             Produccion.Add(fila);
 
-        var totalPlaneada = porProducto.Sum(f => f.CantidadPlaneada);
-        var totalProducida = porProducto.Sum(f => f.CantidadProducida);
+        var totalPlaneada = procesosEnRango.Sum(p => p.CantidadPlaneada);
+        var totalProducida = procesosEnRango.Sum(p => p.CantidadProducida ?? 0);
         var rendimiento = totalPlaneada > 0 ? totalProducida / totalPlaneada * 100 : 0;
+        var productosFabricados = procesosEnRango.Select(p => p.ProductoId).Distinct().Count();
 
         var idsProcesos = procesosEnRango.Select(p => p.Id).ToHashSet();
 
+        // Las líneas no tienen fecha propia: se toma la Fecha del encabezado de la salida (cuándo
+        // salió el material de verdad), y se agrupa también por día — mismo motivo que
+        // "Producción": sin fecha no se sabe en qué día se consumieron esos insumos.
         var consumoMateriaPrima = _salidasMateriaPrima.GetAll()
             .Where(s => s.Estado == EstadoSalidaMateriaPrima.Registrada
                         && s.ProcesoProduccionId is { } id && idsProcesos.Contains(id))
-            .SelectMany(s => s.Lineas)
-            .GroupBy(l => (l.TipoMateriaPrimaNombre, l.UnidadMedidaSnapshot))
-            .Select(g => new FilaConsumoInsumo("Materia prima", g.Key.TipoMateriaPrimaNombre,
-                g.Key.UnidadMedidaSnapshot, g.Sum(l => l.Cantidad)));
+            .SelectMany(s => s.Lineas.Select(l => (s.Fecha, l.TipoMateriaPrimaNombre, l.UnidadMedidaSnapshot, l.Cantidad)))
+            .GroupBy(x => (x.Fecha.Date, x.TipoMateriaPrimaNombre, x.UnidadMedidaSnapshot))
+            .Select(g => new FilaConsumoInsumo(g.Key.Date, "Materia prima", g.Key.TipoMateriaPrimaNombre,
+                g.Key.UnidadMedidaSnapshot, g.Sum(x => x.Cantidad)));
 
         var consumoInventario = _salidasInventario.GetAll()
             .Where(s => s.Estado == EstadoSalida.Registrada
                         && s.ProcesoProduccionId is { } id && idsProcesos.Contains(id))
-            .SelectMany(s => s.Lineas)
-            .GroupBy(l => (l.ArticuloNombre, l.UnidadTexto))
-            .Select(g => new FilaConsumoInsumo("Inventario", g.Key.ArticuloNombre,
-                g.Key.UnidadTexto, g.Sum(l => l.Cantidad)));
+            .SelectMany(s => s.Lineas.Select(l => (s.Fecha, l.ArticuloNombre, l.UnidadTexto, l.Cantidad)))
+            .GroupBy(x => (x.Fecha.Date, x.ArticuloNombre, x.UnidadTexto))
+            .Select(g => new FilaConsumoInsumo(g.Key.Date, "Inventario", g.Key.ArticuloNombre,
+                g.Key.UnidadTexto, g.Sum(x => x.Cantidad)));
 
         var consumo = consumoMateriaPrima.Concat(consumoInventario)
-            .OrderBy(f => f.Origen).ThenByDescending(f => f.Cantidad)
+            .OrderBy(f => f.Fecha).ThenBy(f => f.Origen).ThenByDescending(f => f.Cantidad)
             .ToList();
 
         Consumo.Clear();
@@ -165,7 +171,7 @@ public sealed class ReporteProcesosViewModel : PantallaViewModelBase
         Indicadores.Add(new Indicador("Procesos terminados", terminados.ToString(), "en el período"));
         Indicadores.Add(new Indicador("Rendimiento promedio", $"{rendimiento:N1}%", "producido sobre lo planeado",
             totalPlaneada > 0 && rendimiento < 90 ? EstadoIndicador.Atencion : EstadoIndicador.Normal));
-        Indicadores.Add(new Indicador("Productos fabricados", porProducto.Count.ToString(), "productos distintos en el período"));
+        Indicadores.Add(new Indicador("Productos fabricados", productosFabricados.ToString(), "productos distintos en el período"));
     }
 
     /// <summary>Exporta SOLO la vista abierta en pantalla — mismo criterio que
@@ -179,17 +185,16 @@ public sealed class ReporteProcesosViewModel : PantallaViewModelBase
         if (VistaActual == VistaConsumo)
         {
             nombreVista = "Consumo de insumos";
-            encabezados = ["Origen", "Material", "Unidad", "Cantidad consumida"];
+            encabezados = ["Fecha", "Origen", "Material", "Unidad", "Cantidad consumida"];
             filas = Consumo.Select(f => (IReadOnlyList<string>)
-                [f.Origen, f.MaterialNombre, f.Unidad, f.CantidadTexto]).ToList();
+                [f.FechaTexto, f.Origen, f.MaterialNombre, f.Unidad, f.CantidadTexto]).ToList();
         }
         else
         {
             nombreVista = "Producción";
-            encabezados = ["Producto", "Unidad", "Cantidad planeada", "Cantidad producida", "Rendimiento %"];
+            encabezados = ["Fecha", "Producto", "Planeada", "Producida", "Rendimiento %"];
             filas = Produccion.Select(f => (IReadOnlyList<string>)
-                [f.ProductoNombre, f.UnidadMedida, f.CantidadPlaneadaTexto, f.CantidadProducidaTexto,
-                 f.RendimientoTexto]).ToList();
+                [f.FechaTexto, f.ProductoNombre, f.CantidadPlaneadaTexto, f.CantidadProducidaTexto, f.RendimientoTexto]).ToList();
         }
 
         var ruta = _dialogos.GuardarArchivo("Exportar reporte de procesos",
@@ -209,18 +214,22 @@ public sealed class ReporteProcesosViewModel : PantallaViewModelBase
     }
 }
 
-/// <summary>Fila del desglose "Producción por producto".</summary>
-public sealed record FilaProduccionPorProducto(string ProductoNombre, string UnidadMedida,
+/// <summary>Fila del desglose "Consumo de insumos": un día + un material (Origen es "Materia
+/// prima" o "Inventario"), tomando la Fecha del encabezado de la salida que lo consumió.</summary>
+public sealed record FilaConsumoInsumo(DateTime Fecha, string Origen, string MaterialNombre, string Unidad, decimal Cantidad)
+{
+    public string FechaTexto => Fecha.ToString("dd/MM/yyyy");
+    public string CantidadTexto => $"{Cantidad:N2} {Unidad}".Trim();
+}
+
+/// <summary>Fila del desglose "Producción": un día + un producto (procesos Terminados agrupados
+/// por FechaTermino), para ver el rendimiento día a día en vez de un solo total por período.</summary>
+public sealed record FilaProduccionPorDia(DateTime Fecha, string ProductoNombre, string UnidadMedida,
     decimal CantidadPlaneada, decimal CantidadProducida)
 {
+    public string FechaTexto => Fecha.ToString("dd/MM/yyyy");
     public string CantidadPlaneadaTexto => $"{CantidadPlaneada:N2} {UnidadMedida}".Trim();
     public string CantidadProducidaTexto => $"{CantidadProducida:N2} {UnidadMedida}".Trim();
     public decimal Rendimiento => CantidadPlaneada > 0 ? CantidadProducida / CantidadPlaneada * 100 : 0;
     public string RendimientoTexto => $"{Rendimiento:N1}%";
-}
-
-/// <summary>Fila del desglose "Consumo de insumos": Origen es "Materia prima" o "Inventario".</summary>
-public sealed record FilaConsumoInsumo(string Origen, string MaterialNombre, string Unidad, decimal Cantidad)
-{
-    public string CantidadTexto => $"{Cantidad:N2} {Unidad}".Trim();
 }

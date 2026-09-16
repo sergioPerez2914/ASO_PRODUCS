@@ -69,7 +69,7 @@
 
     <Border Grid.Row="3" Style="{StaticResource TabStripStyle}" VerticalAlignment="Bottom" />
 
-    <!-- ===================== Producción por producto ===================== -->
+    <!-- ===================== Producción por día y producto ===================== -->
     <Grid Grid.Row="4" Margin="0,16,0,0"
           Visibility="{Binding MostrarProduccion, Converter={StaticResource BoolToVis}}">
       <Border Style="{StaticResource SectionCardStyle}" Padding="0">
@@ -77,7 +77,8 @@
           <DataGrid x:Name="TablaProduccion" Style="{StaticResource DataGridStyle}"
                     ItemsSource="{Binding Produccion}" IsReadOnly="True">
             <DataGrid.Columns>
-              <controls:ColumnaTexto Header="Producto" Binding="{Binding ProductoNombre}" Width="28*" MinWidth="160" />
+              <controls:ColumnaTexto Header="Fecha" Binding="{Binding FechaTexto}" Width="16*" MinWidth="100" />
+              <controls:ColumnaTexto Header="Producto" Binding="{Binding ProductoNombre}" Width="26*" MinWidth="150" />
               <controls:ColumnaNumero Header="Planeada" Binding="{Binding CantidadPlaneadaTexto}" Width="18*" MinWidth="110" />
               <controls:ColumnaNumero Header="Producida" Binding="{Binding CantidadProducidaTexto}" Width="18*" MinWidth="110" />
               <controls:ColumnaNumero Header="Rendimiento" Binding="{Binding RendimientoTexto}" Width="14*" MinWidth="100" />
@@ -86,7 +87,7 @@
 
           <controls:EmptyState Icono="{x:Static controls:Iconos.Procesos}"
                                Titulo="No hay producción en el período"
-                               Detalle="Cambia el rango de fechas o registra procesos terminados en Procesos · Producción."
+                               Detalle="Esta tabla solo cuenta procesos ya Terminados, agrupados por el día en que terminaron."
                                Visibility="{Binding HasItems, ElementName=TablaProduccion, Converter={StaticResource SinItemsAVis}}" />
         </Grid>
       </Border>
@@ -100,9 +101,10 @@
           <DataGrid x:Name="TablaConsumo" Style="{StaticResource DataGridStyle}"
                     ItemsSource="{Binding Consumo}" IsReadOnly="True">
             <DataGrid.Columns>
-              <controls:ColumnaTexto Header="Origen" Binding="{Binding Origen}" Width="20*" MinWidth="110" />
-              <controls:ColumnaTexto Header="Material" Binding="{Binding MaterialNombre}" Width="40*" MinWidth="180" />
-              <controls:ColumnaNumero Header="Consumido" Binding="{Binding CantidadTexto}" Width="20*" MinWidth="120" />
+              <controls:ColumnaTexto Header="Fecha" Binding="{Binding FechaTexto}" Width="16*" MinWidth="100" />
+              <controls:ColumnaTexto Header="Origen" Binding="{Binding Origen}" Width="18*" MinWidth="110" />
+              <controls:ColumnaTexto Header="Material" Binding="{Binding MaterialNombre}" Width="36*" MinWidth="160" />
+              <controls:ColumnaNumero Header="Consumido" Binding="{Binding CantidadTexto}" Width="18*" MinWidth="120" />
             </DataGrid.Columns>
           </DataGrid>
 

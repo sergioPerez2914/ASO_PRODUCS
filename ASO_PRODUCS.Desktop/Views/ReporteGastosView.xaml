@@ -58,19 +58,20 @@
     <!-- Una sola tabla: no hace falta pestaña. -->
     <Border Grid.Row="3" Style="{StaticResource SectionCardStyle}" Padding="0" Margin="0,16,0,0">
       <Grid>
-        <DataGrid x:Name="TablaCategorias" Style="{StaticResource DataGridStyle}"
-                  ItemsSource="{Binding PorCategoria}" IsReadOnly="True">
+        <DataGrid x:Name="TablaGastos" Style="{StaticResource DataGridStyle}"
+                  ItemsSource="{Binding Gastos}" IsReadOnly="True">
           <DataGrid.Columns>
-            <controls:ColumnaTexto Header="Categoría" Binding="{Binding Categoria}" Width="40*" MinWidth="180" />
-            <controls:ColumnaNumero Header="Monto" Binding="{Binding MontoTexto}" Width="30*" MinWidth="110" />
-            <controls:ColumnaNumero Header="% del total" Binding="{Binding PorcentajeTexto}" Width="30*" MinWidth="100" />
+            <controls:ColumnaTexto Header="Fecha" Binding="{Binding FechaTexto}" Width="14*" MinWidth="100" />
+            <controls:ColumnaTexto Header="Categoría" Binding="{Binding Categoria}" Width="20*" MinWidth="140" />
+            <controls:ColumnaTexto Header="Concepto" Binding="{Binding Concepto}" Width="46*" MinWidth="220" />
+            <controls:ColumnaNumero Header="Monto" Binding="{Binding MontoTexto}" Width="20*" MinWidth="110" />
           </DataGrid.Columns>
         </DataGrid>
 
         <controls:EmptyState Icono="{x:Static controls:Iconos.CuentasPorPagar}"
                              Titulo="No hay gastos en el período"
                              Detalle="Cambia el rango de fechas o registra pagos en Finanzas · Movimientos."
-                             Visibility="{Binding HasItems, ElementName=TablaCategorias, Converter={StaticResource SinItemsAVis}}" />
+                             Visibility="{Binding HasItems, ElementName=TablaGastos, Converter={StaticResource SinItemsAVis}}" />
       </Grid>
     </Border>
   </Grid>

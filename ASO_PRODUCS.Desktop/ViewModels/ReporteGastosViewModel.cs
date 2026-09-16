@@ -11,7 +11,7 @@ using ASO_PRODUCS.Desktop.Services;
 namespace ASO_PRODUCS.Desktop.ViewModels;
 
 /// <summary>
-/// Reportes · Gastos: salidas de banco por período y por categoría.
+/// Reportes · Gastos: salidas de banco por período, sin agrupar.
 ///
 /// No existe una entidad "Gasto" separada, así que se arma con las salidas de
 /// <see cref="MovimientoBanco"/>. Cuenta como gasto operativo TODO lo que sale del banco EXCEPTO
@@ -19,6 +19,11 @@ namespace ASO_PRODUCS.Desktop.ViewModels;
 /// (movimiento de capital del dueño, no gasto del negocio) y las transferencias entre cuentas
 /// propias (<see cref="OrigenMovimiento.Transferencia"/>, que no es gasto: es mover dinero de un
 /// bolsillo a otro). De solo lectura, mismo criterio que <see cref="ReporteProcesosViewModel"/>.
+/// Una sola tabla, sin pestaña, mismo criterio que <see cref="ReporteVentasViewModel"/>: una fila
+/// por movimiento, no un total por categoría, para no perder A QUIÉN se le pagó — el
+/// <see cref="MovimientoBanco.Concepto"/> ya trae el nombre del proveedor cuando el pago vino de
+/// una <see cref="FacturaProveedor"/> (ver <see cref="MovimientosService.RegistrarPagoProveedor"/>),
+/// y para un gasto manual es la descripción que cargó quien lo registró.
 /// </summary>
 public sealed class ReporteGastosViewModel : PantallaViewModelBase
 {
@@ -64,7 +69,7 @@ public sealed class ReporteGastosViewModel : PantallaViewModelBase
     }
 
     public ObservableCollection<Indicador> Indicadores { get; } = [];
-    public ObservableCollection<FilaGastoPorCategoria> PorCategoria { get; } = [];
+    public ObservableCollection<FilaGasto> Gastos { get; } = [];
 
     public override void Recargar() => Recalcular();
 
@@ -76,22 +81,14 @@ public sealed class ReporteGastosViewModel : PantallaViewModelBase
         var gastosEnRango = _movimientos.GetAll()
             .Where(EsGastoOperativo)
             .Where(m => m.Fecha.Date >= desde && m.Fecha.Date <= hasta)
+            .OrderByDescending(m => m.Fecha)
             .ToList();
 
         var totalGastado = gastosEnRango.Sum(m => m.Monto);
 
-        var porCategoria = gastosEnRango
-            .GroupBy(m => m.Categoria)
-            .Select(g => new FilaGastoPorCategoria(
-                g.First().CategoriaTexto,
-                g.Sum(m => m.Monto),
-                totalGastado > 0 ? g.Sum(m => m.Monto) / totalGastado * 100 : 0))
-            .OrderByDescending(f => f.Monto)
-            .ToList();
-
-        PorCategoria.Clear();
-        foreach (var fila in porCategoria)
-            PorCategoria.Add(fila);
+        Gastos.Clear();
+        foreach (var m in gastosEnRango)
+            Gastos.Add(new FilaGasto(m.Fecha, m.CategoriaTexto, m.Concepto, m.Monto));
 
         Indicadores.Clear();
         Indicadores.Add(new Indicador("Total gastado", totalGastado.ToString("N2"), "en el período"));
@@ -115,11 +112,11 @@ public sealed class ReporteGastosViewModel : PantallaViewModelBase
 
         ExportadorExcel.Exportar(ruta,
         [
-            new HojaExcel("Por categoría",
-                ["Categoría", "Monto", "% del total"],
-                PorCategoria.Select(f => (IReadOnlyList<string>)
-                    [f.Categoria, f.MontoTexto, f.PorcentajeTexto]).ToList(),
-                Titulo: $"{Submodulo?.Nombre ?? "Reporte de Gastos"} · Por categoría",
+            new HojaExcel("Gastos",
+                ["Fecha", "Categoría", "Concepto", "Monto"],
+                Gastos.Select(f => (IReadOnlyList<string>)
+                    [f.FechaTexto, f.Categoria, f.Concepto, f.MontoTexto]).ToList(),
+                Titulo: Submodulo?.Nombre ?? "Reporte de Gastos",
                 Periodo: $"Período: {FechaDesde:dd/MM/yyyy} - {FechaHasta:dd/MM/yyyy}")
         ]);
 
@@ -127,9 +124,10 @@ public sealed class ReporteGastosViewModel : PantallaViewModelBase
     }
 }
 
-/// <summary>Fila del desglose "Gasto por categoría".</summary>
-public sealed record FilaGastoPorCategoria(string Categoria, decimal Monto, decimal Porcentaje)
+/// <summary>Fila de un gasto (salida de banco) tal cual, sin agrupar — el Concepto es lo que
+/// identifica a quién se le pagó o para qué, ver el comentario de cabecera de la clase.</summary>
+public sealed record FilaGasto(DateTime Fecha, string Categoria, string Concepto, decimal Monto)
 {
+    public string FechaTexto => Fecha.ToString("dd/MM/yyyy");
     public string MontoTexto => Monto.ToString("N2");
-    public string PorcentajeTexto => $"{Porcentaje:N1}%";
 }

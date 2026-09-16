@@ -75,13 +75,12 @@
           <DataGrid x:Name="TablaPorCliente" Style="{StaticResource DataGridStyle}"
                     ItemsSource="{Binding PorCliente}" IsReadOnly="True">
             <DataGrid.Columns>
-              <controls:ColumnaTexto Header="Cliente" Binding="{Binding Nombre}" Width="28*" MinWidth="160" />
-              <controls:ColumnaNumero Header="Al día" Binding="{Binding AlDiaTexto}" Width="14*" MinWidth="90" />
-              <controls:ColumnaNumero Header="1-30 días" Binding="{Binding Dias1a30Texto}" Width="14*" MinWidth="90" />
-              <controls:ColumnaNumero Header="31-60 días" Binding="{Binding Dias31a60Texto}" Width="14*" MinWidth="90" />
-              <controls:ColumnaNumero Header="61-90 días" Binding="{Binding Dias61a90Texto}" Width="14*" MinWidth="90" />
-              <controls:ColumnaNumero Header="+90 días" Binding="{Binding Mas90Texto}" Width="14*" MinWidth="90" />
-              <controls:ColumnaNumero Header="Total" Binding="{Binding TotalTexto}" Width="16*" MinWidth="100" />
+              <controls:ColumnaTexto Header="Documento" Binding="{Binding Documento}" Width="16*" MinWidth="110" />
+              <controls:ColumnaTexto Header="Cliente" Binding="{Binding Nombre}" Width="26*" MinWidth="160" />
+              <controls:ColumnaTexto Header="Fecha emisión" Binding="{Binding FechaEmisionTexto}" Width="14*" MinWidth="100" />
+              <controls:ColumnaTexto Header="Vencimiento" Binding="{Binding VencimientoTexto}" Width="14*" MinWidth="100" />
+              <controls:ColumnaTexto Header="Estado" Binding="{Binding PlazoTexto}" Width="16*" MinWidth="130" />
+              <controls:ColumnaNumero Header="Monto" Binding="{Binding MontoTexto}" Width="14*" MinWidth="100" />
             </DataGrid.Columns>
           </DataGrid>
 
@@ -101,13 +100,12 @@
           <DataGrid x:Name="TablaPorProveedor" Style="{StaticResource DataGridStyle}"
                     ItemsSource="{Binding PorProveedor}" IsReadOnly="True">
             <DataGrid.Columns>
-              <controls:ColumnaTexto Header="Proveedor" Binding="{Binding Nombre}" Width="28*" MinWidth="160" />
-              <controls:ColumnaNumero Header="Al día" Binding="{Binding AlDiaTexto}" Width="14*" MinWidth="90" />
-              <controls:ColumnaNumero Header="1-30 días" Binding="{Binding Dias1a30Texto}" Width="14*" MinWidth="90" />
-              <controls:ColumnaNumero Header="31-60 días" Binding="{Binding Dias31a60Texto}" Width="14*" MinWidth="90" />
-              <controls:ColumnaNumero Header="61-90 días" Binding="{Binding Dias61a90Texto}" Width="14*" MinWidth="90" />
-              <controls:ColumnaNumero Header="+90 días" Binding="{Binding Mas90Texto}" Width="14*" MinWidth="90" />
-              <controls:ColumnaNumero Header="Total" Binding="{Binding TotalTexto}" Width="16*" MinWidth="100" />
+              <controls:ColumnaTexto Header="Documento" Binding="{Binding Documento}" Width="16*" MinWidth="110" />
+              <controls:ColumnaTexto Header="Proveedor" Binding="{Binding Nombre}" Width="26*" MinWidth="160" />
+              <controls:ColumnaTexto Header="Fecha emisión" Binding="{Binding FechaEmisionTexto}" Width="14*" MinWidth="100" />
+              <controls:ColumnaTexto Header="Vencimiento" Binding="{Binding VencimientoTexto}" Width="14*" MinWidth="100" />
+              <controls:ColumnaTexto Header="Estado" Binding="{Binding PlazoTexto}" Width="16*" MinWidth="130" />
+              <controls:ColumnaNumero Header="Monto" Binding="{Binding MontoTexto}" Width="14*" MinWidth="100" />
             </DataGrid.Columns>
           </DataGrid>
 

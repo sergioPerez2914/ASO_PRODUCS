@@ -12,15 +12,17 @@ using ASO_PRODUCS.Desktop.Services;
 namespace ASO_PRODUCS.Desktop.ViewModels;
 
 /// <summary>
-/// Reportes · Cartera: antigüedad de saldos de Cuentas por Cobrar y por Pagar por período.
+/// Reportes · Cartera: facturas pendientes de Cuentas por Cobrar y por Pagar por período.
 ///
 /// De solo lectura, mismo criterio que <see cref="ReporteGastosViewModel"/>: se arma directo con
 /// <see cref="FacturaCliente"/>/<see cref="FacturaProveedor"/> pendientes, sin instanciar
 /// <see cref="CuentasPorCobrarService"/>/<see cref="CuentasPorPagarService"/> (que exigen
 /// <see cref="ISesionActual"/> por constructor para sus transiciones, que aquí no hacen falta:
-/// esto no escribe nada). "Vencida"/"Días de atraso" ya son condición derivada en el modelo
-/// (<see cref="FacturaCliente.EstaVencida"/>/<see cref="FacturaCliente.DiasParaVencer"/>), así
-/// que la antigüedad se calcula sin tocar el modelo de datos.
+/// esto no escribe nada). Una fila por factura, no un total por tercero — mismo criterio que
+/// <see cref="ReporteGastosViewModel"/>/<see cref="ReporteVentasViewModel"/>: agrupar por cliente
+/// o proveedor escondía el documento, la fecha de emisión y el vencimiento de cada factura
+/// puntual. "Vencida"/"Días de atraso" ya son condición derivada en el modelo
+/// (<see cref="FacturaCliente.EstaVencida"/>/<see cref="FacturaCliente.PlazoTexto"/>).
 /// </summary>
 public sealed class ReporteCarteraViewModel : PantallaViewModelBase
 {
@@ -73,8 +75,8 @@ public sealed class ReporteCarteraViewModel : PantallaViewModelBase
     }
 
     public ObservableCollection<Indicador> Indicadores { get; } = [];
-    public ObservableCollection<FilaCarteraPorTercero> PorCliente { get; } = [];
-    public ObservableCollection<FilaCarteraPorTercero> PorProveedor { get; } = [];
+    public ObservableCollection<FilaCarteraDetalle> PorCliente { get; } = [];
+    public ObservableCollection<FilaCarteraDetalle> PorProveedor { get; } = [];
 
     private string _vistaActual = VistaPorCliente;
     public string VistaActual
@@ -114,10 +116,12 @@ public sealed class ReporteCarteraViewModel : PantallaViewModelBase
                         && f.FechaEmision.Date >= desde && f.FechaEmision.Date <= hasta)
             .ToList();
 
+        // Ordenada por vencimiento: lo más urgente (ya vencido o por vencer antes) primero; sin
+        // vencimiento definido queda al final.
         var porCliente = cxcEnRango
-            .GroupBy(f => f.ClienteNombre)
-            .Select(g => ArmarFila(g.Key, g.Select(f => (f.Monto, f.DiasParaVencer))))
-            .OrderByDescending(f => f.Total)
+            .OrderBy(f => f.FechaVencimiento ?? DateTime.MaxValue)
+            .Select(f => new FilaCarteraDetalle(f.NumeroDocumento, f.ClienteNombre, f.FechaEmision,
+                f.VencimientoTexto, f.PlazoTexto, f.Monto))
             .ToList();
 
         PorCliente.Clear();
@@ -130,9 +134,9 @@ public sealed class ReporteCarteraViewModel : PantallaViewModelBase
             .ToList();
 
         var porProveedor = cxpEnRango
-            .GroupBy(f => f.ProveedorNombre)
-            .Select(g => ArmarFila(g.Key, g.Select(f => (f.Monto, f.DiasParaVencer))))
-            .OrderByDescending(f => f.Total)
+            .OrderBy(f => f.FechaVencimiento ?? DateTime.MaxValue)
+            .Select(f => new FilaCarteraDetalle(f.NumeroDocumento, f.ProveedorNombre, f.FechaEmision,
+                f.VencimientoTexto, f.PlazoTexto, f.Monto))
             .ToList();
 
         PorProveedor.Clear();
@@ -153,50 +157,30 @@ public sealed class ReporteCarteraViewModel : PantallaViewModelBase
             vencidoProveedor > 0 ? EstadoIndicador.Critico : EstadoIndicador.Normal));
     }
 
-    /// <summary>
-    /// Bucketiza el saldo de un tercero por antigüedad. <c>DiasParaVencer</c> es negativo cuando
-    /// ya venció (ver <see cref="FacturaCliente.DiasParaVencer"/>), así que el atraso es su valor
-    /// cambiado de signo; una factura sin vencer o sin vencimiento definido cae en "Al día".
-    /// </summary>
-    private static FilaCarteraPorTercero ArmarFila(string nombre, IEnumerable<(decimal Monto, int DiasParaVencer)> facturas)
-    {
-        decimal alDia = 0, dias1a30 = 0, dias31a60 = 0, dias61a90 = 0, mas90 = 0;
-
-        foreach (var (monto, diasParaVencer) in facturas)
-        {
-            var atraso = -diasParaVencer;
-
-            if (atraso <= 0) alDia += monto;
-            else if (atraso <= 30) dias1a30 += monto;
-            else if (atraso <= 60) dias31a60 += monto;
-            else if (atraso <= 90) dias61a90 += monto;
-            else mas90 += monto;
-        }
-
-        return new FilaCarteraPorTercero(nombre, alDia, dias1a30, dias31a60, dias61a90, mas90);
-    }
-
     /// <summary>Exporta SOLO la vista abierta en pantalla — mismo criterio que
     /// <see cref="ReporteVentasViewModel.ExportarExcel"/>.</summary>
     private void ExportarExcel()
     {
-        string[] encabezados = ["Cliente/Proveedor", "Al día", "1-30 días", "31-60 días", "61-90 días", "+90 días", "Total"];
-
         string nombreVista;
-        IReadOnlyList<IReadOnlyList<string>> filas;
+        string encabezadoNombre;
+        ObservableCollection<FilaCarteraDetalle> filasOrigen;
 
         if (VistaActual == VistaPorProveedor)
         {
             nombreVista = "Cuentas por pagar";
-            filas = PorProveedor.Select(f => (IReadOnlyList<string>)
-                [f.Nombre, f.AlDiaTexto, f.Dias1a30Texto, f.Dias31a60Texto, f.Dias61a90Texto, f.Mas90Texto, f.TotalTexto]).ToList();
+            encabezadoNombre = "Proveedor";
+            filasOrigen = PorProveedor;
         }
         else
         {
             nombreVista = "Cuentas por cobrar";
-            filas = PorCliente.Select(f => (IReadOnlyList<string>)
-                [f.Nombre, f.AlDiaTexto, f.Dias1a30Texto, f.Dias31a60Texto, f.Dias61a90Texto, f.Mas90Texto, f.TotalTexto]).ToList();
+            encabezadoNombre = "Cliente";
+            filasOrigen = PorCliente;
         }
+
+        string[] encabezados = ["Documento", encabezadoNombre, "Fecha emisión", "Vencimiento", "Estado", "Monto"];
+        var filas = filasOrigen.Select(f => (IReadOnlyList<string>)
+            [f.Documento, f.Nombre, f.FechaEmisionTexto, f.VencimientoTexto, f.PlazoTexto, f.MontoTexto]).ToList();
 
         var ruta = _dialogos.GuardarArchivo("Exportar reporte de cartera",
             $"ReporteCartera_{nombreVista.Replace(" ", "")}.xlsx", "Libro de Excel (*.xlsx)|*.xlsx");
@@ -215,21 +199,16 @@ public sealed class ReporteCarteraViewModel : PantallaViewModelBase
     }
 }
 
-/// <summary>Fila del desglose de antigüedad de saldos, por cliente o por proveedor según la vista.</summary>
-public sealed record FilaCarteraPorTercero(
+/// <summary>Fila de una factura pendiente (cliente o proveedor según la vista), sin agrupar: el
+/// Documento y las fechas identifican exactamente cuál es, en vez de un total por tercero.</summary>
+public sealed record FilaCarteraDetalle(
+    string Documento,
     string Nombre,
-    decimal AlDia,
-    decimal Dias1a30,
-    decimal Dias31a60,
-    decimal Dias61a90,
-    decimal Mas90)
+    DateTime FechaEmision,
+    string VencimientoTexto,
+    string PlazoTexto,
+    decimal Monto)
 {
-    public decimal Total => AlDia + Dias1a30 + Dias31a60 + Dias61a90 + Mas90;
-
-    public string AlDiaTexto => AlDia.ToString("N2");
-    public string Dias1a30Texto => Dias1a30.ToString("N2");
-    public string Dias31a60Texto => Dias31a60.ToString("N2");
-    public string Dias61a90Texto => Dias61a90.ToString("N2");
-    public string Mas90Texto => Mas90.ToString("N2");
-    public string TotalTexto => Total.ToString("N2");
+    public string FechaEmisionTexto => FechaEmision.ToString("dd/MM/yyyy");
+    public string MontoTexto => Monto.ToString("N2");
 }
