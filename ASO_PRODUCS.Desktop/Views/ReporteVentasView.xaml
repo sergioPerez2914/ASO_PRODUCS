@@ -33,6 +33,13 @@
         <DatePicker Width="130" VerticalAlignment="Center"
                     Style="{StaticResource FormDatePickerStyle}"
                     SelectedDate="{Binding FechaHasta}" />
+        <TextBlock Text="Producto" VerticalAlignment="Center" Margin="16,0,8,0"
+                   FontSize="{StaticResource FsCaption}"
+                   Foreground="{DynamicResource TextMutedBrush}" />
+        <ComboBox Width="200" VerticalAlignment="Center"
+                  Style="{StaticResource FormComboBoxStyle}"
+                  ItemsSource="{Binding Productos}"
+                  SelectedItem="{Binding SelectedProducto}" />
         <Button Content="Exportar a Excel" Style="{StaticResource SecondaryButtonStyle}"
                 Margin="16,0,0,0" Command="{Binding ExportarExcelCommand}" />
       </WrapPanel>

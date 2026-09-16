@@ -16,10 +16,15 @@ namespace ASO_PRODUCS.Desktop.ViewModels;
 ///
 /// De solo lectura, igual que <see cref="ReporteProcesosViewModel"/>: hereda de
 /// <see cref="PantallaViewModelBase"/> y se arma con <see cref="Despacho"/> tipo Venta y sus
-/// <see cref="FacturaCliente"/>, sin ningún dato ni migración nueva. Una sola tabla (una fila por
-/// despacho, no por línea: el desglose por producto ya se ve con doble clic, ver
-/// <see cref="VerDetalleCommand"/>): no hace falta pestaña, mismo criterio que
-/// <see cref="ReporteGastosViewModel"/> para su vista "Por categoría".
+/// <see cref="FacturaCliente"/>, sin ningún dato ni migración nueva. Una sola tabla, sin pestaña,
+/// mismo criterio que <see cref="ReporteGastosViewModel"/> para su vista "Por categoría".
+///
+/// La grilla en pantalla respeta el filtro <see cref="SelectedProducto"/>: en "Todos" es una fila
+/// por despacho, no por línea (el desglose se ve con doble clic, ver
+/// <see cref="VerDetalleCommand"/>); con un producto puntual, una fila por línea de ese producto.
+/// <see cref="ExportarExcel"/> en cambio ignora ese filtro a propósito: el Excel siempre sale en
+/// detalle completo, una fila por línea de cada despacho, porque ahí no hay doble clic que
+/// desarme un "Varios (N productos)".
 /// </summary>
 public sealed class ReporteVentasViewModel : PantallaViewModelBase
 {
@@ -81,8 +86,25 @@ public sealed class ReporteVentasViewModel : PantallaViewModelBase
         set { if (SetProperty(ref _fechaHasta, value)) Recalcular(); }
     }
 
+    private string _productoSeleccionado = "Todos";
+
+    /// <summary>"Todos" mantiene la fila consolidada por despacho (con "Varios" cuando
+    /// corresponde); elegir un producto puntual cambia a una fila por línea de ese producto —
+    /// la vista que hace falta para exportar a Excel sin ambigüedad, ver
+    /// <see cref="ExportarExcel"/>.</summary>
+    public string SelectedProducto
+    {
+        get => _productoSeleccionado;
+        set { if (SetProperty(ref _productoSeleccionado, value)) Recalcular(); }
+    }
+
+    public ObservableCollection<string> Productos { get; } = [];
     public ObservableCollection<Indicador> Indicadores { get; } = [];
     public ObservableCollection<FilaVentaDetalle> Detalle { get; } = [];
+
+    // Los despachos del rango vigente, para que ExportarExcel arme su propio detalle sin
+    // depender del filtro de Producto (ver ExportarExcel).
+    private List<Despacho> _despachosEnRango = [];
 
     public override void Recargar() => Recalcular();
 
@@ -96,25 +118,63 @@ public sealed class ReporteVentasViewModel : PantallaViewModelBase
                         && d.Fecha.Date >= desde && d.Fecha.Date <= hasta)
             .ToList();
 
+        _despachosEnRango = despachosEnRango;
+
         var totalVendido = despachosEnRango.Sum(d => d.Total);
 
-        // Una fila por despacho, no por línea: repetir cliente/fecha por cada producto se veía
-        // repetitivo y el desglose ya está a un doble clic (VerDetalle). Con una sola línea se
-        // sigue mostrando el producto/cantidad/precio real; con varias, "Varios (N productos)"
-        // y cantidad/precio vacíos porque mezclar unidades o precios distintos en una sola cifra
-        // no dice nada.
-        var detalle = despachosEnRango
-            .Select(d => new FilaVentaDetalle(
-                d.Fecha, d.Numero, d.ClienteNombre,
-                d.Lineas.Count == 1 ? d.Lineas[0].ProductoNombre : $"Varios ({d.Lineas.Count} productos)",
-                d.Lineas.Count == 1 ? $"{d.Lineas[0].Cantidad:N2} {d.Lineas[0].UnidadMedidaSnapshot}".Trim() : string.Empty,
-                d.Lineas.Count == 1 ? d.Lineas[0].PrecioUnitario.ToString("N2") : string.Empty,
-                d.Total, d))
-            .OrderByDescending(f => f.Fecha)
-            .ToList();
+        // Opciones del filtro de producto: solo los que aparecen en el rango visible, no un
+        // catálogo aparte. Si el producto elegido deja de estar (cambió el rango), cae a "Todos".
+        // Ojo: reconstruir Productos con Clear()+Add() cuando el contenido no cambió resetea a
+        // null el SelectedItem del ComboBox (WPF), lo que dispara este mismo setter de nuevo y
+        // pisa la selección que se acababa de elegir — por eso solo se toca la colección cuando
+        // el conjunto de nombres realmente cambió (típicamente al mover el rango de fechas).
+        var productosDeseados = new List<string> { "Todos" };
+        productosDeseados.AddRange(despachosEnRango
+            .SelectMany(d => d.Lineas.Select(l => l.ProductoNombre))
+            .Distinct()
+            .OrderBy(n => n));
+
+        if (!Productos.SequenceEqual(productosDeseados))
+        {
+            Productos.Clear();
+            foreach (var nombre in productosDeseados)
+                Productos.Add(nombre);
+        }
+
+        if (!Productos.Contains(_productoSeleccionado))
+        {
+            _productoSeleccionado = "Todos";
+            OnPropertyChanged(nameof(SelectedProducto));
+        }
+
+        // Con "Todos": una fila por despacho, no por línea (repetir cliente/fecha por cada
+        // producto se veía repetitivo y el desglose ya está a un doble clic, VerDetalle). Con una
+        // sola línea se sigue mostrando el producto/cantidad/precio real; con varias, "Varios (N
+        // productos)" y cantidad/precio vacíos porque mezclar unidades o precios distintos en una
+        // sola cifra no dice nada. Con un producto puntual elegido, en cambio, hace falta el
+        // desglose real para exportar a Excel (ahí no hay doble clic): una fila por línea de ese
+        // producto, igual que antes de consolidar por despacho.
+        IEnumerable<FilaVentaDetalle> detalle = _productoSeleccionado == "Todos"
+            ? despachosEnRango
+                .Select(d => new FilaVentaDetalle(
+                    d.Fecha, d.Numero, d.ClienteNombre,
+                    d.Lineas.Count == 1 ? d.Lineas[0].ProductoNombre : $"Varios ({d.Lineas.Count} productos)",
+                    d.Lineas.Count == 1 ? $"{d.Lineas[0].Cantidad:N2} {d.Lineas[0].UnidadMedidaSnapshot}".Trim() : string.Empty,
+                    d.Lineas.Count == 1 ? d.Lineas[0].PrecioUnitario.ToString("N2") : string.Empty,
+                    d.Total, d))
+            : despachosEnRango
+                .SelectMany(d => d.Lineas
+                    .Where(l => l.ProductoNombre == _productoSeleccionado)
+                    .Select(l => new FilaVentaDetalle(
+                        d.Fecha, d.Numero, d.ClienteNombre, l.ProductoNombre,
+                        $"{l.Cantidad:N2} {l.UnidadMedidaSnapshot}".Trim(),
+                        l.PrecioUnitario.ToString("N2"),
+                        l.Subtotal, d)));
+
+        var detalleOrdenado = detalle.OrderByDescending(f => f.Fecha).ToList();
 
         Detalle.Clear();
-        foreach (var fila in detalle)
+        foreach (var fila in detalleOrdenado)
             Detalle.Add(fila);
 
         // El estado de cobro se mira contra las facturas EMITIDAS en el período, no contra los
@@ -147,11 +207,24 @@ public sealed class ReporteVentasViewModel : PantallaViewModelBase
         if (ruta is null)
             return;
 
+        // El Excel siempre sale en detalle, una fila por línea (igual que antes de consolidar la
+        // grilla por despacho): en Excel no hay doble clic para abrir un "Varios (N productos)",
+        // así que no depende del filtro de Producto de la pantalla — ese filtro es solo para
+        // mirar en pantalla, ver SelectedProducto.
+        var filasExport = _despachosEnRango
+            .SelectMany(d => d.Lineas.Select(l => new FilaVentaDetalle(
+                d.Fecha, d.Numero, d.ClienteNombre, l.ProductoNombre,
+                $"{l.Cantidad:N2} {l.UnidadMedidaSnapshot}".Trim(),
+                l.PrecioUnitario.ToString("N2"),
+                l.Subtotal, d)))
+            .OrderByDescending(f => f.Fecha)
+            .ToList();
+
         ExportadorExcel.Exportar(ruta,
         [
             new HojaExcel("Ventas",
                 ["Fecha", "Despacho", "Cliente", "Producto", "Cantidad", "Precio unitario", "Total"],
-                Detalle.Select(f => (IReadOnlyList<string>)
+                filasExport.Select(f => (IReadOnlyList<string>)
                     [f.FechaTexto, f.DespachoNumero, f.ClienteNombre, f.ProductoNombre, f.CantidadTexto,
                      f.PrecioUnitarioTexto, f.TotalTexto]).ToList(),
                 Titulo: Submodulo?.Nombre ?? "Reporte de Ventas",
@@ -169,11 +242,12 @@ public sealed class ReporteVentasViewModel : PantallaViewModelBase
 }
 
 /// <summary>
-/// Fila de la tabla de Reportes · Ventas: un despacho completo, cliente y total — el desglose por
-/// producto se ve con doble clic (<see cref="ReporteVentasViewModel.VerDetalleCommand"/>), no
-/// hace falta repetirlo acá. <see cref="ProductoNombre"/>/<see cref="CantidadTexto"/>/
-/// <see cref="PrecioUnitarioTexto"/> ya vienen resueltos desde <c>Recalcular</c>: el dato real
-/// cuando el despacho tiene una sola línea, o un texto genérico cuando tiene varias.
+/// Fila de la tabla de Reportes · Ventas. Con el filtro de producto en "Todos" representa un
+/// despacho completo (el desglose se ve con doble clic,
+/// <see cref="ReporteVentasViewModel.VerDetalleCommand"/>); con un producto elegido, representa
+/// una sola línea de ese despacho. <see cref="ProductoNombre"/>/<see cref="CantidadTexto"/>/
+/// <see cref="PrecioUnitarioTexto"/>/<see cref="Total"/> ya vienen resueltos desde
+/// <c>Recalcular</c> según cuál sea el caso.
 /// </summary>
 public sealed record FilaVentaDetalle(
     DateTime Fecha,
