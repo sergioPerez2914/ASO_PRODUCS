@@ -65,6 +65,9 @@
       <RadioButton Content="Consumo de insumos" GroupName="VistaReporteProcesos"
                    Style="{StaticResource SegmentedTabStyle}"
                    IsChecked="{Binding EsConsumo, Mode=TwoWay}" />
+      <RadioButton Content="Costos" GroupName="VistaReporteProcesos"
+                   Style="{StaticResource SegmentedTabStyle}"
+                   IsChecked="{Binding EsCostos, Mode=TwoWay}" />
     </StackPanel>
 
     <Border Grid.Row="3" Style="{StaticResource TabStripStyle}" VerticalAlignment="Bottom" />
@@ -112,6 +115,34 @@
                                Titulo="No hay consumo registrado en el período"
                                Detalle="El consumo sale de las salidas de materia prima e inventario que generan los procesos."
                                Visibility="{Binding HasItems, ElementName=TablaConsumo, Converter={StaticResource SinItemsAVis}}" />
+        </Grid>
+      </Border>
+    </Grid>
+
+    <!-- ===================== Costos por proceso ===================== -->
+    <Grid Grid.Row="4" Margin="0,16,0,0"
+          Visibility="{Binding MostrarCostos, Converter={StaticResource BoolToVis}}">
+      <Border Style="{StaticResource SectionCardStyle}" Padding="0">
+        <Grid>
+          <DataGrid x:Name="TablaCostos" Style="{StaticResource DataGridStyle}"
+                    ItemsSource="{Binding Costos}" IsReadOnly="True">
+            <DataGrid.Columns>
+              <controls:ColumnaTexto Header="Terminado" Binding="{Binding FechaTexto}" Width="12*" MinWidth="90" />
+              <controls:ColumnaTexto Header="Nº" Binding="{Binding Numero}" Width="12*" MinWidth="90" />
+              <controls:ColumnaTexto Header="Producto" Binding="{Binding ProductoNombre}" Width="20*" MinWidth="130" />
+              <controls:ColumnaNumero Header="Producida" Binding="{Binding CantidadProducidaTexto}" Width="12*" MinWidth="90" />
+              <controls:ColumnaNumero Header="Costo total" Binding="{Binding Costo.CostoTotalTexto}" Width="12*" MinWidth="90" />
+              <controls:ColumnaNumero Header="Costo x unidad" Binding="{Binding Costo.CostoPorUnidadTexto}" Width="12*" MinWidth="100" />
+              <controls:ColumnaNumero Header="Precio" Binding="{Binding Costo.PrecioVentaTexto}" Width="10*" MinWidth="80" />
+              <controls:ColumnaNumero Header="Margen" Binding="{Binding Costo.MargenPorcentajeTexto}" Width="10*" MinWidth="80" />
+              <controls:ColumnaTexto Header="Costo incompleto" Binding="{Binding IncompletoTexto}" Width="10*" MinWidth="100" />
+            </DataGrid.Columns>
+          </DataGrid>
+
+          <controls:EmptyState Icono="{x:Static controls:Iconos.Procesos}"
+                               Titulo="No hay procesos terminados en el período"
+                               Detalle="El costo se calcula con el promedio de las compras con precio de cada material hasta la fecha en que se consumió."
+                               Visibility="{Binding HasItems, ElementName=TablaCostos, Converter={StaticResource SinItemsAVis}}" />
         </Grid>
       </Border>
     </Grid>

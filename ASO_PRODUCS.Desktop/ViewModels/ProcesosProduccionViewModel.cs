@@ -127,6 +127,7 @@ public sealed class ProcesosProduccionCrudViewModel : CrudViewModelBase<ProcesoP
     private const string FiltroTodos = "Todos";
 
     private readonly ProcesosProduccionService _servicio;
+    private readonly CostosProduccionService _costos;
     private readonly ProductosService _productos;
     private readonly IEtapaProduccionDataSource _etapas;
     private readonly ITipoMateriaPrimaDataSource _tipos;
@@ -138,6 +139,7 @@ public sealed class ProcesosProduccionCrudViewModel : CrudViewModelBase<ProcesoP
 
     public ProcesosProduccionCrudViewModel(IProcesoProduccionDataSource procesos,
                                            ProcesosProduccionService servicio,
+                                           CostosProduccionService costos,
                                            ProductosService productos,
                                            IEtapaProduccionDataSource etapas,
                                            ITipoMateriaPrimaDataSource tipos,
@@ -147,6 +149,7 @@ public sealed class ProcesosProduccionCrudViewModel : CrudViewModelBase<ProcesoP
         : base(procesos, dialogos, sesion)
     {
         _servicio = servicio;
+        _costos = costos;
         _productos = productos;
         _etapas = etapas;
         _tipos = tipos;
@@ -290,7 +293,7 @@ public sealed class ProcesosProduccionCrudViewModel : CrudViewModelBase<ProcesoP
         if (SelectedItem is not { } proceso)
             return;
 
-        _dialogos.MostrarEditor(new ProcesoDetalleViewModel(proceso));
+        _dialogos.MostrarEditor(new ProcesoDetalleViewModel(proceso, _costos.Calcular(proceso)));
     }
 
     /// <summary>
@@ -647,12 +650,17 @@ public sealed class EtapaProcesoEditorViewModel : CrudEditorViewModelBase<EtapaP
 /// </summary>
 public sealed class ProcesoDetalleViewModel : CrudEditorViewModelBase
 {
-    public ProcesoDetalleViewModel(ProcesoProduccion proceso)
+    public ProcesoDetalleViewModel(ProcesoProduccion proceso, CostoProceso costo)
     {
         Proceso = proceso;
+        Costo = costo;
     }
 
     public ProcesoProduccion Proceso { get; }
+
+    public CostoProceso Costo { get; }
+
+    public bool TieneCosto => Costo.Lineas.Count > 0;
 
     public override string Titulo => $"Proceso {Proceso.Numero}";
 
@@ -861,6 +869,10 @@ public sealed class ProcesosProduccionViewModel : PantallaViewModelBase
         var inventario = new InventarioService(articulosDs, DataSourceFactory.CrearEntradasInventario(),
                                                DataSourceFactory.CrearSalidasInventario());
 
+        var costosServicio = new CostosProduccionService(DataSourceFactory.CrearRecepcionesMateriaPrima(),
+            DataSourceFactory.CrearEntradasInventario(), DataSourceFactory.CrearSalidasMateriaPrima(),
+            DataSourceFactory.CrearSalidasInventario(), productosDs);
+
         var salidasMateriaPrimaServicio = new SalidasMateriaPrimaService(
             DataSourceFactory.CrearSalidasMateriaPrima(), materiaPrima, sesion);
         var salidasInventarioServicio = new SalidasInventarioService(
@@ -871,7 +883,7 @@ public sealed class ProcesosProduccionViewModel : PantallaViewModelBase
 
         Etapas = new EtapasProduccionCrudViewModel(etapasDs, etapasServicio, dialogos, sesion);
 
-        Procesos = new ProcesosProduccionCrudViewModel(procesosDs, procesosServicio, productosServicio,
+        Procesos = new ProcesosProduccionCrudViewModel(procesosDs, procesosServicio, costosServicio, productosServicio,
             etapasDs, tiposDs, articulosDs, dialogos, sesion);
 
         CambiarVistaCommand = new RelayCommand<string>(vista => VistaActual = vista);

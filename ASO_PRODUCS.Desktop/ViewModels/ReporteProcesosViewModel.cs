@@ -23,10 +23,12 @@ public sealed class ReporteProcesosViewModel : PantallaViewModelBase
 {
     public const string VistaProduccion = "Produccion";
     public const string VistaConsumo = "Consumo";
+    public const string VistaCostos = "Costos";
 
     private readonly IProcesoProduccionDataSource _procesos;
     private readonly ISalidaMateriaPrimaDataSource _salidasMateriaPrima;
     private readonly ISalidaInventarioDataSource _salidasInventario;
+    private readonly CostosProduccionService _costos;
     private readonly IServicioDialogo _dialogos;
 
     public ReporteProcesosViewModel(Modulo modulo, Submodulo submodulo)
@@ -47,6 +49,9 @@ public sealed class ReporteProcesosViewModel : PantallaViewModelBase
         _procesos = procesos;
         _salidasMateriaPrima = salidasMateriaPrima;
         _salidasInventario = salidasInventario;
+        _costos = new CostosProduccionService(DataSourceFactory.CrearRecepcionesMateriaPrima(),
+            DataSourceFactory.CrearEntradasInventario(), salidasMateriaPrima, salidasInventario,
+            DataSourceFactory.CrearProductos());
         _dialogos = dialogos;
 
         _fechaDesde = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
@@ -76,6 +81,7 @@ public sealed class ReporteProcesosViewModel : PantallaViewModelBase
     public ObservableCollection<Indicador> Indicadores { get; } = [];
     public ObservableCollection<FilaProduccionPorDia> Produccion { get; } = [];
     public ObservableCollection<FilaConsumoInsumo> Consumo { get; } = [];
+    public ObservableCollection<FilaCostoProceso> Costos { get; } = [];
 
     private string _vistaActual = VistaProduccion;
     public string VistaActual
@@ -90,6 +96,13 @@ public sealed class ReporteProcesosViewModel : PantallaViewModelBase
 
     public bool MostrarProduccion => VistaActual == VistaProduccion;
     public bool MostrarConsumo => VistaActual == VistaConsumo;
+    public bool MostrarCostos => VistaActual == VistaCostos;
+
+    public bool EsCostos
+    {
+        get => MostrarCostos;
+        set { if (value) VistaActual = VistaCostos; }
+    }
 
     public bool EsProduccion
     {
@@ -167,6 +180,16 @@ public sealed class ReporteProcesosViewModel : PantallaViewModelBase
         foreach (var fila in consumo)
             Consumo.Add(fila);
 
+        // Solo Terminados: sin cantidad producida no hay costo por unidad ni margen que comparar.
+        var procesosTerminados = procesosEnRango
+            .Where(p => p.Estado == EstadoProcesoProduccion.Terminado)
+            .ToList();
+        var costos = _costos.Calcular(procesosTerminados);
+
+        Costos.Clear();
+        foreach (var proceso in procesosTerminados.OrderBy(p => p.FechaTermino).ThenBy(p => p.Numero))
+            Costos.Add(new FilaCostoProceso(proceso, costos[proceso.Id]));
+
         Indicadores.Clear();
         Indicadores.Add(new Indicador("Procesos terminados", terminados.ToString(), "en el período"));
         Indicadores.Add(new Indicador("Rendimiento promedio", $"{rendimiento:N1}%", "producido sobre lo planeado",
@@ -182,7 +205,16 @@ public sealed class ReporteProcesosViewModel : PantallaViewModelBase
         IReadOnlyList<string> encabezados;
         IReadOnlyList<IReadOnlyList<string>> filas;
 
-        if (VistaActual == VistaConsumo)
+        if (VistaActual == VistaCostos)
+        {
+            nombreVista = "Costos";
+            encabezados = ["Fecha término", "Nº", "Producto", "Producida", "Costo total", "Costo por unidad",
+                           "Precio", "Margen %", "Costo incompleto"];
+            filas = Costos.Select(f => (IReadOnlyList<string>)
+                [f.FechaTexto, f.Numero, f.ProductoNombre, f.CantidadProducidaTexto, f.Costo.CostoTotalTexto,
+                 f.Costo.CostoPorUnidadTexto, f.Costo.PrecioVentaTexto, f.Costo.MargenPorcentajeTexto, f.IncompletoTexto]).ToList();
+        }
+        else if (VistaActual == VistaConsumo)
         {
             nombreVista = "Consumo de insumos";
             encabezados = ["Fecha", "Origen", "Material", "Unidad", "Cantidad consumida"];
@@ -212,6 +244,16 @@ public sealed class ReporteProcesosViewModel : PantallaViewModelBase
 
         _dialogos.Informar("Reporte exportado", $"El archivo se guardó en:\n{ruta}");
     }
+}
+
+/// <summary>Fila de la pestaña "Costos": un proceso Terminado con su costo de materiales y margen.</summary>
+public sealed record FilaCostoProceso(ProcesoProduccion Proceso, CostoProceso Costo)
+{
+    public string FechaTexto => Proceso.FechaTermino?.ToString("dd/MM/yyyy") ?? string.Empty;
+    public string Numero => Proceso.Numero;
+    public string ProductoNombre => Proceso.ProductoNombre;
+    public string CantidadProducidaTexto => Proceso.CantidadProducidaTexto;
+    public string IncompletoTexto => Costo.Incompleto ? "Sí" : "No";
 }
 
 /// <summary>Fila del desglose "Consumo de insumos": un día + un material (Origen es "Materia

@@ -351,6 +351,16 @@ anterior: se construyó de cero contra este armazón.
   mecanismo que el resto de los módulos: el servicio asigna "el último + 1" al iniciar/registrar,
   con el índice único `(OrganizacionId, Numero)` como red.
 - **Dos migraciones EF**: `AgregarProcesos`, `AgregarClientesYCuentasPorCobrar`.
+- **`Producto.PrecioUnitario`** (2026-09-16) es un precio de referencia: se propone en una línea de
+  despacho solo si el campo de precio de esa línea está vacío, y se puede cambiar a mano.
+- **El costo de producción se deriva, no se guarda** (`CostosProduccionService`, 2026-09-16). Cada
+  salida registrada enlazada a un proceso se valora al promedio ponderado de las compras con
+  precio > 0 de ese material hasta la fecha de la salida (recepciones de Materia Prima, entradas
+  de Inventario). Las entradas a precio 0 (`OtroOrigen`, `Ajuste`) no cuentan; un material sin
+  compras con precio queda "sin costo" y marca el proceso como incompleto. La merma suma al costo.
+  El margen usa el precio ACTUAL del producto, no uno histórico. Solo materiales: no hay mano de
+  obra ni costos indirectos. Se ve en la ficha de detalle del proceso y en Reporte de Procesos ·
+  Costos.
 
 ## Persistencia
 

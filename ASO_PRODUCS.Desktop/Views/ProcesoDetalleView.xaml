@@ -242,6 +242,123 @@
       </ItemsControl.ItemTemplate>
     </ItemsControl>
 
+    <!-- Costo de materiales: derivado por CostosProduccionService, no guardado. -->
+    <StackPanel>
+      <StackPanel.Style>
+        <Style TargetType="StackPanel">
+          <Setter Property="Visibility" Value="Visible" />
+          <Style.Triggers>
+            <DataTrigger Binding="{Binding TieneCosto}" Value="False">
+              <Setter Property="Visibility" Value="Collapsed" />
+            </DataTrigger>
+          </Style.Triggers>
+        </Style>
+      </StackPanel.Style>
+
+      <TextBlock Text="Costo" Style="{StaticResource CardTitleStyle}" Margin="0,20,0,8" />
+
+      <Border Style="{StaticResource SectionCardStyle}">
+        <StackPanel>
+          <Grid>
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="*" />
+              <ColumnDefinition Width="*" />
+              <ColumnDefinition Width="*" />
+              <ColumnDefinition Width="*" />
+              <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <StackPanel Grid.Column="0">
+              <TextBlock Text="Costo de materiales" FontSize="{StaticResource FsCaption}"
+                         Foreground="{DynamicResource TextMutedBrush}" />
+              <TextBlock Text="{Binding Costo.CostoTotalTexto}" FontSize="{StaticResource FsBody}"
+                         FontWeight="{StaticResource FwMedium}" />
+            </StackPanel>
+
+            <StackPanel Grid.Column="1">
+              <TextBlock Text="De eso, merma" FontSize="{StaticResource FsCaption}"
+                         Foreground="{DynamicResource TextMutedBrush}" />
+              <TextBlock Text="{Binding Costo.CostoMermaTexto}" FontSize="{StaticResource FsBody}" />
+            </StackPanel>
+
+            <StackPanel Grid.Column="2">
+              <TextBlock Text="Costo por unidad" FontSize="{StaticResource FsCaption}"
+                         Foreground="{DynamicResource TextMutedBrush}" />
+              <TextBlock Text="{Binding Costo.CostoPorUnidadTexto}" FontSize="{StaticResource FsBody}" />
+            </StackPanel>
+
+            <StackPanel Grid.Column="3">
+              <TextBlock Text="Precio de venta" FontSize="{StaticResource FsCaption}"
+                         Foreground="{DynamicResource TextMutedBrush}" />
+              <TextBlock Text="{Binding Costo.PrecioVentaTexto}" FontSize="{StaticResource FsBody}" />
+            </StackPanel>
+
+            <StackPanel Grid.Column="4">
+              <TextBlock Text="Margen por unidad" FontSize="{StaticResource FsCaption}"
+                         Foreground="{DynamicResource TextMutedBrush}" />
+              <TextBlock FontSize="{StaticResource FsBody}">
+                <Run Text="{Binding Costo.MargenTexto, Mode=OneWay}" />
+                <Run Text="{Binding Costo.MargenPorcentajeTexto, Mode=OneWay, StringFormat=({0})}"
+                     Foreground="{DynamicResource TextMutedBrush}" />
+              </TextBlock>
+            </StackPanel>
+          </Grid>
+
+          <ItemsControl ItemsSource="{Binding Costo.Lineas}" Margin="0,12,0,0">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate>
+                <StackPanel />
+              </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <Grid Margin="0,2,0,2">
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="16*" />
+                    <ColumnDefinition Width="32*" />
+                    <ColumnDefinition Width="16*" />
+                    <ColumnDefinition Width="16*" />
+                    <ColumnDefinition Width="20*" />
+                  </Grid.ColumnDefinitions>
+
+                  <TextBlock Grid.Column="0" Text="{Binding OrigenTexto}"
+                             FontSize="{StaticResource FsCaption}"
+                             Foreground="{DynamicResource TextMutedBrush}" />
+                  <TextBlock Grid.Column="1" FontSize="{StaticResource FsCaption}" TextWrapping="Wrap">
+                    <Run Text="{Binding MaterialNombre, Mode=OneWay}" />
+                    <Run Text="{Binding MotivoTexto, Mode=OneWay, StringFormat=· {0}}">
+                      <Run.Style>
+                        <Style TargetType="Run">
+                          <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
+                          <Style.Triggers>
+                            <DataTrigger Binding="{Binding EsMerma}" Value="True">
+                              <Setter Property="Foreground" Value="{DynamicResource DangerTextBrush}" />
+                            </DataTrigger>
+                          </Style.Triggers>
+                        </Style>
+                      </Run.Style>
+                    </Run>
+                  </TextBlock>
+                  <TextBlock Grid.Column="2" Text="{Binding CantidadTexto}"
+                             FontSize="{StaticResource FsCaption}" HorizontalAlignment="Right" />
+                  <TextBlock Grid.Column="3" Text="{Binding CostoUnitarioTexto}"
+                             FontSize="{StaticResource FsCaption}" HorizontalAlignment="Right"
+                             Foreground="{DynamicResource TextMutedBrush}" />
+                  <TextBlock Grid.Column="4" Text="{Binding CostoTexto}"
+                             FontSize="{StaticResource FsCaption}" HorizontalAlignment="Right" />
+                </Grid>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+
+          <TextBlock Text="Hay materiales sin compras con precio; el costo real es mayor al mostrado."
+                     FontSize="{StaticResource FsCaption}" TextWrapping="Wrap" Margin="0,8,0,0"
+                     Foreground="{DynamicResource TextMutedBrush}"
+                     Visibility="{Binding Costo.Incompleto, Converter={StaticResource BoolToVis}}" />
+        </StackPanel>
+      </Border>
+    </StackPanel>
+
     <!-- Auditoría -->
     <Border Style="{StaticResource SectionCardStyle}" Margin="0,12,0,0">
       <StackPanel>
