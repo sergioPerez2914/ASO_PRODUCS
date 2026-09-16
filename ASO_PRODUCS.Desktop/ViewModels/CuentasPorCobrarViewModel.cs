@@ -50,11 +50,19 @@ public sealed class FacturasClienteCrudViewModel : CrudViewModelBase<FacturaClie
 
         AnularCommand = new RelayCommand(Anular,
             () => SelectedItem is { } f && _servicio.PuedeAnular(f) && _sesionActual.Puede(Permisos.Finanzas.Anular));
+
+        VerDetalleCommand = new RelayCommand(VerDetalle);
     }
 
     public ICommand CambiarFiltroEstadoCommand { get; }
     public ICommand RegistrarCobroCommand { get; }
     public ICommand AnularCommand { get; }
+
+    /// <summary>Solo la invoca el doble clic de la grilla (ver <c>CuentasPorCobrarView.xaml.cs</c>),
+    /// nunca un botón — por eso no lleva <c>CanExecute</c>: la guarda de "hay algo seleccionado"
+    /// vive dentro de <see cref="VerDetalle"/>. Es una consulta de solo lectura, así que funciona
+    /// igual sin importar el <see cref="EstadoFacturaCliente"/> de la factura.</summary>
+    public ICommand VerDetalleCommand { get; }
 
     /// <summary>Estado de lo por cobrar, visible sin ir al dashboard del módulo.</summary>
     public string ResumenDeuda =>
@@ -133,6 +141,14 @@ public sealed class FacturasClienteCrudViewModel : CrudViewModelBase<FacturaClie
         Aplicar(() => _servicio.Anular(factura, editor.Motivo));
     }
 
+    private void VerDetalle()
+    {
+        if (SelectedItem is not { } factura)
+            return;
+
+        _dialogos.MostrarEditor(new FacturaClienteDetalleViewModel(factura));
+    }
+
     /// <summary>
     /// La lista la repuebla la recarga que dispara la escritura del servicio; aquí solo se
     /// apunta qué factura dejar seleccionada.
@@ -147,6 +163,36 @@ public sealed class FacturasClienteCrudViewModel : CrudViewModelBase<FacturaClie
         {
             _dialogos.Informar("No se pudo completar la operación", ex.Message);
         }
+    }
+}
+
+/// <summary>
+/// La ficha de "ver detalle" de una factura de cliente: solo lectura, se abre con doble clic
+/// sobre la fila (ver <c>CuentasPorCobrarView.xaml.cs</c>). Calco de
+/// <see cref="FacturaProveedorDetalleViewModel"/> con Cliente en vez de Proveedor.
+/// </summary>
+public sealed class FacturaClienteDetalleViewModel : CrudEditorViewModelBase
+{
+    public FacturaClienteDetalleViewModel(FacturaCliente factura)
+    {
+        Factura = factura;
+    }
+
+    public FacturaCliente Factura { get; }
+
+    public override string Titulo => $"Factura {Factura.NumeroDocumento}";
+
+    /// <summary>Amplio: lleva la grilla de líneas dentro.</summary>
+    public override double AnchoEditor => Ancho.Amplio;
+
+    public override string TextoAccion => "Cerrar";
+
+    public override bool MuestraCancelar => false;
+
+    protected override bool Validar(out string? error)
+    {
+        error = null;
+        return true;
     }
 }
 

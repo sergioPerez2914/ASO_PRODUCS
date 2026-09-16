@@ -70,10 +70,18 @@ public sealed class EntradasViewModel : PantallaCrudViewModel<EntradaInventario,
         AnularCommand = new RelayCommand(Anular,
             () => SelectedItem is { } e && _servicio.PuedeAnular(e)
                   && _sesionActual.Puede(Permisos.EntradasInventario.Anular));
+
+        VerDetalleCommand = new RelayCommand(VerDetalle);
     }
 
     public ICommand CambiarFiltroCommand { get; }
     public ICommand AnularCommand { get; }
+
+    /// <summary>Solo la invoca el doble clic de la grilla (ver <c>EntradasView.xaml.cs</c>), nunca
+    /// un botón — por eso no lleva <c>CanExecute</c>: la guarda de "hay algo seleccionado" vive
+    /// dentro de <see cref="VerDetalle"/>. Es una consulta de solo lectura, así que funciona igual
+    /// sin importar el <see cref="EstadoEntrada"/> de la entrada.</summary>
+    public ICommand VerDetalleCommand { get; }
 
     public string Resumen =>
         $"{Items.Count(e => e.Estado == EstadoEntrada.Registrada)} entradas · " +
@@ -151,6 +159,14 @@ public sealed class EntradasViewModel : PantallaCrudViewModel<EntradaInventario,
         Aplicar(() => _servicio.Anular(entrada, editor.Motivo));
     }
 
+    private void VerDetalle()
+    {
+        if (SelectedItem is not { } entrada)
+            return;
+
+        _dialogos.MostrarEditor(new EntradaDetalleViewModel(entrada));
+    }
+
     /// <summary>
     /// La lista la repuebla la recarga que dispara la escritura del servicio; aquí solo se apunta
     /// qué entrada dejar seleccionada.
@@ -165,6 +181,36 @@ public sealed class EntradasViewModel : PantallaCrudViewModel<EntradaInventario,
         {
             _dialogos.Informar("No se pudo completar la operación", ex.Message);
         }
+    }
+}
+
+/// <summary>
+/// La ficha de "ver detalle" de una entrada: solo lectura, se abre con doble clic sobre la fila
+/// (ver <c>EntradasView.xaml.cs</c>). Expone la <see cref="EntradaInventario"/> completa, mismo
+/// criterio que <see cref="ProcesoDetalleViewModel"/>.
+/// </summary>
+public sealed class EntradaDetalleViewModel : CrudEditorViewModelBase
+{
+    public EntradaDetalleViewModel(EntradaInventario entrada)
+    {
+        Entrada = entrada;
+    }
+
+    public EntradaInventario Entrada { get; }
+
+    public override string Titulo => $"Entrada {Entrada.Numero}";
+
+    /// <summary>Amplio: lleva la grilla de líneas dentro.</summary>
+    public override double AnchoEditor => Ancho.Amplio;
+
+    public override string TextoAccion => "Cerrar";
+
+    public override bool MuestraCancelar => false;
+
+    protected override bool Validar(out string? error)
+    {
+        error = null;
+        return true;
     }
 }
 

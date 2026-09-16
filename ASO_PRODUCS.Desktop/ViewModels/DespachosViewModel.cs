@@ -208,10 +208,18 @@ public sealed class DespachosCrudViewModel : CrudViewModelBase<Despacho, int>
 
         AnularCommand = new RelayCommand(Anular,
             () => SelectedItem is { } d && _servicio.PuedeAnular(d) && _sesionActual.Puede(Permisos.Despachos.Anular));
+
+        VerDetalleCommand = new RelayCommand(VerDetalle);
     }
 
     public ICommand CambiarFiltroCommand { get; }
     public ICommand AnularCommand { get; }
+
+    /// <summary>Solo la invoca el doble clic de la grilla (ver <c>DespachosView.xaml.cs</c>), nunca
+    /// un botón — por eso no lleva <c>CanExecute</c>: la guarda de "hay algo seleccionado" vive
+    /// dentro de <see cref="VerDetalle"/>. Es una consulta de solo lectura, así que funciona igual
+    /// sin importar el <see cref="EstadoDespacho"/> del despacho.</summary>
+    public ICommand VerDetalleCommand { get; }
 
     public string Resumen =>
         $"{Items.Count(d => d.Estado == EstadoDespacho.Registrado)} despachos · {_servicio.DelMes().Count} este mes";
@@ -278,6 +286,14 @@ public sealed class DespachosCrudViewModel : CrudViewModelBase<Despacho, int>
         Aplicar(() => _servicio.Anular(despacho, editor.Motivo));
     }
 
+    private void VerDetalle()
+    {
+        if (SelectedItem is not { } despacho)
+            return;
+
+        _dialogos.MostrarEditor(new DespachoDetalleViewModel(despacho));
+    }
+
     private void Aplicar(Func<Despacho> transicion)
     {
         try
@@ -288,6 +304,36 @@ public sealed class DespachosCrudViewModel : CrudViewModelBase<Despacho, int>
         {
             _dialogos.Informar("No se pudo completar la operación", ex.Message);
         }
+    }
+}
+
+/// <summary>
+/// La ficha de "ver detalle" de un despacho: solo lectura, se abre con doble clic sobre la fila
+/// (ver <c>DespachosView.xaml.cs</c>). Expone el <see cref="Despacho"/> completo, mismo criterio
+/// que <see cref="ProcesoDetalleViewModel"/>.
+/// </summary>
+public sealed class DespachoDetalleViewModel : CrudEditorViewModelBase
+{
+    public DespachoDetalleViewModel(Despacho despacho)
+    {
+        Despacho = despacho;
+    }
+
+    public Despacho Despacho { get; }
+
+    public override string Titulo => $"Despacho {Despacho.Numero}";
+
+    /// <summary>Amplio: lleva la grilla de líneas dentro.</summary>
+    public override double AnchoEditor => Ancho.Amplio;
+
+    public override string TextoAccion => "Cerrar";
+
+    public override bool MuestraCancelar => false;
+
+    protected override bool Validar(out string? error)
+    {
+        error = null;
+        return true;
     }
 }
 

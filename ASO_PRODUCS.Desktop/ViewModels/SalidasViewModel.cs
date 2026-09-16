@@ -59,10 +59,18 @@ public sealed class SalidasViewModel : PantallaCrudViewModel<SalidaInventario, i
         AnularCommand = new RelayCommand(Anular,
             () => SelectedItem is { } s && _servicio.PuedeAnular(s)
                   && _sesionActual.Puede(Permisos.SalidasInventario.Anular));
+
+        VerDetalleCommand = new RelayCommand(VerDetalle);
     }
 
     public ICommand CambiarFiltroCommand { get; }
     public ICommand AnularCommand { get; }
+
+    /// <summary>Solo la invoca el doble clic de la grilla (ver <c>SalidasView.xaml.cs</c>), nunca
+    /// un botón — por eso no lleva <c>CanExecute</c>: la guarda de "hay algo seleccionado" vive
+    /// dentro de <see cref="VerDetalle"/>. Es una consulta de solo lectura, así que funciona igual
+    /// sin importar el <see cref="EstadoSalida"/> del boleto.</summary>
+    public ICommand VerDetalleCommand { get; }
 
     public string Resumen =>
         $"{Items.Count(s => s.Estado == EstadoSalida.Registrada)} boletos · " +
@@ -136,6 +144,14 @@ public sealed class SalidasViewModel : PantallaCrudViewModel<SalidaInventario, i
         Aplicar(() => _servicio.Anular(salida, editor.Motivo));
     }
 
+    private void VerDetalle()
+    {
+        if (SelectedItem is not { } salida)
+            return;
+
+        _dialogos.MostrarEditor(new SalidaDetalleViewModel(salida));
+    }
+
     private void Aplicar(Func<SalidaInventario> transicion)
     {
         try
@@ -146,6 +162,36 @@ public sealed class SalidasViewModel : PantallaCrudViewModel<SalidaInventario, i
         {
             _dialogos.Informar("No se pudo completar la operación", ex.Message);
         }
+    }
+}
+
+/// <summary>
+/// La ficha de "ver detalle" de un boleto de salida: solo lectura, se abre con doble clic sobre la
+/// fila (ver <c>SalidasView.xaml.cs</c>). Expone la <see cref="SalidaInventario"/> completa, mismo
+/// criterio que <see cref="ProcesoDetalleViewModel"/>.
+/// </summary>
+public sealed class SalidaDetalleViewModel : CrudEditorViewModelBase
+{
+    public SalidaDetalleViewModel(SalidaInventario salida)
+    {
+        Salida = salida;
+    }
+
+    public SalidaInventario Salida { get; }
+
+    public override string Titulo => $"Boleto {Salida.Numero}";
+
+    /// <summary>Amplio: lleva la grilla de líneas dentro.</summary>
+    public override double AnchoEditor => Ancho.Amplio;
+
+    public override string TextoAccion => "Cerrar";
+
+    public override bool MuestraCancelar => false;
+
+    protected override bool Validar(out string? error)
+    {
+        error = null;
+        return true;
     }
 }
 

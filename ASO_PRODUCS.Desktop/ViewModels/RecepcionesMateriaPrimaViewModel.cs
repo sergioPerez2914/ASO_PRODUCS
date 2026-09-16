@@ -71,10 +71,19 @@ public sealed class RecepcionesMateriaPrimaViewModel : PantallaCrudViewModel<Rec
         AnularCommand = new RelayCommand(Anular,
             () => SelectedItem is { } r && _servicio.PuedeAnular(r)
                   && _sesionActual.Puede(Permisos.RecepcionesMateriaPrima.Anular));
+
+        VerDetalleCommand = new RelayCommand(VerDetalle);
     }
 
     public ICommand CambiarFiltroCommand { get; }
     public ICommand AnularCommand { get; }
+
+    /// <summary>Solo la invoca el doble clic de la grilla (ver
+    /// <c>RecepcionesMateriaPrimaView.xaml.cs</c>), nunca un botón — por eso no lleva
+    /// <c>CanExecute</c>: la guarda de "hay algo seleccionado" vive dentro de
+    /// <see cref="VerDetalle"/>. Es una consulta de solo lectura, así que funciona igual sin
+    /// importar el <see cref="EstadoRecepcionMateriaPrima"/> de la recepción.</summary>
+    public ICommand VerDetalleCommand { get; }
 
     public string Resumen =>
         $"{Items.Count(r => r.Estado == EstadoRecepcionMateriaPrima.Registrada)} recepciones · " +
@@ -158,6 +167,14 @@ public sealed class RecepcionesMateriaPrimaViewModel : PantallaCrudViewModel<Rec
         Aplicar(() => _servicio.Anular(recepcion, editor.Motivo));
     }
 
+    private void VerDetalle()
+    {
+        if (SelectedItem is not { } recepcion)
+            return;
+
+        _dialogos.MostrarEditor(new RecepcionMateriaPrimaDetalleViewModel(recepcion));
+    }
+
     private void Aplicar(Func<RecepcionMateriaPrima> transicion)
     {
         try
@@ -168,6 +185,36 @@ public sealed class RecepcionesMateriaPrimaViewModel : PantallaCrudViewModel<Rec
         {
             _dialogos.Informar("No se pudo completar la operación", ex.Message);
         }
+    }
+}
+
+/// <summary>
+/// La ficha de "ver detalle" de una recepción: solo lectura, se abre con doble clic sobre la fila
+/// (ver <c>RecepcionesMateriaPrimaView.xaml.cs</c>). Expone la <see cref="RecepcionMateriaPrima"/>
+/// completa, mismo criterio que <see cref="ProcesoDetalleViewModel"/>.
+/// </summary>
+public sealed class RecepcionMateriaPrimaDetalleViewModel : CrudEditorViewModelBase
+{
+    public RecepcionMateriaPrimaDetalleViewModel(RecepcionMateriaPrima recepcion)
+    {
+        Recepcion = recepcion;
+    }
+
+    public RecepcionMateriaPrima Recepcion { get; }
+
+    public override string Titulo => $"Recepción {Recepcion.Numero}";
+
+    /// <summary>Amplio: lleva la grilla de líneas dentro.</summary>
+    public override double AnchoEditor => Ancho.Amplio;
+
+    public override string TextoAccion => "Cerrar";
+
+    public override bool MuestraCancelar => false;
+
+    protected override bool Validar(out string? error)
+    {
+        error = null;
+        return true;
     }
 }
 

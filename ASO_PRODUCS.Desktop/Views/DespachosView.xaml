@@ -86,7 +86,8 @@
           <Grid>
             <DataGrid x:Name="TablaDespachos" Style="{StaticResource DataGridStyle}"
                       ItemsSource="{Binding ItemsView}"
-                      SelectedItem="{Binding SelectedItem}">
+                      SelectedItem="{Binding SelectedItem}"
+                      MouseDoubleClick="TablaDespachos_MouseDoubleClick">
               <DataGrid.Columns>
                 <controls:ColumnaTexto Header="Nº" Binding="{Binding Numero}" Width="10*" MinWidth="80" />
                 <controls:ColumnaTexto Header="Fecha" Binding="{Binding FechaTexto}" Width="8*" MinWidth="72" />

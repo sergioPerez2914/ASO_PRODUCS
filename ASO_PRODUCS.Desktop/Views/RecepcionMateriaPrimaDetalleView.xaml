@@ -1,0 +1,195 @@
+<UserControl x:Class="ASO_PRODUCS.Desktop.Views.RecepcionMateriaPrimaDetalleView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:models="clr-namespace:ASO_PRODUCS.Desktop.Models"
+             mc:Ignorable="d"
+             d:DesignWidth="900">
+
+  <!-- Ficha de solo lectura: encabezado con lo esencial y debajo el detalle de líneas. -->
+  <StackPanel>
+
+    <Border Style="{StaticResource SectionCardStyle}">
+      <StackPanel>
+        <Grid>
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="Auto" />
+          </Grid.ColumnDefinitions>
+
+          <StackPanel Grid.Column="0">
+            <TextBlock Text="{Binding Recepcion.OrigenTexto}" Style="{StaticResource CardTitleStyle}" />
+            <TextBlock FontSize="{StaticResource FsCaption}" Margin="0,4,0,0"
+                       Foreground="{DynamicResource TextSecondaryBrush}">
+              <Run Text="{Binding Recepcion.Numero, Mode=OneWay}" />
+              <Run Text=" · " />
+              <Run Text="{Binding Recepcion.FechaTexto, Mode=OneWay}" />
+              <Run Text=" · " />
+              <Run Text="{Binding Recepcion.TipoTexto, Mode=OneWay}" />
+            </TextBlock>
+          </StackPanel>
+
+          <Border Grid.Column="1" Style="{StaticResource ChipEstadoRecepcionMateriaPrimaStyle}"
+                  DataContext="{Binding Recepcion}" VerticalAlignment="Top">
+            <TextBlock Text="{Binding EstadoTexto}" FontSize="{StaticResource FsCaption}" />
+          </Border>
+        </Grid>
+
+        <Grid Margin="0,16,0,0">
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="*" />
+          </Grid.ColumnDefinitions>
+
+          <StackPanel Grid.Column="0">
+            <TextBlock Text="Total" FontSize="{StaticResource FsCaption}"
+                       Foreground="{DynamicResource TextMutedBrush}" />
+            <TextBlock Text="{Binding Recepcion.TotalTexto}" FontSize="{StaticResource FsBody}" />
+          </StackPanel>
+
+          <StackPanel Grid.Column="1">
+            <TextBlock Text="Documento" FontSize="{StaticResource FsCaption}"
+                       Foreground="{DynamicResource TextMutedBrush}" />
+            <TextBlock Text="{Binding Recepcion.NumeroDocumento}" FontSize="{StaticResource FsBody}" />
+          </StackPanel>
+
+          <StackPanel Grid.Column="2">
+            <TextBlock Text="Vencimiento" FontSize="{StaticResource FsCaption}"
+                       Foreground="{DynamicResource TextMutedBrush}" />
+            <TextBlock Text="{Binding Recepcion.VencimientoTexto}" FontSize="{StaticResource FsBody}" />
+          </StackPanel>
+        </Grid>
+
+        <TextBlock Text="{Binding Recepcion.Referencia, StringFormat='Referencia: {0}'}" Margin="0,12,0,0"
+                   FontSize="{StaticResource FsBody}" Foreground="{DynamicResource TextSecondaryBrush}">
+          <TextBlock.Style>
+            <Style TargetType="TextBlock">
+              <Setter Property="Visibility" Value="Visible" />
+              <Style.Triggers>
+                <DataTrigger Binding="{Binding Recepcion.Referencia}" Value="">
+                  <Setter Property="Visibility" Value="Collapsed" />
+                </DataTrigger>
+              </Style.Triggers>
+            </Style>
+          </TextBlock.Style>
+        </TextBlock>
+
+        <TextBlock Text="{Binding Recepcion.RecibidoPor, StringFormat='Recibido por: {0}'}" Margin="0,8,0,0"
+                   FontSize="{StaticResource FsBody}" Foreground="{DynamicResource TextSecondaryBrush}">
+          <TextBlock.Style>
+            <Style TargetType="TextBlock">
+              <Setter Property="Visibility" Value="Visible" />
+              <Style.Triggers>
+                <DataTrigger Binding="{Binding Recepcion.RecibidoPor}" Value="">
+                  <Setter Property="Visibility" Value="Collapsed" />
+                </DataTrigger>
+              </Style.Triggers>
+            </Style>
+          </TextBlock.Style>
+        </TextBlock>
+
+        <TextBlock Text="{Binding Recepcion.Observaciones}" TextWrapping="Wrap" Margin="0,8,0,0"
+                   FontSize="{StaticResource FsBody}" Foreground="{DynamicResource TextSecondaryBrush}">
+          <TextBlock.Style>
+            <Style TargetType="TextBlock">
+              <Setter Property="Visibility" Value="Visible" />
+              <Style.Triggers>
+                <DataTrigger Binding="{Binding Recepcion.Observaciones}" Value="">
+                  <Setter Property="Visibility" Value="Collapsed" />
+                </DataTrigger>
+              </Style.Triggers>
+            </Style>
+          </TextBlock.Style>
+        </TextBlock>
+
+        <TextBlock Text="{Binding Recepcion.CuentaPorPagarTexto, StringFormat='Cuenta por pagar: {0}'}" Margin="0,8,0,0"
+                   FontSize="{StaticResource FsCaption}" Foreground="{DynamicResource TextMutedBrush}">
+          <TextBlock.Style>
+            <Style TargetType="TextBlock">
+              <Setter Property="Visibility" Value="Collapsed" />
+              <Style.Triggers>
+                <DataTrigger Binding="{Binding Recepcion.GeneraCuentaPorPagar}" Value="True">
+                  <Setter Property="Visibility" Value="Visible" />
+                </DataTrigger>
+              </Style.Triggers>
+            </Style>
+          </TextBlock.Style>
+        </TextBlock>
+      </StackPanel>
+    </Border>
+
+    <!-- Detalle de la recepción -->
+    <TextBlock Text="Detalle" Style="{StaticResource CardTitleStyle}" Margin="0,20,0,8" />
+
+    <Border Style="{StaticResource SectionCardStyle}">
+      <StackPanel Grid.IsSharedSizeScope="True">
+        <Grid Margin="0,0,0,4">
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" SharedSizeGroup="ColTipoRecepcion" />
+            <ColumnDefinition Width="Auto" SharedSizeGroup="ColCantidadRecepcion" />
+            <ColumnDefinition Width="Auto" SharedSizeGroup="ColPrecioRecepcion" />
+            <ColumnDefinition Width="Auto" SharedSizeGroup="ColSubtotalRecepcion" />
+          </Grid.ColumnDefinitions>
+          <TextBlock Grid.Column="0" Text="Tipo" FontWeight="{StaticResource FwMedium}" Margin="0,0,16,0" />
+          <TextBlock Grid.Column="1" Text="Cantidad" FontWeight="{StaticResource FwMedium}" Margin="0,0,16,0" HorizontalAlignment="Right" />
+          <TextBlock Grid.Column="2" Text="Precio" FontWeight="{StaticResource FwMedium}" Margin="0,0,16,0" HorizontalAlignment="Right" />
+          <TextBlock Grid.Column="3" Text="Subtotal" FontWeight="{StaticResource FwMedium}" HorizontalAlignment="Right" />
+        </Grid>
+        <Border Height="1" Background="{DynamicResource BorderBrush}" Margin="0,0,0,4" />
+        <ItemsControl ItemsSource="{Binding Recepcion.Lineas}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate>
+              <Grid Margin="0,4,0,4">
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="*" SharedSizeGroup="ColTipoRecepcion" />
+                  <ColumnDefinition Width="Auto" SharedSizeGroup="ColCantidadRecepcion" />
+                  <ColumnDefinition Width="Auto" SharedSizeGroup="ColPrecioRecepcion" />
+                  <ColumnDefinition Width="Auto" SharedSizeGroup="ColSubtotalRecepcion" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0" Text="{Binding TipoMateriaPrimaNombre}" Margin="0,0,16,0" TextTrimming="CharacterEllipsis" />
+                <TextBlock Grid.Column="1" Text="{Binding CantidadTexto}" Margin="0,0,16,0" HorizontalAlignment="Right" />
+                <TextBlock Grid.Column="2" Text="{Binding PrecioUnitarioTexto}" Margin="0,0,16,0" HorizontalAlignment="Right" />
+                <TextBlock Grid.Column="3" Text="{Binding SubtotalTexto}" HorizontalAlignment="Right" />
+              </Grid>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <Border Height="1" Background="{DynamicResource BorderBrush}" Margin="0,4,0,4" />
+        <TextBlock HorizontalAlignment="Right" FontWeight="{StaticResource FwMedium}"
+                   Text="{Binding Recepcion.TotalTexto, StringFormat='Total: {0}'}" />
+      </StackPanel>
+    </Border>
+
+    <!-- Auditoría -->
+    <Border Style="{StaticResource SectionCardStyle}" Margin="0,12,0,0">
+      <StackPanel>
+        <TextBlock FontSize="{StaticResource FsCaption}" Foreground="{DynamicResource TextMutedBrush}">
+          <Run Text="Creada por" />
+          <Run Text="{Binding Recepcion.CreadoPorNombre, Mode=OneWay}" />
+          <Run Text=" · " />
+          <Run Text="{Binding Recepcion.FechaCreacion, Mode=OneWay, StringFormat=dd/MM/yyyy HH:mm}" />
+        </TextBlock>
+
+        <TextBlock FontSize="{StaticResource FsCaption}" Foreground="{DynamicResource TextMutedBrush}" Margin="0,4,0,0"
+                   TextWrapping="Wrap">
+          <TextBlock.Style>
+            <Style TargetType="TextBlock">
+              <Setter Property="Visibility" Value="Collapsed" />
+              <Style.Triggers>
+                <DataTrigger Binding="{Binding Recepcion.Estado}" Value="{x:Static models:EstadoRecepcionMateriaPrima.Anulada}">
+                  <Setter Property="Visibility" Value="Visible" />
+                </DataTrigger>
+              </Style.Triggers>
+            </Style>
+          </TextBlock.Style>
+          <Run Text="Anulada:" />
+          <Run Text="{Binding Recepcion.MotivoAnulacion, Mode=OneWay}" />
+          <Run Text=" · " />
+          <Run Text="{Binding Recepcion.FechaAnulacion, Mode=OneWay, StringFormat=dd/MM/yyyy HH:mm}" />
+        </TextBlock>
+      </StackPanel>
+    </Border>
+  </StackPanel>
+</UserControl>

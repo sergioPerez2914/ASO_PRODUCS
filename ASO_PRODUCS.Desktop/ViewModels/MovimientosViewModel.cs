@@ -61,6 +61,8 @@ public sealed class MovimientosBancoCrudViewModel : CrudViewModelBase<Movimiento
         TransferirCommand = new RelayCommand(Transferir,
             () => _sesionActual.Puede(Permisos.Movimientos.Transferir));
 
+        VerDetalleCommand = new RelayCommand(VerDetalle);
+
         CalcularSaldoCorrido();
     }
 
@@ -69,6 +71,12 @@ public sealed class MovimientosBancoCrudViewModel : CrudViewModelBase<Movimiento
     public ICommand DesconciliarCommand { get; }
     public ICommand AnularCommand { get; }
     public ICommand TransferirCommand { get; }
+
+    /// <summary>Solo la invoca el doble clic de la grilla (ver <c>MovimientosView.xaml.cs</c>),
+    /// nunca un botón — por eso no lleva <c>CanExecute</c>: la guarda de "hay algo seleccionado"
+    /// vive dentro de <see cref="VerDetalle"/>. Es una consulta de solo lectura, así que funciona
+    /// igual sin importar el <see cref="EstadoMovimientoBanco"/> del asiento.</summary>
+    public ICommand VerDetalleCommand { get; }
 
     /// <summary>
     /// Todas las cuentas, incluidas las cerradas: sus movimientos viejos siguen ahí y hay que
@@ -251,6 +259,14 @@ public sealed class MovimientosBancoCrudViewModel : CrudViewModelBase<Movimiento
             _sesionActual.UsuarioActual?.Id ?? 0).Salida);
     }
 
+    private void VerDetalle()
+    {
+        if (SelectedItem is not { } movimiento)
+            return;
+
+        _dialogos.MostrarEditor(new MovimientoBancoDetalleViewModel(movimiento));
+    }
+
     /// <summary>
     /// La lista la repuebla la recarga que dispara la escritura del servicio; aquí solo se apunta
     /// qué movimiento dejar seleccionado y se traduce el rechazo de una regla en un aviso.
@@ -317,6 +333,36 @@ public sealed class MovimientosBancoCrudViewModel : CrudViewModelBase<Movimiento
             saldo += movimiento.Efecto;
             movimiento.SaldoCorrido = saldo;
         }
+    }
+}
+
+/// <summary>
+/// La ficha de "ver detalle" de un asiento de banco: solo lectura, se abre con doble clic sobre la
+/// fila (ver <c>MovimientosView.xaml.cs</c>). Documento plano, sin líneas: no hay historial que
+/// mostrar aparte del encabezado, a diferencia de <see cref="ProcesoDetalleViewModel"/>.
+/// </summary>
+public sealed class MovimientoBancoDetalleViewModel : CrudEditorViewModelBase
+{
+    public MovimientoBancoDetalleViewModel(MovimientoBanco movimiento)
+    {
+        Movimiento = movimiento;
+    }
+
+    public MovimientoBanco Movimiento { get; }
+
+    public override string Titulo => $"Movimiento Nº {Movimiento.Id}";
+
+    /// <summary>Estándar: no lleva grilla de líneas dentro.</summary>
+    public override double AnchoEditor => Ancho.Estandar;
+
+    public override string TextoAccion => "Cerrar";
+
+    public override bool MuestraCancelar => false;
+
+    protected override bool Validar(out string? error)
+    {
+        error = null;
+        return true;
     }
 }
 

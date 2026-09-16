@@ -152,7 +152,8 @@
           <Grid>
             <DataGrid x:Name="TablaMovimientos" Style="{StaticResource DataGridStyle}"
                       ItemsSource="{Binding ItemsView}"
-                      SelectedItem="{Binding SelectedItem}">
+                      SelectedItem="{Binding SelectedItem}"
+                      MouseDoubleClick="TablaMovimientos_MouseDoubleClick">
               <DataGrid.Columns>
                 <controls:ColumnaTexto Header="Fecha" Binding="{Binding FechaTexto}" Width="9*" MinWidth="76" />
                 <controls:ColumnaTexto Header="Concepto" Binding="{Binding Concepto}" Width="26*" MinWidth="150" />

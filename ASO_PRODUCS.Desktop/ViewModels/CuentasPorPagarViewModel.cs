@@ -47,11 +47,19 @@ public sealed class FacturasProveedorCrudViewModel : CrudViewModelBase<FacturaPr
 
         AnularCommand = new RelayCommand(Anular,
             () => SelectedItem is { } f && _servicio.PuedeAnular(f) && _sesionActual.Puede("Finanzas.Anular"));
+
+        VerDetalleCommand = new RelayCommand(VerDetalle);
     }
 
     public ICommand CambiarFiltroEstadoCommand { get; }
     public ICommand RegistrarPagoCommand { get; }
     public ICommand AnularCommand { get; }
+
+    /// <summary>Solo la invoca el doble clic de la grilla (ver <c>CuentasPorPagarView.xaml.cs</c>),
+    /// nunca un botón — por eso no lleva <c>CanExecute</c>: la guarda de "hay algo seleccionado"
+    /// vive dentro de <see cref="VerDetalle"/>. Es una consulta de solo lectura, así que funciona
+    /// igual sin importar el <see cref="EstadoFacturaProveedor"/> de la factura.</summary>
+    public ICommand VerDetalleCommand { get; }
 
     /// <summary>Estado de la deuda, visible sin ir al dashboard del módulo.</summary>
     public string ResumenDeuda =>
@@ -131,6 +139,14 @@ public sealed class FacturasProveedorCrudViewModel : CrudViewModelBase<FacturaPr
         Aplicar(() => _servicio.Anular(factura, editor.Motivo));
     }
 
+    private void VerDetalle()
+    {
+        if (SelectedItem is not { } factura)
+            return;
+
+        _dialogos.MostrarEditor(new FacturaProveedorDetalleViewModel(factura));
+    }
+
     /// <summary>
     /// La lista la repuebla la recarga que dispara la escritura del servicio; aquí solo se
     /// apunta qué factura dejar seleccionada.
@@ -145,6 +161,39 @@ public sealed class FacturasProveedorCrudViewModel : CrudViewModelBase<FacturaPr
         {
             _dialogos.Informar("No se pudo completar la operación", ex.Message);
         }
+    }
+}
+
+/// <summary>
+/// La ficha de "ver detalle" de una factura de proveedor: solo lectura, se abre con doble clic
+/// sobre la fila (ver <c>CuentasPorPagarView.xaml.cs</c>). Expone la <see cref="FacturaProveedor"/>
+/// completa en vez de repetir cada propiedad como envoltorio, mismo criterio que
+/// <see cref="ProcesoDetalleViewModel"/>.
+/// </summary>
+public sealed class FacturaProveedorDetalleViewModel : CrudEditorViewModelBase
+{
+    public FacturaProveedorDetalleViewModel(FacturaProveedor factura)
+    {
+        Factura = factura;
+    }
+
+    public FacturaProveedor Factura { get; }
+
+    public override string Titulo => $"Factura {Factura.NumeroDocumento}";
+
+    /// <summary>Amplio: lleva la grilla de líneas dentro.</summary>
+    public override double AnchoEditor => Ancho.Amplio;
+
+    public override string TextoAccion => "Cerrar";
+
+    /// <summary>Ficha de solo lectura: no hay nada que cancelar — ver el comentario de
+    /// <see cref="CrudEditorViewModelBase.MuestraCancelar"/>.</summary>
+    public override bool MuestraCancelar => false;
+
+    protected override bool Validar(out string? error)
+    {
+        error = null;
+        return true;
     }
 }
 

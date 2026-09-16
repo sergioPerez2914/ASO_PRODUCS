@@ -22,6 +22,10 @@
     <views:FacturaProveedorEditorView />
   </DataTemplate>
 
+  <DataTemplate DataType="{x:Type vm:FacturaProveedorDetalleViewModel}">
+    <views:FacturaProveedorDetalleView />
+  </DataTemplate>
+
   <DataTemplate DataType="{x:Type vm:ClienteEditorViewModel}">
     <views:ClienteEditorView />
   </DataTemplate>
@@ -30,12 +34,20 @@
     <views:FacturaClienteEditorView />
   </DataTemplate>
 
+  <DataTemplate DataType="{x:Type vm:FacturaClienteDetalleViewModel}">
+    <views:FacturaClienteDetalleView />
+  </DataTemplate>
+
   <DataTemplate DataType="{x:Type vm:AsientoBancoEditorViewModel}">
     <views:AsientoBancoEditorView />
   </DataTemplate>
 
   <DataTemplate DataType="{x:Type vm:MovimientoBancoEditorViewModel}">
     <views:MovimientoBancoEditorView />
+  </DataTemplate>
+
+  <DataTemplate DataType="{x:Type vm:MovimientoBancoDetalleViewModel}">
+    <views:MovimientoBancoDetalleView />
   </DataTemplate>
 
   <DataTemplate DataType="{x:Type vm:CuentaBancariaEditorViewModel}">
@@ -56,8 +68,16 @@
     <views:EntradaEditorView />
   </DataTemplate>
 
+  <DataTemplate DataType="{x:Type vm:EntradaDetalleViewModel}">
+    <views:EntradaDetalleView />
+  </DataTemplate>
+
   <DataTemplate DataType="{x:Type vm:SalidaEditorViewModel}">
     <views:SalidaEditorView />
+  </DataTemplate>
+
+  <DataTemplate DataType="{x:Type vm:SalidaDetalleViewModel}">
+    <views:SalidaDetalleView />
   </DataTemplate>
 
   <!-- Materia Prima -->
@@ -70,8 +90,16 @@
     <views:RecepcionMateriaPrimaEditorView />
   </DataTemplate>
 
+  <DataTemplate DataType="{x:Type vm:RecepcionMateriaPrimaDetalleViewModel}">
+    <views:RecepcionMateriaPrimaDetalleView />
+  </DataTemplate>
+
   <DataTemplate DataType="{x:Type vm:SalidaMateriaPrimaEditorViewModel}">
     <views:SalidaMateriaPrimaEditorView />
+  </DataTemplate>
+
+  <DataTemplate DataType="{x:Type vm:SalidaMateriaPrimaDetalleViewModel}">
+    <views:SalidaMateriaPrimaDetalleView />
   </DataTemplate>
 
   <!-- Procesos · Producción y Despacho -->
@@ -98,6 +126,10 @@
 
   <DataTemplate DataType="{x:Type vm:DespachoEditorViewModel}">
     <views:DespachoEditorView />
+  </DataTemplate>
+
+  <DataTemplate DataType="{x:Type vm:DespachoDetalleViewModel}">
+    <views:DespachoDetalleView />
   </DataTemplate>
 
   <!-- Armazón -->

@@ -112,7 +112,8 @@
         <Grid>
           <DataGrid x:Name="TablaRecepciones" Style="{StaticResource DataGridStyle}"
                     ItemsSource="{Binding ItemsView}"
-                    SelectedItem="{Binding SelectedItem}">
+                    SelectedItem="{Binding SelectedItem}"
+                    MouseDoubleClick="TablaRecepciones_MouseDoubleClick">
             <DataGrid.RowStyle>
               <Style TargetType="DataGridRow" BasedOn="{StaticResource {x:Type DataGridRow}}">
                 <Setter Property="ToolTip" Value="{Binding}" />
