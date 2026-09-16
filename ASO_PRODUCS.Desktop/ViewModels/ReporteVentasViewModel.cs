@@ -16,8 +16,9 @@ namespace ASO_PRODUCS.Desktop.ViewModels;
 ///
 /// De solo lectura, igual que <see cref="ReporteProcesosViewModel"/>: hereda de
 /// <see cref="PantallaViewModelBase"/> y se arma con <see cref="Despacho"/> tipo Venta y sus
-/// <see cref="FacturaCliente"/>, sin ningún dato ni migración nueva. Una sola tabla (detalle por
-/// línea de despacho, sin agrupar): no hace falta pestaña, mismo criterio que
+/// <see cref="FacturaCliente"/>, sin ningún dato ni migración nueva. Una sola tabla (una fila por
+/// despacho, no por línea: el desglose por producto ya se ve con doble clic, ver
+/// <see cref="VerDetalleCommand"/>): no hace falta pestaña, mismo criterio que
 /// <see cref="ReporteGastosViewModel"/> para su vista "Por categoría".
 /// </summary>
 public sealed class ReporteVentasViewModel : PantallaViewModelBase
@@ -97,13 +98,18 @@ public sealed class ReporteVentasViewModel : PantallaViewModelBase
 
         var totalVendido = despachosEnRango.Sum(d => d.Total);
 
-        // Sin agrupar: una fila por cada línea de despacho, con su cliente y su unidad — es lo
-        // que hace falta para rastrear una venta exacta, en vez de un total agregado.
+        // Una fila por despacho, no por línea: repetir cliente/fecha por cada producto se veía
+        // repetitivo y el desglose ya está a un doble clic (VerDetalle). Con una sola línea se
+        // sigue mostrando el producto/cantidad/precio real; con varias, "Varios (N productos)"
+        // y cantidad/precio vacíos porque mezclar unidades o precios distintos en una sola cifra
+        // no dice nada.
         var detalle = despachosEnRango
-            .SelectMany(d => d.Lineas.Select(l => new FilaVentaDetalle(
-                d.Fecha, d.Numero, d.ClienteNombre, l.ProductoNombre,
-                $"{l.Cantidad:N2} {l.UnidadMedidaSnapshot}".Trim(),
-                l.PrecioUnitario, l.Subtotal, d)))
+            .Select(d => new FilaVentaDetalle(
+                d.Fecha, d.Numero, d.ClienteNombre,
+                d.Lineas.Count == 1 ? d.Lineas[0].ProductoNombre : $"Varios ({d.Lineas.Count} productos)",
+                d.Lineas.Count == 1 ? $"{d.Lineas[0].Cantidad:N2} {d.Lineas[0].UnidadMedidaSnapshot}".Trim() : string.Empty,
+                d.Lineas.Count == 1 ? d.Lineas[0].PrecioUnitario.ToString("N2") : string.Empty,
+                d.Total, d))
             .OrderByDescending(f => f.Fecha)
             .ToList();
 
@@ -144,10 +150,10 @@ public sealed class ReporteVentasViewModel : PantallaViewModelBase
         ExportadorExcel.Exportar(ruta,
         [
             new HojaExcel("Ventas",
-                ["Fecha", "Despacho", "Cliente", "Producto", "Cantidad", "Precio unitario", "Subtotal"],
+                ["Fecha", "Despacho", "Cliente", "Producto", "Cantidad", "Precio unitario", "Total"],
                 Detalle.Select(f => (IReadOnlyList<string>)
                     [f.FechaTexto, f.DespachoNumero, f.ClienteNombre, f.ProductoNombre, f.CantidadTexto,
-                     f.PrecioUnitarioTexto, f.SubtotalTexto]).ToList(),
+                     f.PrecioUnitarioTexto, f.TotalTexto]).ToList(),
                 Titulo: Submodulo?.Nombre ?? "Reporte de Ventas",
                 Periodo: $"Período: {FechaDesde:dd/MM/yyyy} - {FechaHasta:dd/MM/yyyy}")
         ]);
@@ -163,9 +169,11 @@ public sealed class ReporteVentasViewModel : PantallaViewModelBase
 }
 
 /// <summary>
-/// Fila de la tabla de Reportes · Ventas: una línea de despacho tal cual, sin agrupar — cliente,
-/// producto y cantidad con su unidad. Es la respuesta directa a "no se puede rastrear el origen
-/// de una venta".
+/// Fila de la tabla de Reportes · Ventas: un despacho completo, cliente y total — el desglose por
+/// producto se ve con doble clic (<see cref="ReporteVentasViewModel.VerDetalleCommand"/>), no
+/// hace falta repetirlo acá. <see cref="ProductoNombre"/>/<see cref="CantidadTexto"/>/
+/// <see cref="PrecioUnitarioTexto"/> ya vienen resueltos desde <c>Recalcular</c>: el dato real
+/// cuando el despacho tiene una sola línea, o un texto genérico cuando tiene varias.
 /// </summary>
 public sealed record FilaVentaDetalle(
     DateTime Fecha,
@@ -173,11 +181,10 @@ public sealed record FilaVentaDetalle(
     string ClienteNombre,
     string ProductoNombre,
     string CantidadTexto,
-    decimal PrecioUnitario,
-    decimal Subtotal,
+    string PrecioUnitarioTexto,
+    decimal Total,
     Despacho Despacho)
 {
     public string FechaTexto => Fecha.ToString("dd/MM/yyyy");
-    public string PrecioUnitarioTexto => PrecioUnitario.ToString("N2");
-    public string SubtotalTexto => Subtotal.ToString("N2");
+    public string TotalTexto => Total.ToString("N2");
 }

@@ -79,7 +79,7 @@
               <controls:ColumnaTexto Header="Producto" Binding="{Binding ProductoNombre}" Width="20*" MinWidth="150" />
               <controls:ColumnaNumero Header="Cantidad" Binding="{Binding CantidadTexto}" Width="14*" MinWidth="110" />
               <controls:ColumnaNumero Header="Precio unitario" Binding="{Binding PrecioUnitarioTexto}" Width="12*" MinWidth="100" />
-              <controls:ColumnaNumero Header="Subtotal" Binding="{Binding SubtotalTexto}" Width="12*" MinWidth="100" />
+              <controls:ColumnaNumero Header="Total" Binding="{Binding TotalTexto}" Width="12*" MinWidth="100" />
             </DataGrid.Columns>
           </DataGrid>
 
