@@ -92,6 +92,7 @@ public sealed class InicioViewModel : ViewModelBase, IRecargable
         var materiaPrima = new MateriaPrimaService(tiposDs,
             DataSourceFactory.CrearRecepcionesMateriaPrima(), DataSourceFactory.CrearSalidasMateriaPrima());
         var productos = new ProductosService(productosDs, procesosDs, despachosDs);
+        var pedidos = new PedidosService(DataSourceFactory.CrearPedidos(), despachosDs, SesionActual.Instancia);
 
         var moduloInventario = ModuloCatalogo.BuscarModulo("Inventario")!;
         var moduloMateriaPrima = ModuloCatalogo.BuscarModulo("MateriaPrima")!;
@@ -117,6 +118,9 @@ public sealed class InicioViewModel : ViewModelBase, IRecargable
         var porVencer = productos.LotesConExistencia().Count(l => l.Estado == EstadoVencimientoLote.PorVencer);
         Agregar("Lotes por vencer", porVencer, "en los próximos días · Procesos · Despacho",
             moduloProcesos, ModuloCatalogo.BuscarSubmodulo("Procesos.Despacho"));
+
+        Agregar("Pedidos pendientes", pedidos.PedidosPendientes(), "de clientes, sin despachar del todo · Procesos · Pedidos",
+            moduloProcesos, ModuloCatalogo.BuscarSubmodulo("Procesos.Pedidos"));
 
         return alertas;
     }

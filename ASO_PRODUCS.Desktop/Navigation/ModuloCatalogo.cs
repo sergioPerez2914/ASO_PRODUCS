@@ -113,7 +113,9 @@ public static class ModuloCatalogo
                 new Submodulo("Procesos.Produccion", "Producción",
                     "Etapas de fabricación y los procesos que van transformando materia prima y artículos en producto terminado.", Iconos.Produccion),
                 new Submodulo("Procesos.Despacho", "Despacho",
-                    "Catálogo de productos terminados y el registro de lo que se despacha.", Iconos.Despacho)
+                    "Catálogo de productos terminados y el registro de lo que se despacha.", Iconos.Despacho),
+                new Submodulo("Procesos.Pedidos", "Pedidos",
+                    "Lo que los clientes pidieron, antes de despacharlo.", Iconos.Pedidos)
             ]),
 
         new Modulo(

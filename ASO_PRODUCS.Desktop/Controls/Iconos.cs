@@ -50,6 +50,7 @@ public static class Iconos
     public const string Procesos =         ""; // gear-six (procesos de producción/despacho)
     public const string Produccion =       ""; // factory
     public const string Despacho =         ""; // package
+    public const string Pedidos =          "";     // clipboard-text (mismo glifo de Despacho por ahora; cambiar cuando se confirme un icono propio)
     public const string Reportes =         ""; // chart-bar
 
     public const string Administracion =   "";     // shield-check U+E40C

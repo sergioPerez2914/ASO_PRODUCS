@@ -132,6 +132,14 @@
     <views:DespachoDetalleView />
   </DataTemplate>
 
+  <DataTemplate DataType="{x:Type vm:PedidoEditorViewModel}">
+    <views:PedidoEditorView />
+  </DataTemplate>
+
+  <DataTemplate DataType="{x:Type vm:PedidoDetalleViewModel}">
+    <views:PedidoDetalleView />
+  </DataTemplate>
+
   <!-- Armazón -->
 
   <DataTemplate DataType="{x:Type vm:UsuarioEditorViewModel}">

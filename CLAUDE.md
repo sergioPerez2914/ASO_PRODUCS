@@ -380,6 +380,19 @@ anterior: se construyó de cero contra este armazón.
   una tarjeta de alertas —bajo mínimo de los tres catálogos y lotes por vencer, cada una con
   acceso directo al submódulo— calculada fuera del hilo de interfaz, mismo criterio que
   `ModuloDashboardViewModel`.
+- **Pedidos de clientes** (2026-09-16, migración `AgregarPedidosDeClientes`), tercer submódulo de
+  Procesos: `Pedido`/`PedidoLinea` calcan la forma de `Despacho`/`DespachoLinea`, pero **no
+  reservan existencia** — solo registran lo que falta entregar. `DespachoLinea` gana `PedidoId`/
+  `PedidoNumero` (mismo patrón opcional que ya tenía `ProcesoProduccionId` para el lote), y
+  `PedidoLinea.Despachado` (NO persistido) se deriva sumando las líneas de despacho que citan ese
+  pedido — `PedidosService.RellenarDespachado`. `Pedido.EstadoEntregaTexto`
+  ("Pendiente"/"Parcial"/"Completado") también se deriva, nunca se guarda; el único estado
+  persistido es el binario `EstadoPedido` (Registrado/Anulado), igual que el resto de los
+  documentos. El botón "Despachar pedido" (`PedidosViewModel.Despachar`) abre un
+  `DespachoEditorViewModel` precargado con `PrecargarDesdePedido`: fija Venta, el cliente y una
+  línea por cada renglón con saldo pendiente, con el precio del pedido (fijado DESPUÉS de elegir
+  el producto, para que no lo pise el precio del catálogo). Anular un pedido no revierte los
+  despachos que ya generó, mismo criterio que anular un proceso de producción.
 
 ## Persistencia
 

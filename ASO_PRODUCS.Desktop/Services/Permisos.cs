@@ -183,6 +183,14 @@ public static class Permisos
         public const string Anular = "Despachos.Anular";
     }
 
+    /// <summary>Pedidos de clientes (Procesos · Pedidos). "Despachar pedido" no pide un permiso
+    /// propio: ya exige <see cref="Despachos.Crear"/>, porque es exactamente eso.</summary>
+    public static class Pedidos
+    {
+        public const string Crear = "Pedidos.Crear";
+        public const string Anular = "Pedidos.Anular";
+    }
+
     public static class Peticiones
     {
         public const string Solicitar = "Peticiones.Solicitar";

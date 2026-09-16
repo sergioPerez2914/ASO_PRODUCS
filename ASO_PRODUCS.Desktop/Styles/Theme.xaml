@@ -447,6 +447,31 @@
     </Style.Triggers>
   </Style>
 
+  <!-- Chip de un pedido de cliente. Se enlaza al texto (Pedido.EstadoMostrado) y no al enum
+       porque "Completado"/"Parcial" no son un Estado guardado: salen de comparar lo pedido
+       contra lo despachado — mismo criterio que ChipExistenciaStyle. -->
+  <Style x:Key="ChipEstadoPedidoStyle" TargetType="Border" BasedOn="{StaticResource ChipBaseStyle}">
+    <Style.Triggers>
+      <DataTrigger Binding="{Binding EstadoMostrado}" Value="Completado">
+        <Setter Property="Background" Value="{DynamicResource SuccessSoftBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource SuccessBordeBrush}" />
+        <Setter Property="TextElement.Foreground" Value="{DynamicResource SuccessTextBrush}" />
+      </DataTrigger>
+      <DataTrigger Binding="{Binding EstadoMostrado}" Value="Parcial">
+        <Setter Property="Background" Value="{DynamicResource WarningSoftBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource WarningBordeBrush}" />
+        <Setter Property="TextElement.Foreground" Value="{DynamicResource WarningTextBrush}" />
+      </DataTrigger>
+      <!-- "Pendiente" usa el azul de información, igual que un Despacho Registrado. -->
+      <DataTrigger Binding="{Binding EstadoMostrado}" Value="Pendiente">
+        <Setter Property="Background" Value="{DynamicResource InfoSoftBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource InfoBordeBrush}" />
+        <Setter Property="TextElement.Foreground" Value="{DynamicResource InfoTextBrush}" />
+      </DataTrigger>
+      <!-- "Anulado" se queda con el neutro de ChipBaseStyle. -->
+    </Style.Triggers>
+  </Style>
+
   <!-- Nombre anterior de SectionCardStyle. Sigue vivo porque lo citan 64 sitios, para cuatro
        cosas distintas; las vistas lo van cambiando por el nombre que corresponda conforme se
        rehacen, y entonces desaparece. -->

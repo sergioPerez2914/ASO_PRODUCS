@@ -290,10 +290,12 @@ public sealed class ModuloDashboardViewModel : ViewModelBase, IRecargable
         var cuentasPorCobrar = new CuentasPorCobrarService(facturasClienteDs, banco, sesion);
 
         var despachos = new DespachosService(despachosDs, productos, facturasClienteDs, cuentasPorCobrar, sesion);
+        var pedidos = new PedidosService(DataSourceFactory.CrearPedidos(), despachosDs, sesion);
 
         var enProceso = procesos.EnProcesoCount();
         var bajoMinimo = productos.ProductosBajoMinimo();
         var sinExistencia = productos.ProductosSinExistencia();
+        var pedidosPendientes = pedidos.PedidosPendientes();
 
         return
         [
@@ -302,6 +304,8 @@ public sealed class ModuloDashboardViewModel : ViewModelBase, IRecargable
                 SegunCuenta(bajoMinimo, 5)),
             new Indicador("Sin existencia", $"{sinExistencia}", "productos agotados",
                 SegunCuenta(sinExistencia, 3)),
+            new Indicador("Pedidos pendientes", $"{pedidosPendientes}", "de clientes, sin despachar del todo",
+                SegunCuenta(pedidosPendientes, 5)),
             new Indicador("Terminados este mes", $"{procesos.DelMes().Count(p => p.Estado == EstadoProcesoProduccion.Terminado)}",
                 "procesos que cerraron en el período"),
             new Indicador("Despachos este mes", $"{despachos.DelMes().Count}", "salidas de producto terminado")

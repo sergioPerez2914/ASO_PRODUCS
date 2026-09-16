@@ -34,6 +34,7 @@ public static class DataSourceFactory
     private static IProductoDataSource? _productos;
     private static IProcesoProduccionDataSource? _procesosProduccion;
     private static IDespachoDataSource? _despachos;
+    private static IPedidoDataSource? _pedidos;
     private static IClienteDataSource? _clientes;
     private static IFacturaClienteDataSource? _facturasCliente;
     private static IAuthService? _auth;
@@ -92,6 +93,9 @@ public static class DataSourceFactory
 
     public static IDespachoDataSource CrearDespachos() =>
         _despachos ??= new SqlDespachoDataSource();
+
+    public static IPedidoDataSource CrearPedidos() =>
+        _pedidos ??= new SqlPedidoDataSource();
 
     public static IClienteDataSource CrearClientes() =>
         _clientes ??= new SqlClienteDataSource();

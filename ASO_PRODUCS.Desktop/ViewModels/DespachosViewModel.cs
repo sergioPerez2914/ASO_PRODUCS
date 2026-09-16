@@ -427,6 +427,38 @@ public sealed class DespachoEditorViewModel : CrudEditorViewModelBase<Despacho>
         Lineas.Add(NuevaLinea());
     }
 
+    /// <summary>
+    /// Llena el despacho con lo que falta entregar de <paramref name="pedido"/>: tipo Venta, el
+    /// cliente del pedido, y una línea por cada <see cref="PedidoLinea"/> con
+    /// <see cref="PedidoLinea.Pendiente"/> positivo. Usa el <see cref="NuevaLinea"/> privado para
+    /// que cada línea quede suscrita a <see cref="LineaDespachoEditorViewModel.Cambio"/> — armarlas
+    /// a mano desde afuera dejaría los totales del editor sin refrescar.
+    ///
+    /// El producto se fija ANTES que el precio: el precio del catálogo solo se propone si el
+    /// campo está vacío (ver <see cref="LineaDespachoEditorViewModel.ProductoSeleccionado"/>), así
+    /// que asignarlo después es lo que deja el precio del pedido sin que nada lo pise.
+    /// </summary>
+    public void PrecargarDesdePedido(Pedido pedido)
+    {
+        Tipo = TipoDespacho.Venta;
+        ClienteSeleccionado = Clientes.FirstOrDefault(c => c.Id == pedido.ClienteId);
+
+        Lineas.Clear();
+
+        foreach (var lineaPedido in pedido.Lineas.Where(l => l.Pendiente > 0))
+        {
+            var linea = NuevaLinea();
+            linea.ProductoSeleccionado = Productos.FirstOrDefault(p => p.Id == lineaPedido.ProductoId);
+            linea.Cantidad = lineaPedido.Pendiente.ToString("0.####");
+            linea.PrecioUnitario = lineaPedido.PrecioUnitario.ToString("0.####");
+            linea.PedidoOrigen = pedido;
+            Lineas.Add(linea);
+        }
+
+        if (Lineas.Count == 0)
+            Lineas.Add(NuevaLinea());
+    }
+
     public override string Titulo => "Registrar despacho";
 
     /// <summary>Amplio: lleva una grilla de líneas dentro.</summary>
@@ -641,6 +673,11 @@ public sealed class LineaDespachoEditorViewModel : ViewModelBase
         set { if (SetProperty(ref _loteSeleccionado, value)) Recalcular(); }
     }
 
+    /// <summary>El <see cref="Pedido"/> que esta línea cumple, si el despacho se armó con
+    /// "Despachar pedido" (ver <see cref="DespachoEditorViewModel.PrecargarDesdePedido"/>). Nulo
+    /// en un despacho armado a mano.</summary>
+    public Pedido? PedidoOrigen { get; set; }
+
     private string _cantidad = string.Empty;
     public string Cantidad
     {
@@ -687,7 +724,9 @@ public sealed class LineaDespachoEditorViewModel : ViewModelBase
         PrecioUnitario = conPrecios ? PrecioValor : 0m,
         Subtotal = conPrecios ? Subtotal : 0m,
         ProcesoProduccionId = LoteSeleccionado?.ProcesoId,
-        ProcesoProduccionNumero = LoteSeleccionado?.Numero ?? string.Empty
+        ProcesoProduccionNumero = LoteSeleccionado?.Numero ?? string.Empty,
+        PedidoId = PedidoOrigen?.Id,
+        PedidoNumero = PedidoOrigen?.Numero ?? string.Empty
     };
 
     private void Recalcular()

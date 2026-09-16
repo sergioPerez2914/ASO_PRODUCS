@@ -39,6 +39,7 @@ public class AsoProductoresDbContext : DbContext
     public DbSet<Producto> Productos { get; set; }
     public DbSet<ProcesoProduccion> ProcesosProduccion { get; set; }
     public DbSet<Despacho> Despachos { get; set; }
+    public DbSet<Pedido> Pedidos { get; set; }
 
     /// <summary>
     /// Organización sobre la que trabaja ESTE contexto. Se toma del ámbito al construirlo y no
@@ -634,11 +635,53 @@ public class AsoProductoresDbContext : DbContext
                 linea.Property(x => x.PrecioUnitario).HasColumnType("decimal(18,2)");
                 linea.Property(x => x.Subtotal).HasColumnType("decimal(18,2)");
                 linea.Property(x => x.ProcesoProduccionNumero).HasMaxLength(20);
+                linea.Property(x => x.PedidoNumero).HasMaxLength(20);
 
                 linea.Ignore(x => x.CantidadTexto);
                 linea.Ignore(x => x.PrecioUnitarioTexto);
                 linea.Ignore(x => x.SubtotalTexto);
                 linea.Ignore(x => x.ProcesoOrigenTexto);
+            });
+        });
+
+        modelBuilder.Entity<Pedido>(entity =>
+        {
+            entity.HasKey(p => p.Id);
+            entity.Property(p => p.Numero).IsRequired().HasMaxLength(20);
+            entity.Property(p => p.Observaciones).HasMaxLength(500);
+            entity.Property(p => p.ClienteNombre).HasMaxLength(150);
+            entity.Property(p => p.MotivoAnulacion).HasMaxLength(500);
+            entity.Property(p => p.CreadoPorNombre).HasMaxLength(150);
+            entity.Property(p => p.Total).HasColumnType("decimal(18,2)").IsRequired();
+
+            entity.HasIndex(p => new { p.OrganizacionId, p.Numero }).IsUnique();
+
+            entity.Ignore(p => p.FechaTexto);
+            entity.Ignore(p => p.TotalTexto);
+            entity.Ignore(p => p.EstadoEntregaTexto);
+            entity.Ignore(p => p.EstadoMostrado);
+
+            entity.OwnsMany(p => p.Lineas, linea =>
+            {
+                linea.WithOwner().HasForeignKey("PedidoId");
+                linea.Property<int>("Id");
+                linea.HasKey("Id");
+                linea.Property(x => x.ProductoNombre).HasMaxLength(150);
+                linea.Property(x => x.UnidadMedidaSnapshot).HasMaxLength(30);
+                linea.Property(x => x.CantidadPedida).HasColumnType("decimal(18,2)");
+                linea.Property(x => x.PrecioUnitario).HasColumnType("decimal(18,2)");
+                linea.Property(x => x.Subtotal).HasColumnType("decimal(18,2)");
+
+                // Despachado NO se persiste: depende de la tabla de despachos entera, la rellena
+                // PedidosService.RellenarDespachado.
+                linea.Ignore(x => x.Despachado);
+                linea.Ignore(x => x.Pendiente);
+                linea.Ignore(x => x.EstaCompleta);
+                linea.Ignore(x => x.CantidadPedidaTexto);
+                linea.Ignore(x => x.DespachadoTexto);
+                linea.Ignore(x => x.PendienteTexto);
+                linea.Ignore(x => x.PrecioUnitarioTexto);
+                linea.Ignore(x => x.SubtotalTexto);
             });
         });
 

@@ -138,6 +138,13 @@ public class DespachoLinea
     public int? ProcesoProduccionId { get; set; }
     public string ProcesoProduccionNumero { get; set; } = string.Empty;  // snapshot
 
+    /// <summary>El <see cref="Pedido"/> que esta línea cumple, si salió de uno ("Despachar
+    /// pedido"). Nulo en un despacho armado a mano. Opcional e informativo por sí solo — no se
+    /// valida contra nada del pedido, que no reserva existencia — pero es la clave que usa
+    /// <c>PedidosService.RellenarDespachado</c> para saber cuánto lleva entregado cada línea.</summary>
+    public int? PedidoId { get; set; }
+    public string PedidoNumero { get; set; } = string.Empty;  // snapshot
+
     public string CantidadTexto => $"{Cantidad:N2} {UnidadMedidaSnapshot}".Trim();
     public string PrecioUnitarioTexto => PrecioUnitario.ToString("N2");
     public string SubtotalTexto => Subtotal.ToString("N2");
