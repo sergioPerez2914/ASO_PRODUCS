@@ -4,14 +4,27 @@ using ASO_PRODUCS.Desktop.Configuration;
 using ASO_PRODUCS.Desktop.Services;
 using ASO_PRODUCS.Desktop.Views;
 using Microsoft.EntityFrameworkCore;
+using Velopack;
 
 namespace ASO_PRODUCS.Desktop;
 
 public partial class App : Application
 {
+    public App()
+    {
+        // Tiene que ser lo primero que corre, antes que cualquier otra cosa: así detecta
+        // Velopack los argumentos especiales que Windows le pasa al instalar/actualizar/
+        // desinstalar (--veloapp-install, --veloapp-updated, etc.) y sale sin llegar a tocar la
+        // base de datos ni mostrar el login. Moverlo a OnStartup sería tarde: esos eventos
+        // alcanzarían a correr el resto del arranque antes de que Velopack los interceptara.
+        VelopackApp.Build().Run();
+    }
+
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+
+        RevisarActualizaciones();
 
         // El tema antes de abrir nada: si se aplicara despues, la pantalla de login parpadearia
         // en claro antes de pasar a oscuro.
@@ -48,6 +61,42 @@ public partial class App : Application
 
         // A partir de aquí sí queremos que cerrar la última ventana cierre la app.
         ShutdownMode = ShutdownMode.OnLastWindowClose;
+    }
+
+    /// <summary>
+    /// Busca, descarga y aplica una actualización si <c>AppConfig.RutaActualizaciones</c> apunta
+    /// a algo y hay una versión nueva ahí (ver CLAUDE.md "Distribución"). Si la aplica,
+    /// <c>ApplyUpdatesAndRestart</c> cierra este proceso y abre el nuevo — el resto de
+    /// <c>OnStartup</c> no llega a correr en ese caso. Si no hay ruta configurada, no hay nada
+    /// nuevo, o la carpeta no se puede alcanzar (el cliente sin red, por ejemplo), sigue
+    /// arrancando con la versión que ya tiene: nunca vale la pena bloquear el arranque por esto.
+    /// </summary>
+    private static void RevisarActualizaciones()
+    {
+        if (string.IsNullOrWhiteSpace(AppConfig.RutaActualizaciones))
+            return;
+
+        try
+        {
+            var gestor = new UpdateManager(AppConfig.RutaActualizaciones);
+
+            // Corriendo desde el IDE (dotnet run/F5), sin pasar por un instalador de Velopack:
+            // no hay nada que revisar ni donde aplicar una actualización.
+            if (!gestor.IsInstalled)
+                return;
+
+            var nueva = gestor.CheckForUpdatesAsync().GetAwaiter().GetResult();
+            if (nueva is null)
+                return;
+
+            gestor.DownloadUpdatesAsync(nueva).GetAwaiter().GetResult();
+            gestor.ApplyUpdatesAndRestart(nueva);
+        }
+        catch
+        {
+            // Sin conexión a la carpeta de actualizaciones, o cualquier otro problema: seguir
+            // con la versión actual es mejor que no arrancar.
+        }
     }
 
     /// <summary>

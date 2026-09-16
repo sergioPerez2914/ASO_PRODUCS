@@ -23,6 +23,8 @@
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="8.0.1" />
     <!-- Exportar a Excel en Reportes (Services/ExportadorExcel.cs). MIT, sin costo. -->
     <PackageReference Include="ClosedXML" Version="0.104.1" />
+    <!-- Instalador silencioso + auto-actualización (App.xaml.cs). Ver CLAUDE.md "Distribución". -->
+    <PackageReference Include="Velopack" Version="1.2.0" />
   </ItemGroup>
 
   <!-- La fuente de iconos viaja con el proyecto. Antes se usaba Segoe MDL2 Assets, que solo

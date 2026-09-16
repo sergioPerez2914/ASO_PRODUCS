@@ -61,6 +61,58 @@ heredar una vez que se quitaron las tablas de los tres módulos eliminados.
 Es escritorio, no web (no hay dev server / puerto). `dotnet run` dentro de
 `ASO_PRODUCS.Desktop`, o F5 en Visual Studio (`ASO_PRODUCS.slnx`).
 
+## Distribución (2026-09-12)
+
+El cliente no instala el .NET Runtime a mano ni reemplaza el `.exe` a mano: **Velopack**
+(`Velopack` NuGet, `App.xaml.cs`) empaqueta un instalador de un clic y resuelve las
+actualizaciones solo. La base de datos sigue siendo LocalDB por máquina, sin cambios — eso es
+aparte de esto.
+
+- **`App()` llama a `VelopackApp.Build().Run()` como lo primero que corre**, antes de
+  `OnStartup`: así intercepta los argumentos que Windows le pasa al instalar/actualizar/
+  desinstalar (`--veloapp-install`, etc.) sin llegar a tocar la base ni mostrar el login.
+- **`App.OnStartup` llama a `RevisarActualizaciones()` antes que nada más.** Si
+  `AppConfig.RutaActualizaciones` (clave `Actualizaciones:Ruta`, ver
+  `appsettings.local.example.json`) está vacía, no revisa nada — así el scaffold sigue
+  arrancando igual que siempre mientras un cliente nuevo no tenga carpeta de actualizaciones
+  configurada. Si hay una ruta y hay versión nueva, la descarga y reinicia con
+  `ApplyUpdatesAndRestart` — el resto de `OnStartup` no llega a correr ese arranque. Cualquier
+  falla (sin red, carpeta no alcanzable) se traga y sigue con la versión que ya tenía: nunca
+  vale la pena bloquear el arranque por esto.
+- **La ruta de actualizaciones es una carpeta local o de red** (`\\servidor\carpeta`, un feed
+  que arma `vpk pack`), no un servidor web — no hace falta levantar nada aparte, alcanza con un
+  recurso compartido de la LAN del cliente (coherente con "instalación local en LAN" del resto
+  del proyecto). Va en `appsettings.local.json`, la misma ruta en TODAS las máquinas de un mismo
+  cliente (no es un dato por máquina como la cadena de conexión: es la carpeta compartida donde
+  ese cliente recibe sus actualizaciones).
+- **`AppConfig.CarpetaDatos` (el archivo `.mdf` de LocalDB) vive en
+  `%AppData%\ASO Productores\App_Data`**, misma carpeta base que ya usaba
+  `AjustesStoreJson` para las preferencias. Antes se calculaba subiendo tres niveles desde
+  `AppContext.BaseDirectory`, asumiendo el layout de "dotnet run"/F5 en Debug
+  (`bin/Debug/netX.0-windows`); eso se rompía en cuanto la app corría empaquetada, porque
+  Velopack instala en `%LocalAppData%\<PackId>\current\`, sin ese layout de tres niveles.
+
+### Cómo publicar una versión nueva
+
+1. `dotnet publish ASO_PRODUCS.Desktop.csproj -c Release --self-contained -r win-x64 -o .\publish`
+   (autocontenido: el cliente no necesita el .NET Runtime instalado).
+2. `dotnet tool install -g vpk` (una sola vez por máquina de quien publica).
+3. `vpk pack --packId AsoProductores --packVersion X.Y.Z --packDir .\publish --mainExe ASO_PRODUCS.Desktop.exe --outputDir .\releases`
+   — **`packId` no cambia nunca** entre versiones (es la identidad de la app para Velopack);
+   `packVersion` sube en cada release (semver).
+4. Copiar el contenido de `.\releases\` a la carpeta compartida que apunta
+   `Actualizaciones:Ruta` (reemplaza lo que había: el feed (`releases.win.json`) siempre
+   describe el estado completo, no solo lo nuevo).
+5. **Primera instalación en una máquina nueva del cliente**: correr una vez el
+   `AsoProductoresSetup.exe` de esa misma carpeta — sin asistente, sin permisos de administrador.
+   Las máquinas ya instaladas se actualizan solas en su próximo arranque.
+
+### Pendiente, no bloqueante
+
+El `.exe`/instalador no está firmado todavía: Windows SmartScreen puede advertir en la primera
+ejecución de cada máquina ("Editor desconocido"). No impide instalar ni actualizar; firmar con un
+certificado de código es un paso aparte para cuando el cliente lo pida.
+
 ## Decisiones de arquitectura (heredadas, sin cambios)
 
 - **WPF con MVVM ligero**: `ViewModels/ViewModelBase.cs` (INotifyPropertyChanged). Lógica fuera

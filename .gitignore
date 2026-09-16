@@ -29,6 +29,12 @@ appsettings.local.json
 # Base de datos LocalDB de cada maquina (archivo .mdf/.ldf) - cada quien tiene la suya
 ASO_PRODUCS.Desktop/App_Data/
 
+# Publicacion/paquetes de Velopack (ver CLAUDE.md "Distribucion") - artefactos generados
+ASO_PRODUCS.Desktop/publish/
+ASO_PRODUCS.Desktop/releases/
+ASO_PRODUCS.Desktop/.publish/
+ASO_PRODUCS.Desktop/.releases/
+
 # Documentacion interna del equipo. El repositorio es PUBLICO: estos documentos son de uso
 # interno y no se publican.
 docs/
