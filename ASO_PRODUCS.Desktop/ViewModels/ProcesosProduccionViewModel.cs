@@ -672,6 +672,11 @@ public sealed class ProcesoDetalleViewModel : CrudEditorViewModelBase
 
     public bool TieneEtapas => Proceso.Etapas.Count > 0;
 
+    /// <summary>Si hay algo que mostrar en "Consumo inicial" — lo que se consumió al iniciar el
+    /// proceso, antes de la primera etapa. Es la única línea de consumo que no vive dentro de
+    /// <see cref="ProcesoProduccion.Etapas"/>, así que necesita su propia sección.</summary>
+    public bool TieneLineasIniciales => Proceso.LineasIniciales.Count > 0;
+
     protected override bool Validar(out string? error)
     {
         error = null;

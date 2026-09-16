@@ -102,6 +102,53 @@
       </StackPanel>
     </Border>
 
+    <!-- Consumo inicial: lo que se consumió al iniciar el proceso, antes de la primera etapa.
+         Vive en Proceso.LineasIniciales, no dentro de Proceso.Etapas, por eso es una sección
+         aparte en vez de una fila más del historial. -->
+    <StackPanel>
+      <StackPanel.Style>
+        <Style TargetType="StackPanel">
+          <Setter Property="Visibility" Value="Visible" />
+          <Style.Triggers>
+            <DataTrigger Binding="{Binding TieneLineasIniciales}" Value="False">
+              <Setter Property="Visibility" Value="Collapsed" />
+            </DataTrigger>
+          </Style.Triggers>
+        </Style>
+      </StackPanel.Style>
+
+      <TextBlock Text="Consumo inicial" Style="{StaticResource CardTitleStyle}" Margin="0,20,0,8" />
+
+      <Border Style="{StaticResource SectionCardStyle}">
+        <ItemsControl ItemsSource="{Binding Proceso.LineasIniciales}">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <StackPanel />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate>
+              <Grid Margin="0,2,0,2">
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="18*" />
+                  <ColumnDefinition Width="62*" />
+                  <ColumnDefinition Width="20*" />
+                </Grid.ColumnDefinitions>
+
+                <TextBlock Grid.Column="0" Text="{Binding OrigenTexto}"
+                           FontSize="{StaticResource FsCaption}"
+                           Foreground="{DynamicResource TextMutedBrush}" />
+                <TextBlock Grid.Column="1" Text="{Binding MaterialNombre}"
+                           FontSize="{StaticResource FsCaption}" TextWrapping="Wrap" />
+                <TextBlock Grid.Column="2" Text="{Binding CantidadTexto}"
+                           FontSize="{StaticResource FsCaption}" HorizontalAlignment="Right" />
+              </Grid>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </Border>
+    </StackPanel>
+
     <!-- Historial de etapas -->
     <TextBlock Text="Historial de etapas" Style="{StaticResource CardTitleStyle}" Margin="0,20,0,8" />
 
