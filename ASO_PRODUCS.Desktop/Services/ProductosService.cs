@@ -168,11 +168,18 @@ public sealed class ProductosService
                     sinLote[linea.ProductoId] = sinLote.GetValueOrDefault(linea.ProductoId) + linea.Cantidad;
             }
 
+        // Los despachos sin lote son anteriores a esta funcionalidad: hay que imputarlos a los
+        // lotes más viejos primero (orden cronológico de producción), NO al orden FEFO de
+        // arriba (vence antes primero) — ese orden pondría un lote recién terminado con
+        // vencimiento cargado por delante de lotes sin vencimiento pero más antiguos, atribuyéndole
+        // despachos de fechas anteriores a que ese lote existiera.
+        var ordenCronologico = lotes.OrderBy(l => l.FechaTermino).ToList();
+
         foreach (var (productoId, cantidad) in sinLote)
         {
             var pendiente = cantidad;
 
-            foreach (var lote in lotes.Where(l => l.ProductoId == productoId && l.Existencia > 0))
+            foreach (var lote in ordenCronologico.Where(l => l.ProductoId == productoId && l.Existencia > 0))
             {
                 if (pendiente <= 0)
                     break;
