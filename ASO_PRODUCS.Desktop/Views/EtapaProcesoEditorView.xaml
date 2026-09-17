@@ -63,6 +63,7 @@
                             SelectedValue="{Binding OrigenSeleccionado, UpdateSourceTrigger=PropertyChanged}">
                     <ComboBoxItem Content="Materia prima" Tag="{x:Static models:OrigenMaterial.MateriaPrima}" />
                     <ComboBoxItem Content="Inventario" Tag="{x:Static models:OrigenMaterial.Articulo}" />
+                    <ComboBoxItem Content="Producto (lote)" Tag="{x:Static models:OrigenMaterial.Producto}" />
                   </ComboBox>
                 </DataTemplate>
               </DataGridTemplateColumn.CellTemplate>
@@ -71,8 +72,8 @@
             <DataGridTemplateColumn Header="Material" Width="28*" MinWidth="200">
               <DataGridTemplateColumn.CellTemplate>
                 <DataTemplate>
-                  <!-- Dos ComboBox superpuestos: la visibilidad es un binding LOCAL a la fila
-                       (EsMateriaPrima/EsArticulo), no necesita PuenteDeDatos. -->
+                  <!-- Tres ComboBox superpuestos: la visibilidad es un binding LOCAL a la fila
+                       (EsMateriaPrima/EsArticulo/EsProducto), no necesita PuenteDeDatos. -->
                   <Grid>
                     <ComboBox Style="{StaticResource LineaComboBoxStyle}"
                               ItemsSource="{Binding TiposMateriaPrima}"
@@ -84,6 +85,11 @@
                               DisplayMemberPath="Etiqueta"
                               SelectedItem="{Binding ArticuloSeleccionado, UpdateSourceTrigger=PropertyChanged}"
                               Visibility="{Binding EsArticulo, Converter={StaticResource BoolToVis}}" />
+                    <ComboBox Style="{StaticResource LineaComboBoxStyle}"
+                              ItemsSource="{Binding Lotes}"
+                              DisplayMemberPath="EtiquetaConProducto"
+                              SelectedItem="{Binding LoteSeleccionado, UpdateSourceTrigger=PropertyChanged}"
+                              Visibility="{Binding EsProducto, Converter={StaticResource BoolToVis}}" />
                   </Grid>
                 </DataTemplate>
               </DataGridTemplateColumn.CellTemplate>

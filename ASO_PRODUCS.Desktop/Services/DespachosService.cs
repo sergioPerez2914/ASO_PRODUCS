@@ -78,6 +78,12 @@ public sealed class DespachosService
             return false;
         }
 
+        if (despacho.Tipo == TipoDespacho.Venta && despacho.Lineas.Any(l => l.PedidoId is null))
+        {
+            error = "Un despacho de Venta solo puede registrarse despachando un pedido; use \"Despachar pedido\" desde Procesos · Pedidos.";
+            return false;
+        }
+
         if (despacho.GeneraCuentaPorCobrar && despacho.Lineas.Any(l => l.PrecioUnitario <= 0))
         {
             error = "Indique el precio de cada producto despachado.";

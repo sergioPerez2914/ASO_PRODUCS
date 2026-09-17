@@ -1,3 +1,6 @@
+using System.Collections.Generic;
+using System.Linq;
+
 namespace ASO_PRODUCS.Desktop.Models;
 
 /// <summary>
@@ -64,7 +67,47 @@ public class Producto : IEntidad<int>, IDeOrganizacion
 
     public string MinimoTexto => Minimo > 0 ? $"{Minimo:N2} {UnidadMedida}".Trim() : "—";
 
-    /// <summary>Copia superficial (solo hay tipos de valor y cadenas) para no mutar el original
-    /// en la lista.</summary>
-    public Producto Clonar() => (Producto)MemberwiseClone();
+    // --- Presentación / subproducto de otro producto ---
+
+    /// <summary>Si este producto sale de transformar otro (Mantequilla 200 g sale de Mantequilla).
+    /// Nulo = se fabrica desde materia prima, como siempre. Es una receta para PROPONER el
+    /// consumo al transformar; el proceso guarda lo que de verdad se consumió.</summary>
+    public int? ProductoBaseId { get; set; }
+
+    public string ProductoBaseNombre { get; set; } = string.Empty;  // snapshot
+
+    /// <summary>Cuánto del producto base (en SU unidad) lleva una unidad de este: 0,2 kg de
+    /// Mantequilla por cada Mantequilla 200 g.</summary>
+    public decimal? CantidadBasePorUnidad { get; set; }
+
+    /// <summary>Empaque y otros materiales por unidad producida (1 pote, 1 etiqueta…).</summary>
+    public List<ProductoComponente> Componentes { get; set; } = [];
+
+    public bool EsDerivado => ProductoBaseId is not null;
+
+    public string OrigenTexto => EsDerivado ? $"De {ProductoBaseNombre}" : "—";
+
+    /// <summary>Copia honda: duplica <see cref="Componentes"/> para no compartir la lista con lo
+    /// que está en pantalla.</summary>
+    public Producto Clonar()
+    {
+        var copia = (Producto)MemberwiseClone();
+        copia.Componentes = Componentes.Select(c => c.Clonar()).ToList();
+        return copia;
+    }
+}
+
+/// <summary>Un material que lleva cada unidad de un producto derivado, además del producto base.
+/// Solo materia prima o artículo de inventario.</summary>
+public class ProductoComponente
+{
+    public OrigenMaterial Origen { get; set; }
+
+    public int MaterialId { get; set; }
+    public string MaterialNombre { get; set; } = string.Empty;       // snapshot
+    public string UnidadMedidaSnapshot { get; set; } = string.Empty; // snapshot
+
+    public decimal CantidadPorUnidad { get; set; }
+
+    public ProductoComponente Clonar() => (ProductoComponente)MemberwiseClone();
 }

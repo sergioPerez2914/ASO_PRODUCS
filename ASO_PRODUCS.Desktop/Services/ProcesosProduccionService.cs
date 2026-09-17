@@ -68,10 +68,10 @@ public sealed class ProcesosProduccionService
 
         // A diferencia de una Recepción/Salida, LineasIniciales SÍ puede estar vacía: un proceso
         // puede no consumir nada al iniciar y consumir todo por etapas.
-        return ValidarLineas(proceso.LineasIniciales.Select(ALinea), out error);
+        return ValidarLineas(proceso.ProductoId, proceso.LineasIniciales.Select(ALinea), out error);
     }
 
-    private static bool ValidarLineas(IEnumerable<LineaConsumo> lineas, out string? error)
+    private bool ValidarLineas(int productoFabricadoId, IEnumerable<LineaConsumo> lineas, out string? error)
     {
         var lista = lineas.ToList();
 
@@ -89,13 +89,61 @@ public sealed class ProcesosProduccionService
 
         // El motivo entra en la clave: una línea de Consumo y una de Merma del mismo material,
         // dentro de la misma etapa, son válidas por separado (terminan en documentos distintos),
-        // no un duplicado a fundir.
-        var repetida = lista.GroupBy(l => (l.Origen, l.MaterialId, l.Motivo)).FirstOrDefault(g => g.Count() > 1);
+        // no un duplicado a fundir. El lote también: dos lotes del mismo producto son dos líneas.
+        var repetida = lista.GroupBy(l => (l.Origen, l.MaterialId, l.LoteProcesoId, l.Motivo)).FirstOrDefault(g => g.Count() > 1);
 
         if (repetida is not null)
         {
             error = $"{repetida.First().MaterialNombre} está en más de una línea con el mismo motivo; júntelas en una sola.";
             return false;
+        }
+
+        return ValidarConsumoDeLotes(productoFabricadoId, lista, out error);
+    }
+
+    /// <summary>Las líneas de producto: que traigan lote, que el lote sea de ese producto, que no
+    /// sea el mismo producto que se fabrica, y que al lote le quede EN VIVO lo que se pide.</summary>
+    private bool ValidarConsumoDeLotes(int productoFabricadoId, List<LineaConsumo> lineas, out string? error)
+    {
+        var deProducto = lineas.Where(l => l.Origen == OrigenMaterial.Producto).ToList();
+
+        if (deProducto.Count == 0)
+        {
+            error = null;
+            return true;
+        }
+
+        if (deProducto.Any(l => l.LoteProcesoId is null))
+        {
+            error = "Indique de qué lote sale cada producto que se consume.";
+            return false;
+        }
+
+        if (deProducto.FirstOrDefault(l => l.MaterialId == productoFabricadoId) is { MaterialId: > 0 } mismo)
+        {
+            error = $"Un proceso no puede consumir el mismo producto que fabrica ({mismo.MaterialNombre}).";
+            return false;
+        }
+
+        var lotes = _productos.Lotes().ToDictionary(l => l.ProcesoId);
+
+        foreach (var grupo in deProducto.GroupBy(l => l.LoteProcesoId!.Value))
+        {
+            var pedido = grupo.Sum(l => l.Cantidad);
+            var primera = grupo.First();
+
+            if (!lotes.TryGetValue(grupo.Key, out var lote) || lote.ProductoId != primera.MaterialId)
+            {
+                error = $"El lote {primera.LoteNumero} de {primera.MaterialNombre} ya no está disponible.";
+                return false;
+            }
+
+            if (pedido > lote.Existencia)
+            {
+                error = $"Del lote {lote.Numero} de {lote.ProductoNombre} quedan {lote.ExistenciaTexto}; " +
+                        $"no alcanza para {pedido:N2} {lote.Unidad}.";
+                return false;
+            }
         }
 
         error = null;
@@ -242,7 +290,7 @@ public sealed class ProcesosProduccionService
         if (proceso.EtapaActualId is null)
             return;
 
-        if (!ValidarLineas(cierre.Lineas.Select(ALinea), out var error))
+        if (!ValidarLineas(proceso.ProductoId, cierre.Lineas.Select(ALinea), out var error))
             throw new InvalidOperationException(error);
 
         var (consumoMateriaPrima, mermaMateriaPrima, consumoInventario, mermaInventario) =
@@ -281,10 +329,16 @@ public sealed class ProcesosProduccionService
             throw new InvalidOperationException("Indique el motivo de la anulación.");
 
         if (proceso.Estado == EstadoProcesoProduccion.Terminado
-            && _productos.Lotes().FirstOrDefault(l => l.ProcesoId == proceso.Id) is { Despachado: > 0 } lote)
+            && _productos.Lotes().FirstOrDefault(l => l.ProcesoId == proceso.Id) is { } lote)
         {
-            throw new InvalidOperationException(
-                $"No se puede anular: ya se despacharon {lote.DespachadoTexto} del lote {proceso.Numero}.");
+            if (lote.Despachado > 0)
+                throw new InvalidOperationException(
+                    $"No se puede anular: ya se despacharon {lote.DespachadoTexto} del lote {proceso.Numero}.");
+
+            if (lote.Transformado > 0)
+                throw new InvalidOperationException(
+                    $"No se puede anular: ya se usaron {lote.TransformadoTexto} del lote {proceso.Numero} en otra " +
+                    "transformación. Anule primero ese proceso.");
         }
 
         var copia = proceso.Clonar();
@@ -299,15 +353,19 @@ public sealed class ProcesosProduccionService
 
     private readonly record struct LineaConsumo(
         OrigenMaterial Origen, int MaterialId, string MaterialNombre, string UnidadMedidaSnapshot,
-        decimal Cantidad, MotivoConsumoEtapa Motivo);
+        decimal Cantidad, MotivoConsumoEtapa Motivo, int? LoteProcesoId, string? LoteNumero);
 
     /// <summary>El consumo inicial (antes de la primera etapa) siempre es Consumo normal, nunca
-    /// merma: el motivo no se lee del modelo —que no lo tiene— sino que se fija aquí a propósito.</summary>
+    /// merma: el motivo no se lee del modelo —que no lo tiene— sino que se fija aquí a propósito.
+    /// Las líneas de producto no generan salida: su consumo queda en la propia línea del proceso
+    /// y lo descuenta <see cref="ProductosService"/>.</summary>
     private static LineaConsumo ALinea(ProcesoProduccionLineaInicial l) =>
-        new(l.Origen, l.MaterialId, l.MaterialNombre, l.UnidadMedidaSnapshot, l.Cantidad, MotivoConsumoEtapa.Consumo);
+        new(l.Origen, l.MaterialId, l.MaterialNombre, l.UnidadMedidaSnapshot, l.Cantidad, MotivoConsumoEtapa.Consumo,
+            l.LoteProcesoId, l.LoteNumero);
 
     private static LineaConsumo ALinea(EtapaProcesoProduccionLinea l) =>
-        new(l.Origen, l.MaterialId, l.MaterialNombre, l.UnidadMedidaSnapshot, l.Cantidad, l.Motivo);
+        new(l.Origen, l.MaterialId, l.MaterialNombre, l.UnidadMedidaSnapshot, l.Cantidad, l.Motivo,
+            l.LoteProcesoId, l.LoteNumero);
 
     /// <summary>
     /// Arma, sin escribir nada, hasta cuatro salidas —materia prima y/o inventario, cada una de

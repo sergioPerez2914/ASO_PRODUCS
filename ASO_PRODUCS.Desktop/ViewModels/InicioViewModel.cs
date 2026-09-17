@@ -112,12 +112,12 @@ public sealed class InicioViewModel : ViewModelBase, IRecargable
         Agregar("Materia prima bajo mínimo", materiaPrima.TiposBajoMinimo(), "en Materia Prima · Existencias",
             moduloMateriaPrima, ModuloCatalogo.BuscarSubmodulo("MateriaPrima.Existencias"));
 
-        Agregar("Productos bajo mínimo", productos.ProductosBajoMinimo(), "en Procesos · Despacho",
-            moduloProcesos, ModuloCatalogo.BuscarSubmodulo("Procesos.Despacho"));
+        Agregar("Productos bajo mínimo", productos.ProductosBajoMinimo(), "en Procesos · Productos y Lotes",
+            moduloProcesos, ModuloCatalogo.BuscarSubmodulo("Procesos.ProductosYLotes"));
 
         var porVencer = productos.LotesConExistencia().Count(l => l.Estado == EstadoVencimientoLote.PorVencer);
-        Agregar("Lotes por vencer", porVencer, "en los próximos días · Procesos · Despacho",
-            moduloProcesos, ModuloCatalogo.BuscarSubmodulo("Procesos.Despacho"));
+        Agregar("Lotes por vencer", porVencer, "en los próximos días · Procesos · Productos y Lotes",
+            moduloProcesos, ModuloCatalogo.BuscarSubmodulo("Procesos.ProductosYLotes"));
 
         Agregar("Pedidos pendientes", pedidos.PedidosPendientes(), "de clientes, sin despachar del todo · Procesos · Pedidos",
             moduloProcesos, ModuloCatalogo.BuscarSubmodulo("Procesos.Pedidos"));

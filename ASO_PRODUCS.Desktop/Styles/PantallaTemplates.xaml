@@ -65,8 +65,8 @@
     <views:ProcesosProduccionView />
   </DataTemplate>
 
-  <DataTemplate DataType="{x:Type vm:DespachosViewModel}">
-    <views:DespachosView />
+  <DataTemplate DataType="{x:Type vm:ProductosYLotesViewModel}">
+    <views:ProductosYLotesView />
   </DataTemplate>
 
   <DataTemplate DataType="{x:Type vm:PedidosViewModel}">

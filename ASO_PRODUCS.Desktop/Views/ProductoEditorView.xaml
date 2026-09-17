@@ -4,43 +4,178 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:controls="clr-namespace:ASO_PRODUCS.Desktop.Controls"
+             xmlns:models="clr-namespace:ASO_PRODUCS.Desktop.Models"
              mc:Ignorable="d"
-             d:DesignWidth="420">
+             d:DesignWidth="900">
+
+  <UserControl.Resources>
+    <!-- Las columnas del DataGrid no heredan DataContext; ver Controls/PuenteDeDatos.cs -->
+    <controls:PuenteDeDatos x:Key="Puente" Datos="{Binding}" />
+  </UserControl.Resources>
 
   <StackPanel>
-    <controls:FormField Etiqueta="Nombre">
-      <TextBox Style="{StaticResource FormTextBoxStyle}"
-               Text="{Binding Nombre, UpdateSourceTrigger=PropertyChanged}" />
-    </controls:FormField>
+    <Grid>
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="*" />
+        <ColumnDefinition Width="16" />
+        <ColumnDefinition Width="*" />
+      </Grid.ColumnDefinitions>
 
-    <controls:FormField Etiqueta="Unidad de medida" Ayuda="Kg, unidades, cajas… lo que use la organización.">
-      <TextBox Style="{StaticResource FormTextBoxStyle}"
-               Text="{Binding UnidadMedida, UpdateSourceTrigger=PropertyChanged}" />
-    </controls:FormField>
+      <StackPanel Grid.Column="0">
+        <controls:FormField Etiqueta="Nombre">
+          <TextBox Style="{StaticResource FormTextBoxStyle}"
+                   Text="{Binding Nombre, UpdateSourceTrigger=PropertyChanged}" />
+        </controls:FormField>
 
-    <controls:FormField Etiqueta="Precio por unidad"
-                        Ayuda="Precio sugerido al despachar este producto; se puede cambiar en cada despacho.">
-      <TextBox Style="{StaticResource FormTextBoxStyle}"
-               Text="{Binding Precio, UpdateSourceTrigger=PropertyChanged}" />
-    </controls:FormField>
+        <controls:FormField Etiqueta="Unidad de medida" Ayuda="Kg, unidades, cajas… lo que use la organización.">
+          <TextBox Style="{StaticResource FormTextBoxStyle}"
+                   Text="{Binding UnidadMedida, UpdateSourceTrigger=PropertyChanged}" />
+        </controls:FormField>
 
-    <controls:FormField Etiqueta="Días de vida útil"
-                        Ayuda="Para proponer el vencimiento al terminar un proceso. Vacío si no vence.">
-      <TextBox Style="{StaticResource FormTextBoxStyle}"
-               Text="{Binding DiasVidaUtil, UpdateSourceTrigger=PropertyChanged}" />
-    </controls:FormField>
+        <controls:FormField Etiqueta="Precio por unidad"
+                            Ayuda="Precio sugerido al despachar este producto; se puede cambiar en cada despacho.">
+          <TextBox Style="{StaticResource FormTextBoxStyle}"
+                   Text="{Binding Precio, UpdateSourceTrigger=PropertyChanged}" />
+        </controls:FormField>
+      </StackPanel>
 
-    <controls:FormField Etiqueta="Mínimo" Ayuda="Cero significa no vigilar.">
-      <TextBox Style="{StaticResource FormTextBoxStyle}"
-               Text="{Binding Minimo, UpdateSourceTrigger=PropertyChanged}" />
-    </controls:FormField>
+      <StackPanel Grid.Column="2">
+        <controls:FormField Etiqueta="Días de vida útil"
+                            Ayuda="Para proponer el vencimiento al terminar un proceso. Vacío si no vence.">
+          <TextBox Style="{StaticResource FormTextBoxStyle}"
+                   Text="{Binding DiasVidaUtil, UpdateSourceTrigger=PropertyChanged}" />
+        </controls:FormField>
 
-    <CheckBox Content="Activo" Margin="0,16,0,0" Cursor="Hand"
-              Foreground="{DynamicResource TextPrimaryBrush}"
-              IsChecked="{Binding Activo}" />
+        <controls:FormField Etiqueta="Mínimo" Ayuda="Cero significa no vigilar.">
+          <TextBox Style="{StaticResource FormTextBoxStyle}"
+                   Text="{Binding Minimo, UpdateSourceTrigger=PropertyChanged}" />
+        </controls:FormField>
 
-    <TextBlock Text="Un producto inactivo se conserva en el historial, pero no se ofrece al iniciar procesos ni al registrar despachos. La existencia no se escribe aquí: sale de lo que producen los procesos terminados menos lo despachado."
+        <CheckBox Content="Activo" Margin="0,16,0,0" Cursor="Hand"
+                  Foreground="{DynamicResource TextPrimaryBrush}"
+                  IsChecked="{Binding Activo}" />
+      </StackPanel>
+    </Grid>
+
+    <!-- Presentación / subproducto: opcional, solo se despliega al marcarlo. -->
+    <Border Style="{StaticResource SectionCardStyle}" Margin="0,20,0,0">
+      <StackPanel>
+        <CheckBox Content="Se obtiene transformando otro producto" Cursor="Hand"
+                  FontWeight="{StaticResource FwMedium}"
+                  Foreground="{DynamicResource TextPrimaryBrush}"
+                  IsChecked="{Binding EsDerivado}" />
+        <TextBlock Text="Por ejemplo, Mantequilla 200 g o Ghee a partir de Mantequilla. Con esto, el botón Transformar propone solo el consumo de cada lote."
+                   FontSize="{StaticResource FsCaption}" TextWrapping="Wrap" Margin="0,4,0,0"
+                   Foreground="{DynamicResource TextMutedBrush}" />
+
+        <StackPanel Visibility="{Binding EsDerivado, Converter={StaticResource BoolToVis}}">
+          <Grid>
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="*" />
+              <ColumnDefinition Width="16" />
+              <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <controls:FormField Grid.Column="0" Etiqueta="Producto base">
+              <ComboBox Style="{StaticResource FormComboBoxStyle}"
+                        ItemsSource="{Binding ProductosBase}"
+                        DisplayMemberPath="Nombre"
+                        SelectedItem="{Binding ProductoBase}" />
+            </controls:FormField>
+
+            <controls:FormField Grid.Column="2" Etiqueta="Cantidad de base por unidad">
+              <Grid>
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="*" />
+                  <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBox Grid.Column="0" Style="{StaticResource FormTextBoxStyle}" TextAlignment="Right"
+                         Text="{Binding CantidadBase, UpdateSourceTrigger=PropertyChanged}" />
+                <TextBlock Grid.Column="1" Text="{Binding UnidadBase}" Margin="8,0,0,0"
+                           VerticalAlignment="Center" FontSize="{StaticResource FsBody}"
+                           Foreground="{DynamicResource TextSecondaryBrush}" />
+              </Grid>
+            </controls:FormField>
+          </Grid>
+
+          <TextBlock Text="{Binding AyudaCantidadBase}" Margin="0,6,0,0" TextWrapping="Wrap"
+                     FontSize="{StaticResource FsCaption}"
+                     Foreground="{DynamicResource InfoTextBrush}" />
+
+          <TextBlock Text="Empaque y otros materiales por unidad (opcional)" Style="{StaticResource CardTitleStyle}"
+                     Margin="0,16,0,8" />
+
+          <DataGrid Style="{StaticResource DataGridStyle}"
+                    ItemsSource="{Binding Componentes}"
+                    IsReadOnly="True" MaxHeight="200"
+                    HeadersVisibility="Column" CanUserSortColumns="False">
+            <DataGrid.Columns>
+              <DataGridTemplateColumn Header="Origen" Width="14*" MinWidth="110">
+                <DataGridTemplateColumn.CellTemplate>
+                  <DataTemplate>
+                    <ComboBox Style="{StaticResource LineaComboBoxStyle}"
+                              SelectedValuePath="Tag"
+                              SelectedValue="{Binding OrigenSeleccionado, UpdateSourceTrigger=PropertyChanged}">
+                      <ComboBoxItem Content="Inventario" Tag="{x:Static models:OrigenMaterial.Articulo}" />
+                      <ComboBoxItem Content="Materia prima" Tag="{x:Static models:OrigenMaterial.MateriaPrima}" />
+                    </ComboBox>
+                  </DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+              </DataGridTemplateColumn>
+
+              <DataGridTemplateColumn Header="Material" Width="34*" MinWidth="200">
+                <DataGridTemplateColumn.CellTemplate>
+                  <DataTemplate>
+                    <Grid>
+                      <ComboBox Style="{StaticResource LineaComboBoxStyle}"
+                                ItemsSource="{Binding TiposMateriaPrima}"
+                                DisplayMemberPath="Nombre"
+                                SelectedItem="{Binding TipoSeleccionado, UpdateSourceTrigger=PropertyChanged}"
+                                Visibility="{Binding EsMateriaPrima, Converter={StaticResource BoolToVis}}" />
+                      <ComboBox Style="{StaticResource LineaComboBoxStyle}"
+                                ItemsSource="{Binding Articulos}"
+                                DisplayMemberPath="Etiqueta"
+                                SelectedItem="{Binding ArticuloSeleccionado, UpdateSourceTrigger=PropertyChanged}"
+                                Visibility="{Binding EsArticulo, Converter={StaticResource BoolToVis}}" />
+                    </Grid>
+                  </DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+              </DataGridTemplateColumn>
+
+              <DataGridTemplateColumn Header="Por unidad" Width="14*" MinWidth="100">
+                <DataGridTemplateColumn.CellTemplate>
+                  <DataTemplate>
+                    <TextBox Style="{StaticResource LineaTextBoxStyle}" TextAlignment="Right"
+                             Text="{Binding Cantidad, UpdateSourceTrigger=PropertyChanged}" />
+                  </DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+              </DataGridTemplateColumn>
+
+              <controls:ColumnaTexto Header="Unidad" Binding="{Binding UnidadTexto}" Width="10*" MinWidth="70" />
+
+              <DataGridTemplateColumn Width="56">
+                <DataGridTemplateColumn.CellTemplate>
+                  <DataTemplate>
+                    <Button Content="{x:Static controls:Iconos.Limpiar}"
+                            Style="{StaticResource LineaBotonQuitarStyle}"
+                            ToolTip="Quitar este material"
+                            Command="{Binding Datos.QuitarComponenteCommand, Source={StaticResource Puente}}"
+                            CommandParameter="{Binding}" />
+                  </DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+              </DataGridTemplateColumn>
+            </DataGrid.Columns>
+          </DataGrid>
+
+          <Button Content="Agregar material" Margin="0,8,0,0" HorizontalAlignment="Left"
+                  Style="{StaticResource SecondaryButtonStyle}"
+                  Command="{Binding AgregarComponenteCommand}" />
+        </StackPanel>
+      </StackPanel>
+    </Border>
+
+    <TextBlock Text="Un producto inactivo se conserva en el historial, pero no se ofrece al iniciar procesos ni al registrar despachos. La existencia no se escribe aquí: sale de lo que producen los procesos terminados menos lo despachado y lo transformado."
                FontSize="{StaticResource FsCaption}" TextWrapping="Wrap"
-               Foreground="{DynamicResource TextMutedBrush}" Margin="0,8,0,0" />
+               Foreground="{DynamicResource TextMutedBrush}" Margin="0,12,0,0" />
   </StackPanel>
 </UserControl>

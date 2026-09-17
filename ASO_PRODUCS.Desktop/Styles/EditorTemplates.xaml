@@ -124,6 +124,10 @@
     <views:ProductoEditorView />
   </DataTemplate>
 
+  <DataTemplate DataType="{x:Type vm:TransformarLoteEditorViewModel}">
+    <views:TransformarLoteEditorView />
+  </DataTemplate>
+
   <DataTemplate DataType="{x:Type vm:DespachoEditorViewModel}">
     <views:DespachoEditorView />
   </DataTemplate>

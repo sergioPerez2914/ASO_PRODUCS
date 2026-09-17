@@ -14,19 +14,11 @@
 
   <StackPanel>
 
-    <!-- Los dos modos. Pestañas y no pastillas: las pastillas son el estilo de los filtros. -->
-    <StackPanel Orientation="Horizontal">
-      <RadioButton Content="Venta" GroupName="TipoDespacho"
-                   Style="{StaticResource SegmentedTabStyle}"
-                   IsChecked="{Binding EsVenta, Mode=TwoWay}" />
-      <RadioButton Content="Ajuste" GroupName="TipoDespacho"
-                   Style="{StaticResource SegmentedTabStyle}"
-                   IsChecked="{Binding EsAjuste, Mode=TwoWay}" />
-    </StackPanel>
+    <!-- El tipo ya no lo elige el operador acá: queda fijo según cómo se abrió el editor (ver
+         DespachoEditorViewModel). -->
+    <TextBlock Text="{Binding TipoTexto}" Style="{StaticResource CardTitleStyle}" Margin="0,0,0,8" />
 
-    <Border Style="{StaticResource TabStripStyle}" />
-
-    <TextBlock Text="{Binding NotaModo}" Margin="0,12,0,0" TextWrapping="Wrap"
+    <TextBlock Text="{Binding NotaModo}" Margin="0,0,0,12" TextWrapping="Wrap"
                FontSize="{StaticResource FsCaption}"
                Foreground="{DynamicResource TextMutedBrush}" />
 

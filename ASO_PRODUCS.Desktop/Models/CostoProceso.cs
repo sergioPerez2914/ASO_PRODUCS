@@ -25,8 +25,9 @@ public sealed class CostoProceso
 
     public decimal CostoMerma => Lineas.Where(l => l.EsMerma).Sum(l => l.Costo);
 
-    /// <summary>Algún material no tiene compras con precio: el costo real es mayor al calculado.</summary>
-    public bool Incompleto => Lineas.Any(l => l.CostoUnitario is null);
+    /// <summary>Algún material no tiene compras con precio (o sale de un lote cuyo costo ya era
+    /// incompleto): el costo real es mayor al calculado.</summary>
+    public bool Incompleto => Lineas.Any(l => l.CostoUnitario is null || l.CostoParcial);
 
     public decimal? CostoPorUnidad => CantidadProducida is > 0 ? CostoTotal / CantidadProducida.Value : null;
 
@@ -54,9 +55,14 @@ public sealed class LineaCostoProceso
     /// <summary>Nulo si el material no tiene ninguna compra con precio hasta esa fecha.</summary>
     public decimal? CostoUnitario { get; init; }
 
+    /// <summary>Solo para un lote de producto: su costo por unidad salió de un cálculo incompleto.</summary>
+    public bool CostoParcial { get; init; }
+
+    public string? LoteNumero { get; init; }
+
     public decimal Costo => Cantidad * (CostoUnitario ?? 0);
 
-    public string OrigenTexto => Origen == OrigenMaterial.MateriaPrima ? "Materia prima" : "Inventario";
+    public string OrigenTexto => OrigenMaterialTexto.De(Origen, LoteNumero);
     public string CantidadTexto => $"{Cantidad:N2} {Unidad}".Trim();
     public string CostoUnitarioTexto => CostoUnitario is { } c ? c.ToString("N2") : "Sin costo";
     public string CostoTexto => CostoUnitario is null ? "—" : Costo.ToString("N2");

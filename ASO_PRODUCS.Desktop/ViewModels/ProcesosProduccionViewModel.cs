@@ -129,6 +129,7 @@ public sealed class ProcesosProduccionCrudViewModel : CrudViewModelBase<ProcesoP
     private readonly ProcesosProduccionService _servicio;
     private readonly CostosProduccionService _costos;
     private readonly ProductosService _productos;
+    private readonly TransformacionesService _transformaciones;
     private readonly IEtapaProduccionDataSource _etapas;
     private readonly ITipoMateriaPrimaDataSource _tipos;
     private readonly IArticuloDataSource _articulos;
@@ -141,6 +142,7 @@ public sealed class ProcesosProduccionCrudViewModel : CrudViewModelBase<ProcesoP
                                            ProcesosProduccionService servicio,
                                            CostosProduccionService costos,
                                            ProductosService productos,
+                                           TransformacionesService transformaciones,
                                            IEtapaProduccionDataSource etapas,
                                            ITipoMateriaPrimaDataSource tipos,
                                            IArticuloDataSource articulos,
@@ -151,6 +153,7 @@ public sealed class ProcesosProduccionCrudViewModel : CrudViewModelBase<ProcesoP
         _servicio = servicio;
         _costos = costos;
         _productos = productos;
+        _transformaciones = transformaciones;
         _etapas = etapas;
         _tipos = tipos;
         _articulos = articulos;
@@ -176,9 +179,16 @@ public sealed class ProcesosProduccionCrudViewModel : CrudViewModelBase<ProcesoP
                   && _sesionActual.Puede(Permisos.ProcesosProduccion.Anular));
 
         VerDetalleCommand = new RelayCommand(VerDetalle);
+
+        // Transformar parte de un lote, y un lote solo existe cuando el proceso está Terminado.
+        TransformarCommand = new RelayCommand(Transformar,
+            () => SelectedItem is { Estado: EstadoProcesoProduccion.Terminado }
+                  && _sesionActual.Puede(Permisos.ProcesosProduccion.Crear)
+                  && _sesionActual.Puede(Permisos.ProcesosProduccion.Terminar));
     }
 
     public ICommand CambiarFiltroCommand { get; }
+    public ICommand TransformarCommand { get; }
     public ICommand ContinuarProcesoCommand { get; }
     public ICommand AnularCommand { get; }
 
@@ -217,7 +227,10 @@ public sealed class ProcesosProduccionCrudViewModel : CrudViewModelBase<ProcesoP
     };
 
     protected override CrudEditorViewModelBase<ProcesoProduccion> CrearEditor(ProcesoProduccion item) =>
-        new IniciarProcesoEditorViewModel(item, _productos.ActivosConExistencia(), ListaTipos(), ListaArticulos(), _servicio);
+        // Las presentaciones y subproductos no se fabrican desde cero: salen de Transformar.
+        new IniciarProcesoEditorViewModel(item, [.. _productos.ActivosConExistencia().Where(p => !p.EsDerivado)],
+                                          ListaTipos(), ListaArticulos(),
+                                          _productos.LotesConExistencia(), _servicio);
 
     private IReadOnlyList<TipoMateriaPrima> ListaTipos() =>
         [.. _tipos.GetActivos().OrderBy(t => t.Nombre)];
@@ -256,6 +269,7 @@ public sealed class ProcesosProduccionCrudViewModel : CrudViewModelBase<ProcesoP
             return;
 
         var editor = new EtapaProcesoEditorViewModel(proceso, ListaEtapasActivas(), ListaTipos(), ListaArticulos(),
+                                                     _productos.LotesConExistencia(),
                                                      _productos.Buscar(proceso.ProductoId)?.DiasVidaUtil);
 
         if (!_dialogos.MostrarEditor(editor))
@@ -266,6 +280,22 @@ public sealed class ProcesosProduccionCrudViewModel : CrudViewModelBase<ProcesoP
                                      _sesionActual.UsuarioActual?.Id ?? 0)
             : _servicio.Terminar(proceso, editor.CantidadProducidaValor, editor.FechaVencimiento,
                                  editor.ObtenerResultado(), _sesionActual.UsuarioActual?.Id ?? 0));
+    }
+
+    private void Transformar()
+    {
+        if (SelectedItem is not { Estado: EstadoProcesoProduccion.Terminado } terminado)
+            return;
+
+        if (_productos.LotesConExistencia().FirstOrDefault(l => l.ProcesoId == terminado.Id) is not { } lote)
+        {
+            _dialogos.Informar("Nada que transformar",
+                $"El lote {terminado.Numero} de {terminado.ProductoNombre} ya no tiene existencia.");
+            return;
+        }
+
+        if (TransformarLoteEditorViewModel.Abrir(_transformaciones, _dialogos, _sesionActual, lote) is { } proceso)
+            SeleccionarTrasRecargar(proceso.Id);
     }
 
     private void Anular()
@@ -324,6 +354,7 @@ public sealed class IniciarProcesoEditorViewModel : CrudEditorViewModelBase<Proc
                                          IReadOnlyList<Producto> productos,
                                          IReadOnlyList<TipoMateriaPrima> tiposMateriaPrima,
                                          IReadOnlyList<Articulo> articulos,
+                                         IReadOnlyList<LoteProducto> lotes,
                                          ProcesosProduccionService servicio)
     {
         _original = original;
@@ -332,6 +363,7 @@ public sealed class IniciarProcesoEditorViewModel : CrudEditorViewModelBase<Proc
         Productos = productos;
         TiposMateriaPrima = tiposMateriaPrima;
         Articulos = articulos;
+        Lotes = lotes;
 
         Fecha = original.Fecha == default ? DateTime.Today : original.Fecha;
         ProductoSeleccionado = productos.FirstOrDefault(p => p.Id == original.ProductoId);
@@ -359,6 +391,7 @@ public sealed class IniciarProcesoEditorViewModel : CrudEditorViewModelBase<Proc
     public IReadOnlyList<Producto> Productos { get; }
     public IReadOnlyList<TipoMateriaPrima> TiposMateriaPrima { get; }
     public IReadOnlyList<Articulo> Articulos { get; }
+    public IReadOnlyList<LoteProducto> Lotes { get; }
 
     public ObservableCollection<LineaConsumoEditorViewModel> LineasIniciales { get; } = [];
 
@@ -442,7 +475,7 @@ public sealed class IniciarProcesoEditorViewModel : CrudEditorViewModelBase<Proc
         return proceso;
     }
 
-    private LineaConsumoEditorViewModel NuevaLinea() => new(TiposMateriaPrima, Articulos);
+    private LineaConsumoEditorViewModel NuevaLinea() => new(TiposMateriaPrima, Articulos, Lotes);
 }
 
 /// <summary>
@@ -470,8 +503,10 @@ public sealed class EtapaProcesoEditorViewModel : CrudEditorViewModelBase<EtapaP
                                        IReadOnlyList<EtapaProduccion> etapas,
                                        IReadOnlyList<TipoMateriaPrima> tiposMateriaPrima,
                                        IReadOnlyList<Articulo> articulos,
+                                       IReadOnlyList<LoteProducto> lotes,
                                        int? diasVidaUtil)
     {
+        Lotes = lotes;
         _numero = proceso.Numero;
         _fechaVencimiento = diasVidaUtil is { } dias ? DateTime.Today.AddDays(dias) : null;
         _productoTexto = $"{proceso.ProductoNombre} — planeado {proceso.CantidadPlaneadaTexto}";
@@ -555,6 +590,7 @@ public sealed class EtapaProcesoEditorViewModel : CrudEditorViewModelBase<EtapaP
     public IReadOnlyList<EtapaProduccion> Etapas { get; }
     public IReadOnlyList<TipoMateriaPrima> TiposMateriaPrima { get; }
     public IReadOnlyList<Articulo> Articulos { get; }
+    public IReadOnlyList<LoteProducto> Lotes { get; }
 
     public ObservableCollection<LineaConsumoEditorViewModel> Lineas { get; } = [];
 
@@ -655,7 +691,7 @@ public sealed class EtapaProcesoEditorViewModel : CrudEditorViewModelBase<EtapaP
         Lineas = [.. Lineas.Where(l => l.TieneMaterialSeleccionado).Select(l => l.ConstruirLineaDeEtapa()!)]
     };
 
-    private LineaConsumoEditorViewModel NuevaLinea() => new(TiposMateriaPrima, Articulos);
+    private LineaConsumoEditorViewModel NuevaLinea() => new(TiposMateriaPrima, Articulos, Lotes);
 }
 
 /// <summary>
@@ -726,14 +762,20 @@ public sealed class LineaConsumoEditorViewModel : ViewModelBase
     /// reinventar el enganche.</summary>
     public event EventHandler? Cambio;
 
-    public LineaConsumoEditorViewModel(IReadOnlyList<TipoMateriaPrima> tiposMateriaPrima, IReadOnlyList<Articulo> articulos)
+    public LineaConsumoEditorViewModel(IReadOnlyList<TipoMateriaPrima> tiposMateriaPrima, IReadOnlyList<Articulo> articulos,
+                                       IReadOnlyList<LoteProducto> lotes)
     {
         TiposMateriaPrima = tiposMateriaPrima;
         Articulos = articulos;
+        Lotes = lotes;
     }
 
     public IReadOnlyList<TipoMateriaPrima> TiposMateriaPrima { get; }
     public IReadOnlyList<Articulo> Articulos { get; }
+
+    /// <summary>Lotes con existencia de cualquier producto, en orden FEFO: consumir un producto es
+    /// elegir directamente el lote.</summary>
+    public IReadOnlyList<LoteProducto> Lotes { get; }
 
     private OrigenMaterial _origenSeleccionado = OrigenMaterial.MateriaPrima;
     public OrigenMaterial OrigenSeleccionado
@@ -744,22 +786,33 @@ public sealed class LineaConsumoEditorViewModel : ViewModelBase
             if (!SetProperty(ref _origenSeleccionado, value))
                 return;
 
-            // Cambiar de origen deja seleccionado —pero invisible— un material del origen
-            // contrario; sin limpiarlo, Construir() podría armar una línea con el Id de un tipo
-            // de materia prima y el nombre/unidad de un artículo, o viceversa.
-            if (EsMateriaPrima)
-                ArticuloSeleccionado = null;
-            else
+            // Cambiar de origen deja seleccionado —pero invisible— un material de otro origen;
+            // sin limpiarlo, Construir() podría armar una línea con el Id de un tipo de materia
+            // prima y el nombre/unidad de un artículo, o viceversa.
+            if (!EsMateriaPrima)
                 TipoSeleccionado = null;
+            if (!EsArticulo)
+                ArticuloSeleccionado = null;
+            if (!EsProducto)
+                LoteSeleccionado = null;
 
             OnPropertyChanged(nameof(EsMateriaPrima));
             OnPropertyChanged(nameof(EsArticulo));
+            OnPropertyChanged(nameof(EsProducto));
             Recalcular();
         }
     }
 
     public bool EsMateriaPrima => OrigenSeleccionado == OrigenMaterial.MateriaPrima;
-    public bool EsArticulo => !EsMateriaPrima;
+    public bool EsArticulo => OrigenSeleccionado == OrigenMaterial.Articulo;
+    public bool EsProducto => OrigenSeleccionado == OrigenMaterial.Producto;
+
+    private LoteProducto? _loteSeleccionado;
+    public LoteProducto? LoteSeleccionado
+    {
+        get => _loteSeleccionado;
+        set { if (SetProperty(ref _loteSeleccionado, value)) Recalcular(); }
+    }
 
     private TipoMateriaPrima? _tipoSeleccionado;
     public TipoMateriaPrima? TipoSeleccionado
@@ -793,24 +846,56 @@ public sealed class LineaConsumoEditorViewModel : ViewModelBase
 
     /// <summary>Una línea está en blanco si no se eligió ni tipo ni artículo; la usa el editor
     /// padre para filtrarla al construir el resultado.</summary>
-    public bool TieneMaterialSeleccionado => EsMateriaPrima ? TipoSeleccionado is not null : ArticuloSeleccionado is not null;
+    public bool TieneMaterialSeleccionado => OrigenSeleccionado switch
+    {
+        OrigenMaterial.MateriaPrima => TipoSeleccionado is not null,
+        OrigenMaterial.Articulo => ArticuloSeleccionado is not null,
+        _ => LoteSeleccionado is not null
+    };
 
     public bool CantidadEsValida =>
         !string.IsNullOrWhiteSpace(Cantidad) && decimal.TryParse(Cantidad, out var v) && v > 0;
 
     public decimal CantidadValor => decimal.TryParse(Cantidad, out var valor) ? valor : 0m;
 
-    public string UnidadTexto => EsMateriaPrima
-        ? TipoSeleccionado?.UnidadMedida ?? string.Empty
-        : ArticuloSeleccionado?.UnidadCorta ?? string.Empty;
+    public string UnidadTexto => OrigenSeleccionado switch
+    {
+        OrigenMaterial.MateriaPrima => TipoSeleccionado?.UnidadMedida ?? string.Empty,
+        OrigenMaterial.Articulo => ArticuloSeleccionado?.UnidadCorta ?? string.Empty,
+        _ => LoteSeleccionado?.Unidad ?? string.Empty
+    };
 
-    private int MaterialId => EsMateriaPrima ? TipoSeleccionado?.Id ?? 0 : ArticuloSeleccionado?.Id ?? 0;
+    private int MaterialId => OrigenSeleccionado switch
+    {
+        OrigenMaterial.MateriaPrima => TipoSeleccionado?.Id ?? 0,
+        OrigenMaterial.Articulo => ArticuloSeleccionado?.Id ?? 0,
+        _ => LoteSeleccionado?.ProductoId ?? 0
+    };
 
     /// <summary>Usa <see cref="Articulo.Etiqueta"/> (código · nombre) cuando el origen es
     /// Inventario, para que el snapshot quede trazable hasta el artículo del almacén.</summary>
-    private string MaterialNombre => EsMateriaPrima
-        ? TipoSeleccionado?.Nombre ?? string.Empty
-        : ArticuloSeleccionado?.Etiqueta ?? string.Empty;
+    private string MaterialNombre => OrigenSeleccionado switch
+    {
+        OrigenMaterial.MateriaPrima => TipoSeleccionado?.Nombre ?? string.Empty,
+        OrigenMaterial.Articulo => ArticuloSeleccionado?.Etiqueta ?? string.Empty,
+        _ => LoteSeleccionado?.ProductoNombre ?? string.Empty
+    };
+
+    /// <summary>Para la receta de un producto derivado: solo materia prima o artículo.</summary>
+    public ProductoComponente? ConstruirComponente()
+    {
+        if (!TieneMaterialSeleccionado || EsProducto)
+            return null;
+
+        return new ProductoComponente
+        {
+            Origen = OrigenSeleccionado,
+            MaterialId = MaterialId,
+            MaterialNombre = MaterialNombre,
+            UnidadMedidaSnapshot = UnidadTexto,
+            CantidadPorUnidad = CantidadValor
+        };
+    }
 
     public ProcesoProduccionLineaInicial? ConstruirLineaInicial()
     {
@@ -823,7 +908,9 @@ public sealed class LineaConsumoEditorViewModel : ViewModelBase
             MaterialId = MaterialId,
             MaterialNombre = MaterialNombre,
             UnidadMedidaSnapshot = UnidadTexto,
-            Cantidad = CantidadValor
+            Cantidad = CantidadValor,
+            LoteProcesoId = EsProducto ? LoteSeleccionado?.ProcesoId : null,
+            LoteNumero = EsProducto ? LoteSeleccionado?.Numero : null
         };
     }
 
@@ -839,7 +926,9 @@ public sealed class LineaConsumoEditorViewModel : ViewModelBase
             MaterialNombre = MaterialNombre,
             UnidadMedidaSnapshot = UnidadTexto,
             Cantidad = CantidadValor,
-            Motivo = MotivoSeleccionado
+            Motivo = MotivoSeleccionado,
+            LoteProcesoId = EsProducto ? LoteSeleccionado?.ProcesoId : null,
+            LoteNumero = EsProducto ? LoteSeleccionado?.Numero : null
         };
     }
 
@@ -888,7 +977,7 @@ public sealed class ProcesosProduccionViewModel : PantallaViewModelBase
 
         var costosServicio = new CostosProduccionService(DataSourceFactory.CrearRecepcionesMateriaPrima(),
             DataSourceFactory.CrearEntradasInventario(), DataSourceFactory.CrearSalidasMateriaPrima(),
-            DataSourceFactory.CrearSalidasInventario(), productosDs);
+            DataSourceFactory.CrearSalidasInventario(), productosDs, procesosDs);
 
         var salidasMateriaPrimaServicio = new SalidasMateriaPrimaService(
             DataSourceFactory.CrearSalidasMateriaPrima(), materiaPrima, sesion);
@@ -898,10 +987,12 @@ public sealed class ProcesosProduccionViewModel : PantallaViewModelBase
         var procesosServicio = new ProcesosProduccionService(procesosDs, productosServicio,
             salidasMateriaPrimaServicio, salidasInventarioServicio, articulosDs, sesion);
 
+        var transformaciones = new TransformacionesService(procesosServicio, productosServicio, materiaPrima, inventario);
+
         Etapas = new EtapasProduccionCrudViewModel(etapasDs, etapasServicio, dialogos, sesion);
 
         Procesos = new ProcesosProduccionCrudViewModel(procesosDs, procesosServicio, costosServicio, productosServicio,
-            etapasDs, tiposDs, articulosDs, dialogos, sesion);
+            transformaciones, etapasDs, tiposDs, articulosDs, dialogos, sesion);
 
         CambiarVistaCommand = new RelayCommand<string>(vista => VistaActual = vista);
     }

@@ -76,6 +76,9 @@
                         Margin="0,12,0,0">
               <Button Content="Iniciar proceso" Style="{StaticResource PrimaryButtonStyle}"
                       Command="{Binding AgregarCommand}" />
+              <Button Content="Transformar" Style="{StaticResource SecondaryButtonStyle}"
+                      Command="{Binding TransformarCommand}"
+                      ToolTip="Produce una presentación o subproducto (Mantequilla 200 g, Ghee…) a partir del proceso seleccionado, que debe estar Terminado." />
               <Button Content="Continuar proceso" Style="{StaticResource SecondaryButtonStyle}"
                       Command="{Binding ContinuarProcesoCommand}"
                       ToolTip="Confirma cómo salió la etapa en curso (si hay una) y, en el mismo paso, pasa a la siguiente etapa o termina el proceso." />

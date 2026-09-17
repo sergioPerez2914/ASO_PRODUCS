@@ -28,7 +28,10 @@ public sealed class LoteProducto
     public decimal Producido { get; init; }
     public decimal Despachado { get; set; }
 
-    public decimal Existencia => Producido - Despachado;
+    /// <summary>Lo que consumieron otros procesos (transformaciones) de este lote.</summary>
+    public decimal Transformado { get; set; }
+
+    public decimal Existencia => Producido - Despachado - Transformado;
 
     public EstadoVencimientoLote Estado => FechaVencimiento is not { } vence
         ? EstadoVencimientoLote.SinVencimiento
@@ -50,9 +53,12 @@ public sealed class LoteProducto
     public string FechaVencimientoTexto => FechaVencimiento?.ToString("dd/MM/yyyy") ?? "—";
     public string ProducidoTexto => $"{Producido:N2} {Unidad}".Trim();
     public string DespachadoTexto => $"{Despachado:N2} {Unidad}".Trim();
+    public string TransformadoTexto => Transformado > 0 ? $"{Transformado:N2} {Unidad}".Trim() : "—";
     public string ExistenciaTexto => $"{Existencia:N2} {Unidad}".Trim();
 
     public string Etiqueta => FechaVencimiento is { } vence
         ? $"{Numero} · vence {vence:dd/MM/yyyy} · {ExistenciaTexto}"
         : $"{Numero} · {ExistenciaTexto}";
+
+    public string EtiquetaConProducto => $"{ProductoNombre} · {Etiqueta}";
 }

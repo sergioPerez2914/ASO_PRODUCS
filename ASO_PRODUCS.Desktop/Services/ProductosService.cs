@@ -65,6 +65,64 @@ public sealed class ProductosService
             return false;
         }
 
+        return ValidarPresentacion(producto, out error);
+    }
+
+    private bool ValidarPresentacion(Producto producto, out string? error)
+    {
+        if (producto.ProductoBaseId is not { } baseId)
+        {
+            error = null;
+            return true;
+        }
+
+        if (baseId == producto.Id)
+        {
+            error = "Un producto no puede ser presentación de sí mismo.";
+            return false;
+        }
+
+        if (producto.CantidadBasePorUnidad is not > 0)
+        {
+            error = $"Indique cuánto de {producto.ProductoBaseNombre} lleva cada unidad, con un número mayor que cero.";
+            return false;
+        }
+
+        // Una cadena Mantequilla → Ghee → Mantequilla haría que ninguno de los dos se pudiera
+        // producir sin el otro.
+        if (producto.Id != 0)
+        {
+            var porId = _productos.GetAll().ToDictionary(p => p.Id);
+            var visitados = new HashSet<int> { producto.Id };
+
+            for (int? actual = baseId; actual is { } id && porId.TryGetValue(id, out var p); actual = p.ProductoBaseId)
+            {
+                if (!visitados.Add(id))
+                {
+                    error = $"{producto.ProductoBaseNombre} ya sale, directa o indirectamente, de {producto.Nombre}.";
+                    return false;
+                }
+            }
+        }
+
+        if (producto.Componentes.Any(c => c.MaterialId == 0))
+        {
+            error = "Hay un material de empaque sin seleccionar.";
+            return false;
+        }
+
+        if (producto.Componentes.Any(c => c.CantidadPorUnidad <= 0))
+        {
+            error = "La cantidad por unidad de cada material debe ser mayor que cero.";
+            return false;
+        }
+
+        if (producto.Componentes.GroupBy(c => (c.Origen, c.MaterialId)).FirstOrDefault(g => g.Count() > 1) is { } repetido)
+        {
+            error = $"{repetido.First().MaterialNombre} está más de una vez; júntelo en una sola línea.";
+            return false;
+        }
+
         error = null;
         return true;
     }
@@ -75,7 +133,8 @@ public sealed class ProductosService
     /// </summary>
     public bool PuedeEliminar(Producto producto)
         => !_procesos.GetAll().Any(p => p.ProductoId == producto.Id)
-           && !_despachos.GetAll().Any(d => d.Lineas.Any(l => l.ProductoId == producto.Id));
+           && !_despachos.GetAll().Any(d => d.Lineas.Any(l => l.ProductoId == producto.Id))
+           && !_productos.GetAll().Any(p => p.ProductoBaseId == producto.Id);
 
     /// <summary>
     /// Da de alta, de una sola vez, los productos sugeridos que todavía no existan por nombre
@@ -105,7 +164,11 @@ public sealed class ProductosService
 
     /// <summary>
     /// Existencia de cada producto que se haya movido alguna vez: lo producido por los procesos
-    /// Terminados menos lo despachado, sin contar documentos anulados.
+    /// Terminados, menos lo despachado, menos lo que consumieron otros procesos (transformaciones),
+    /// sin contar documentos anulados.
+    ///
+    /// A diferencia de la materia prima y los artículos, el producto que consumió un proceso
+    /// anulado SÍ vuelve: no hay una entrada de ajuste de productos con la que devolverlo.
     ///
     /// Recorre las dos tablas UNA vez cada una y suma en memoria sobre un diccionario, igual que
     /// <see cref="MateriaPrimaService.ExistenciasPorTipo"/>.
@@ -114,8 +177,15 @@ public sealed class ProductosService
     {
         var saldos = new Dictionary<int, decimal>();
 
-        foreach (var proceso in _procesos.GetAll().Where(p => p.CuentaEnExistencia))
-            saldos[proceso.ProductoId] = saldos.GetValueOrDefault(proceso.ProductoId) + (proceso.CantidadProducida ?? 0);
+        foreach (var proceso in _procesos.GetAll())
+        {
+            if (proceso.CuentaEnExistencia)
+                saldos[proceso.ProductoId] = saldos.GetValueOrDefault(proceso.ProductoId) + (proceso.CantidadProducida ?? 0);
+
+            if (proceso.Estado != EstadoProcesoProduccion.Anulado)
+                foreach (var (productoId, _, cantidad) in proceso.ConsumosDeProducto())
+                    saldos[productoId] = saldos.GetValueOrDefault(productoId) - cantidad;
+        }
 
         foreach (var despacho in _despachos.GetAll().Where(d => d.CuentaEnExistencia))
             foreach (var linea in despacho.Lineas)
@@ -128,6 +198,9 @@ public sealed class ProductosService
 
     public Producto? Buscar(int productoId) => _productos.GetById(productoId);
 
+    /// <summary>Los productos activos que tienen receta de presentación, para transformar.</summary>
+    public IReadOnlyList<Producto> DerivadosActivos() => [.. _productos.GetActivos().Where(p => p.EsDerivado)];
+
     /// <summary>
     /// Cada proceso Terminado es un lote: lo producido menos las líneas de despacho que lo citan,
     /// en orden FEFO (vence antes primero; los que no vencen al final, por fecha de término).
@@ -138,7 +211,9 @@ public sealed class ProductosService
     /// </summary>
     public IReadOnlyList<LoteProducto> Lotes()
     {
-        var lotes = _procesos.GetAll()
+        var procesos = _procesos.GetAll().ToList();
+
+        var lotes = procesos
             .Where(p => p.CuentaEnExistencia)
             .Select(p => new LoteProducto
             {
@@ -158,6 +233,13 @@ public sealed class ProductosService
 
         var porId = lotes.ToDictionary(l => l.ProcesoId);
         var sinLote = new Dictionary<int, decimal>();
+
+        // Toda línea de consumo de producto nace con lote (el servicio lo exige), así que no hay
+        // un "sin lote" que repartir como con los despachos viejos.
+        foreach (var proceso in procesos.Where(p => p.Estado != EstadoProcesoProduccion.Anulado))
+            foreach (var (_, loteId, cantidad) in proceso.ConsumosDeProducto())
+                if (loteId is { } id && porId.TryGetValue(id, out var loteConsumido))
+                    loteConsumido.Transformado += cantidad;
 
         foreach (var despacho in _despachos.GetAll().Where(d => d.CuentaEnExistencia))
             foreach (var linea in despacho.Lineas)

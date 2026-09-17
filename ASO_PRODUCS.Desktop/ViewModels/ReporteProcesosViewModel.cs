@@ -51,7 +51,7 @@ public sealed class ReporteProcesosViewModel : PantallaViewModelBase
         _salidasInventario = salidasInventario;
         _costos = new CostosProduccionService(DataSourceFactory.CrearRecepcionesMateriaPrima(),
             DataSourceFactory.CrearEntradasInventario(), salidasMateriaPrima, salidasInventario,
-            DataSourceFactory.CrearProductos());
+            DataSourceFactory.CrearProductos(), procesos);
         _dialogos = dialogos;
 
         _fechaDesde = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);

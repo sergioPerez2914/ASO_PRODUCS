@@ -171,7 +171,7 @@ public partial class MainWindow : Window
             ["MateriaPrima.Salidas"] = (m, s) => new SalidasMateriaPrimaViewModel(m, s),
 
             ["Procesos.Produccion"] = (m, s) => new ProcesosProduccionViewModel(m, s),
-            ["Procesos.Despacho"] = (m, s) => new DespachosViewModel(m, s),
+            ["Procesos.ProductosYLotes"] = (m, s) => new ProductosYLotesViewModel(m, s),
             ["Procesos.Pedidos"] = (m, s) => new PedidosViewModel(m, s),
 
             ["Reportes.Procesos"] = (m, s) => new ReporteProcesosViewModel(m, s),

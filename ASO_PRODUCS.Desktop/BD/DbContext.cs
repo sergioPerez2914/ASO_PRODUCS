@@ -526,6 +526,21 @@ public class AsoProductoresDbContext : DbContext
             entity.Ignore(p => p.PrecioUnitarioTexto);
             entity.Ignore(p => p.VidaUtilTexto);
             entity.Ignore(p => p.MinimoTexto);
+            entity.Ignore(p => p.EsDerivado);
+            entity.Ignore(p => p.OrigenTexto);
+
+            entity.Property(p => p.ProductoBaseNombre).HasMaxLength(150);
+            entity.Property(p => p.CantidadBasePorUnidad).HasColumnType("decimal(18,4)");
+
+            entity.OwnsMany(p => p.Componentes, componente =>
+            {
+                componente.WithOwner().HasForeignKey("ProductoId");
+                componente.Property<int>("Id");
+                componente.HasKey("Id");
+                componente.Property(x => x.MaterialNombre).HasMaxLength(150);
+                componente.Property(x => x.UnidadMedidaSnapshot).HasMaxLength(30);
+                componente.Property(x => x.CantidadPorUnidad).HasColumnType("decimal(18,4)");
+            });
         });
 
         modelBuilder.Entity<ProcesoProduccion>(entity =>
@@ -562,6 +577,7 @@ public class AsoProductoresDbContext : DbContext
                 linea.Property(x => x.MaterialNombre).HasMaxLength(150);
                 linea.Property(x => x.UnidadMedidaSnapshot).HasMaxLength(30);
                 linea.Property(x => x.Cantidad).HasColumnType("decimal(18,2)");
+                linea.Property(x => x.LoteNumero).HasMaxLength(20);
 
                 linea.Ignore(x => x.CantidadTexto);
                 linea.Ignore(x => x.OrigenTexto);
@@ -590,6 +606,7 @@ public class AsoProductoresDbContext : DbContext
                     linea.Property(x => x.MaterialNombre).HasMaxLength(150);
                     linea.Property(x => x.UnidadMedidaSnapshot).HasMaxLength(30);
                     linea.Property(x => x.Cantidad).HasColumnType("decimal(18,2)");
+                    linea.Property(x => x.LoteNumero).HasMaxLength(20);
 
                     linea.Ignore(x => x.CantidadTexto);
                     linea.Ignore(x => x.OrigenTexto);

@@ -13,14 +13,25 @@ public enum EstadoProcesoProduccion
 }
 
 /// <summary>
-/// De dónde sale el material que consume una línea de un proceso: del padrón de materia prima o
-/// del de artículos de inventario, indistintamente. Se persiste como ORDINAL: miembros nuevos al
-/// final.
+/// De dónde sale el material que consume una línea de un proceso: del padrón de materia prima, del
+/// de artículos de inventario, o de un lote de producto terminado (una transformación: Mantequilla
+/// → Mantequilla 200 g). Se persiste como ORDINAL: miembros nuevos al final.
 /// </summary>
 public enum OrigenMaterial
 {
     MateriaPrima,
-    Articulo
+    Articulo,
+    Producto
+}
+
+public static class OrigenMaterialTexto
+{
+    public static string De(OrigenMaterial origen, string? loteNumero) => origen switch
+    {
+        OrigenMaterial.MateriaPrima => "Materia prima",
+        OrigenMaterial.Articulo => "Inventario",
+        _ => string.IsNullOrWhiteSpace(loteNumero) ? "Producto" : $"Lote {loteNumero}"
+    };
 }
 
 /// <summary>Cómo terminó una etapa. Se persiste como ORDINAL: miembros nuevos al final.</summary>
@@ -139,6 +150,15 @@ public class ProcesoProduccion : IEntidad<int>, IDeOrganizacion
 
     public int CantidadEtapas => Etapas.Count;
 
+    /// <summary>Cada línea de consumo de un lote de producto, inicial o de etapa. Un proceso con
+    /// alguna es una transformación.</summary>
+    public IEnumerable<(int ProductoId, int? LoteProcesoId, decimal Cantidad)> ConsumosDeProducto() =>
+        LineasIniciales.Where(l => l.Origen == OrigenMaterial.Producto)
+            .Select(l => (l.MaterialId, l.LoteProcesoId, l.Cantidad))
+            .Concat(Etapas.SelectMany(e => e.Lineas)
+                .Where(l => l.Origen == OrigenMaterial.Producto)
+                .Select(l => (l.MaterialId, l.LoteProcesoId, l.Cantidad)));
+
     /// <summary>
     /// Copia HONDA: duplica de verdad <see cref="LineasIniciales"/>, <see cref="Etapas"/> y, dentro
     /// de cada etapa, sus propias líneas. Un <c>MemberwiseClone</c> superficial compartiría esas
@@ -170,9 +190,14 @@ public class ProcesoProduccionLineaInicial
 
     public decimal Cantidad { get; set; }
 
+    /// <summary>Solo con <see cref="OrigenMaterial.Producto"/>: el lote (proceso Terminado) del que
+    /// sale el producto; <see cref="MaterialId"/> es entonces el <c>ProductoId</c>.</summary>
+    public int? LoteProcesoId { get; set; }
+    public string? LoteNumero { get; set; }  // snapshot
+
     public string CantidadTexto => $"{Cantidad:N2} {UnidadMedidaSnapshot}".Trim();
 
-    public string OrigenTexto => Origen == OrigenMaterial.MateriaPrima ? "Materia prima" : "Inventario";
+    public string OrigenTexto => OrigenMaterialTexto.De(Origen, LoteNumero);
 
     public ProcesoProduccionLineaInicial Clonar() => (ProcesoProduccionLineaInicial)MemberwiseClone();
 }
@@ -245,9 +270,13 @@ public class EtapaProcesoProduccionLinea
     /// nada existente cambie de comportamiento.</summary>
     public MotivoConsumoEtapa Motivo { get; set; }
 
+    /// <summary>Ver <see cref="ProcesoProduccionLineaInicial.LoteProcesoId"/>.</summary>
+    public int? LoteProcesoId { get; set; }
+    public string? LoteNumero { get; set; }  // snapshot
+
     public string CantidadTexto => $"{Cantidad:N2} {UnidadMedidaSnapshot}".Trim();
 
-    public string OrigenTexto => Origen == OrigenMaterial.MateriaPrima ? "Materia prima" : "Inventario";
+    public string OrigenTexto => OrigenMaterialTexto.De(Origen, LoteNumero);
 
     public string MotivoTexto => Motivo == MotivoConsumoEtapa.Consumo ? "Consumo" : "Merma/exceso";
 

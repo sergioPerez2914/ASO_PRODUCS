@@ -350,7 +350,8 @@ anterior: se construyó de cero contra este armazón.
 - **Los correlativos** (`PRO-000123` los procesos, `DES-000123` los despachos) siguen el mismo
   mecanismo que el resto de los módulos: el servicio asigna "el último + 1" al iniciar/registrar,
   con el índice único `(OrganizacionId, Numero)` como red.
-- **Dos migraciones EF**: `AgregarProcesos`, `AgregarClientesYCuentasPorCobrar`.
+- **Migraciones EF**: `AgregarProcesos`, `AgregarClientesYCuentasPorCobrar` y, después,
+  `AgregarProductosDerivados` (ver "Productos derivados" abajo).
 - **`Producto.PrecioUnitario`** (2026-09-16) es un precio de referencia: se propone en una línea de
   despacho solo si el campo de precio de esa línea está vacío, y se puede cambiar a mano.
 - **El costo de producción se deriva, no se guarda** (`CostosProduccionService`, 2026-09-16). Cada
@@ -393,6 +394,45 @@ anterior: se construyó de cero contra este armazón.
   línea por cada renglón con saldo pendiente, con el precio del pedido (fijado DESPUÉS de elegir
   el producto, para que no lo pise el precio del catálogo). Anular un pedido no revierte los
   despachos que ya generó, mismo criterio que anular un proceso de producción.
+- **Productos derivados / transformaciones** (2026-09-16, migración `AgregarProductosDerivados`).
+  Producir Mantequilla y luego convertirla en Mantequilla 200 g, 500 g o Ghee **no es un
+  documento nuevo**: es un `ProcesoProduccion` normal (con su lote, sus etapas, su costo y su
+  despacho) que consume un **lote de producto**. Las piezas son:
+  - `OrigenMaterial.Producto` (ordinal 2, al final). Las líneas de consumo, iniciales o de
+    etapa, llevan `LoteProcesoId`/`LoteNumero`, y `MaterialId` es el `ProductoId`.
+  - **Ese consumo NO genera una Salida en otro módulo**: queda en la propia línea del proceso.
+    `ProductosService.ExistenciasPorProducto`/`Lotes()` lo restan (`LoteProducto.Transformado`)
+    de los procesos no anulados, vía `ProcesoProduccion.ConsumosDeProducto()`.
+  - **Anular una transformación SÍ devuelve el producto base al lote**, a diferencia de la
+    materia prima y los artículos (que siguen sin volver). Los productos no tienen una entrada
+    de ajuste con la que devolverlo. Anular el lote base se niega si ya se usó en otra
+    transformación, igual que si ya se despachó.
+  - `ProcesosProduccionService.ValidarConsumoDeLotes` exige lote, que el lote sea de ese
+    producto, que el proceso no consuma el mismo producto que fabrica, y existencia EN VIVO por
+    lote.
+  - **Receta de presentación** en `Producto` (opcional): `ProductoBaseId`/`ProductoBaseNombre`,
+    `CantidadBasePorUnidad` (en la unidad del base: 0,2 kg por unidad de 200 g) y `Componentes`
+    (`ProductoComponente`, `OwnsMany`: empaque por unidad, solo MateriaPrima/Articulo). Por eso
+    `SqlProductoDataSource` pasó a `SqlAgregadoDataSource`. `ProductosService.Validar` rechaza
+    recetas circulares. Solo PROPONE el consumo; el proceso guarda lo que se consumió de verdad.
+  - **`TransformacionesService`** es el atajo amigable:
+    - Arma el plan: la base sale del lote elegido y se completa con los demás en orden FEFO;
+      los componentes van por unidades.
+    - Llama a `Iniciar` y, si `terminarAhora`, a `Terminar` en el mismo paso.
+    - Sin terminar, el proceso queda En proceso para etapas (Ghee).
+    - `Planificar` es estático sobre una foto (`TomarExistencias`) para que la vista previa del
+      formulario no relea la base en cada tecla.
+  - **Interfaz**:
+    - Botón "Transformar" en Producción y "Transformar lote" en la pestaña Lotes.
+    - `TransformarLoteEditorViewModel` muestra la vista previa en vivo con lo que falta en rojo.
+    - La ficha del producto tiene la sección "Se obtiene transformando otro producto".
+    - Las grillas de consumo manual suman "Producto (lote)".
+    - Lotes gana la columna "Transformado"; el detalle del proceso muestra "Lote PRO-…" como
+      origen.
+  - **Costo**: `CostosProduccionService` valora la línea de producto al costo por unidad del
+    proceso que produjo ese lote (recursivo, con memo). Si ese costo era incompleto, el derivado
+    queda incompleto (`LineaCostoProceso.CostoParcial`). Por eso ahora pide
+    `IProcesoProduccionDataSource`.
 
 ## Persistencia
 
