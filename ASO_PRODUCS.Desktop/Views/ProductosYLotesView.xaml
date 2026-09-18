@@ -146,11 +146,19 @@
                   </Grid>
 
                   <!-- Solo en los derivados: en el resto OrigenTexto es "—" y una línea con un
-                       guion no dice nada. -->
-                  <TextBlock Text="{Binding OrigenTexto}" Margin="{StaticResource TkAyuda}"
-                             FontSize="{StaticResource FsCaption}"
-                             Foreground="{DynamicResource TextMutedBrush}"
-                             Visibility="{Binding EsDerivado, Converter={StaticResource BoolToVis}}" />
+                       guion no dice nada. El ícono de flujo marca a simple vista que este
+                       producto es una presentación/subproducto, no uno de base. -->
+                  <StackPanel Orientation="Horizontal" Margin="{StaticResource TkAyuda}"
+                              Visibility="{Binding EsDerivado, Converter={StaticResource BoolToVis}}">
+                    <TextBlock Text="{x:Static controls:Iconos.ProductoDerivado}"
+                               FontFamily="{StaticResource IconFont}"
+                               FontSize="{StaticResource FsCaption}"
+                               Foreground="{DynamicResource TextMutedBrush}"
+                               VerticalAlignment="Center" />
+                    <TextBlock Text="{Binding OrigenTexto}" Margin="4,0,0,0" TextWrapping="Wrap"
+                               FontSize="{StaticResource FsCaption}"
+                               Foreground="{DynamicResource TextMutedBrush}" />
+                  </StackPanel>
 
                   <TextBlock Text="{Binding ExistenciaTexto}" Margin="0,12,0,0"
                              FontSize="{StaticResource FsMetric}"
@@ -245,10 +253,12 @@
 
               <controls:FiltroDropdown Style="{StaticResource FiltroDropdownStyle}" SelectedIndex="0"
                                        Margin="0,0,12,0" VerticalAlignment="Center"
+                                       ToolTip="&quot;Agotados&quot; son los lotes en 0 (despachados y/o transformados del todo): normalmente no se muestran."
                                        Command="{Binding CambiarFiltroCommand}">
                 <ComboBoxItem Content="Todos" />
                 <ComboBoxItem Content="Por vencer" />
                 <ComboBoxItem Content="Vencidos" />
+                <ComboBoxItem Content="Agotados" />
               </controls:FiltroDropdown>
 
               <TextBlock Text="{Binding Conteo}" VerticalAlignment="Center"

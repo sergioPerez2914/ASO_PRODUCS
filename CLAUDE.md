@@ -478,6 +478,57 @@ queda en Pedidos — es donde se sabe qué falta entregar.
   - **Cuatro indicadores de cabecera** (`KpiTile`): productos activos, bajo mínimo, lotes por
     vencer y lotes vencidos. Van encima del conmutador porque hablan de las dos pestañas, y se
     arman con lo que los dos padrones ya tienen en memoria — ninguna consulta extra.
+- **Consumo adicional al transformar** (2026-09-18). "Transformar lote" solo consumía lo que
+  proponía la receta (`Producto.Componentes` + el producto base); no había forma de sumar a mano
+  un material extra por merma o consumo no previsto (un pote roto, una etiqueta de más), como ya
+  podía hacerse en "Iniciar proceso" con su grilla de líneas manuales. `TransformarLoteEditorView`
+  gana esa misma grilla ("Consumo adicional", opcional, debajo de la vista previa de la receta —
+  que sigue de solo lectura), calcada de `IniciarProcesoEditorView` (`LineaConsumoEditorViewModel`
+  reutilizado tal cual: Origen → Material → Cantidad, con Materia prima/Inventario/Producto-lote
+  como orígenes). Sin columna Motivo, a propósito: `ProcesoProduccionLineaInicial` no la tiene —
+  `ProcesosProduccionService.ALinea` mapea toda línea inicial a `Consumo` siempre (la merma solo
+  existe en las líneas de etapa), y "Iniciar proceso" tampoco la muestra en sus líneas manuales.
+  `TransformacionesService.Transformar` gana el parámetro `extra` y una `Fundir` interna que junta
+  receta + extra por `(Origen, MaterialId, LoteProcesoId)` **sumando cantidades** antes de armar
+  `LineasIniciales`: sin eso, agregar a mano un material que la receta YA incluye (el caso típico
+  — "se rompió un pote más") chocaría con la guarda de línea duplicada de
+  `ProcesosProduccionService.ValidarLineas` ("está en más de una línea con el mismo motivo"),
+  pensada para dos líneas cargadas por error a mano, no para esto. Como en "Iniciar proceso", lo
+  extra no se pre-valida contra existencia en el formulario (la receta sí, en rojo si no alcanza):
+  se rechaza recién al confirmar, con el mismo mensaje que ya da un proceso normal en ese caso.
+- **Ícono de producto derivado en la tarjeta** (2026-09-18). El catálogo en tarjetas (arriba) ya
+  mostraba "De {producto base}" en los derivados, pero solo como texto. `Controls/Iconos.cs` suma
+  `ProductoDerivado` (flow-arrow), junto a ese texto, con el mismo `Visibility` que ya tenía atado
+  a `EsDerivado` — no hace falta ninguna propiedad nueva en `Producto`. Acotado a la tarjeta del
+  catálogo, que es lo que se pidió: no toca la columna "Producto" de la pestaña Lotes ni la ficha
+  del editor.
+- **Filtro "Agotados" en la pestaña Lotes** (2026-09-18). `LotesViewModel` solo mostraba
+  `ProductosService.LotesConExistencia()`: en cuanto un lote llegaba a 0 (despachado y/o
+  transformado del todo) desaparecía de la pestaña sin dejar rastro navegable en ningún lado —
+  seguía existiendo como el proceso que lo produjo, pero nada apuntaba de vuelta a él salvo que ya
+  se supiera qué transformación posterior lo citaba ("Lote PRO-…" en la ficha de esa otra). Ahora
+  `Recargar()` pide `Lotes()` (todos, sin filtrar) una sola vez y separa `_todos` (con existencia —
+  sigue siendo lo único que ven los indicadores de cabecera, el resumen y la tarjeta del catálogo,
+  a propósito, para no inflar esos conteos con lotes que ya no tienen nada que dar) de `_agotados`.
+  "Agotados" es una cuarta opción del mismo `FiltroDropdown` (`Todos`/`Por vencer`/`Vencidos`), no
+  un toggle aparte: por defecto la pestaña se ve exactamente igual que antes, agotados solo
+  aparecen si se piden. El filtro por producto ahora se puebla de ambas listas (para poder acotar
+  también dentro de "Agotados"), y "Transformar lote" se apaga si el lote seleccionado ya está en
+  0 (antes no pasaba nada visible al intentarlo: el editor simplemente no lo preseleccionaba).
+- **"Consumo de lotes" en Reportes · Procesos** (2026-09-18). Cuarta pestaña de
+  `ReporteProcesosViewModel`, junto a Producción/Consumo de insumos/Costos. Hacía falta un lugar
+  para ver, por período y no de a un proceso a la vez, qué transformación se llevó qué de cada
+  lote — la ficha de cada proceso (`ProcesoDetalleView`) ya lo mostraba, pero solo si ya se sabía
+  cuál proceso mirar. A diferencia de "Consumo de insumos" (que sale de `SalidaMateriaPrima`/
+  `SalidaInventario`), este consumo NUNCA generó una Salida en otro módulo — vive solo dentro de
+  `LineasIniciales`/`Etapas[].Lineas` del propio proceso que consume (`Origen == Producto`), así
+  que se recorre directo ahí, sin documento aparte que consultar. Sin fecha propia de la línea, se
+  usa la `Fecha` del proceso que consume, mismo criterio que la pestaña "Producción". **No se
+  agrupa por día+material** como si hace "Consumo de insumos": cada fila es una línea sin fundir
+  (proceso que consume, qué obtiene, qué lote y de qué producto, cantidad, motivo) — agregarlas
+  escondería justo el rastro que se pedía, que es "cuál transformación se llevó este lote", el
+  mismo problema que resolvió el filtro "Agotados" de arriba pero visto desde Reportes en vez de
+  desde el lote.
 
 ## Persistencia
 

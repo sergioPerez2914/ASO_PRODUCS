@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Windows.Input;
 using ASO_PRODUCS.Desktop.Models;
 using ASO_PRODUCS.Desktop.Services;
 
@@ -37,16 +38,21 @@ public sealed class TransformarLoteEditorViewModel : CrudEditorViewModelBase
             return null;
         }
 
-        var editor = new TransformarLoteEditorViewModel(servicio.TomarExistencias(), derivados, loteInicial);
+        var editor = new TransformarLoteEditorViewModel(servicio, servicio.TomarExistencias(), derivados, loteInicial);
 
         if (!dialogos.MostrarEditor(editor))
             return null;
 
         try
         {
+            var extra = editor.LineasExtra
+                .Where(l => l.TieneMaterialSeleccionado)
+                .Select(l => l.ConstruirLineaInicial()!)
+                .ToList();
+
             return servicio.Transformar(editor.ProductoSeleccionado!, editor.UnidadesValor, editor.LoteSeleccionado?.ProcesoId,
                                         editor.TerminarAhora, editor.TerminarAhora ? editor.FechaVencimiento : null,
-                                        editor.Observaciones, sesion.UsuarioActual?.Id ?? 0);
+                                        editor.Observaciones, sesion.UsuarioActual?.Id ?? 0, extra);
         }
         catch (InvalidOperationException ex)
         {
@@ -55,7 +61,8 @@ public sealed class TransformarLoteEditorViewModel : CrudEditorViewModelBase
         }
     }
 
-    private TransformarLoteEditorViewModel(TransformacionesService.Existencias existencias,
+    private TransformarLoteEditorViewModel(TransformacionesService servicio,
+                                           TransformacionesService.Existencias existencias,
                                            IReadOnlyList<Producto> productos,
                                            LoteProducto? loteInicial)
     {
@@ -64,7 +71,23 @@ public sealed class TransformarLoteEditorViewModel : CrudEditorViewModelBase
 
         Productos = productos;
         ProductoSeleccionado = productos.Count == 1 ? productos[0] : null;
+
+        TiposMateriaPrima = servicio.TiposMateriaPrima();
+        Articulos = servicio.Articulos();
+
+        AgregarLineaExtraCommand = new RelayCommand(() => LineasExtra.Add(NuevaLineaExtra()));
+
+        QuitarLineaExtraCommand = new RelayCommand<LineaConsumoEditorViewModel>(linea =>
+        {
+            if (linea is not null)
+                LineasExtra.Remove(linea);
+        });
+
+        LineasExtra.Add(NuevaLineaExtra());
     }
+
+    private LineaConsumoEditorViewModel NuevaLineaExtra() =>
+        new(TiposMateriaPrima, Articulos, _existencias.Lotes);
 
     public override string Titulo => "Transformar producto";
 
@@ -165,6 +188,19 @@ public sealed class TransformarLoteEditorViewModel : CrudEditorViewModelBase
 
     public bool HayFaltantes => Consumo.Any(c => !c.Alcanza);
 
+    // --- Consumo adicional: merma o consumo no previsto en la receta, mismo mecanismo que la
+    // grilla de líneas manuales de "Iniciar proceso" (ver LineaConsumoEditorViewModel). Se funde
+    // con la receta en TransformacionesService.Transformar, no aquí: este editor solo junta las
+    // filas que el operador cargó.
+
+    public IReadOnlyList<TipoMateriaPrima> TiposMateriaPrima { get; }
+    public IReadOnlyList<Articulo> Articulos { get; }
+
+    public ObservableCollection<LineaConsumoEditorViewModel> LineasExtra { get; } = [];
+
+    public ICommand AgregarLineaExtraCommand { get; }
+    public ICommand QuitarLineaExtraCommand { get; }
+
     public string ResumenTexto => ProductoSeleccionado is { } p && UnidadesValor > 0
         ? TerminarAhora
             ? $"Se obtendrán {UnidadesValor:0.####} {p.UnidadMedida} de {p.Nombre} en un lote nuevo, listo para despachar."
@@ -201,6 +237,14 @@ public sealed class TransformarLoteEditorViewModel : CrudEditorViewModelBase
         if (Consumo.FirstOrDefault(c => !c.Alcanza) is { } falta)
         {
             error = $"No alcanza {falta.MaterialNombre}: {falta.DisponibleTexto.ToLowerInvariant()}.";
+            return false;
+        }
+
+        // La existencia de lo agregado a mano no se pre-valida aquí, igual que en "Iniciar
+        // proceso": el servicio la rechaza recién al confirmar (ver Fundir en TransformacionesService).
+        if (LineasExtra.Any(l => l.TieneMaterialSeleccionado && !l.CantidadEsValida))
+        {
+            error = "Hay una cantidad de consumo adicional que no es un número válido.";
             return false;
         }
 

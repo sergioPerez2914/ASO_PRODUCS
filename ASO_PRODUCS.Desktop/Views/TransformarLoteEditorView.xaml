@@ -4,8 +4,14 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:controls="clr-namespace:ASO_PRODUCS.Desktop.Controls"
+             xmlns:models="clr-namespace:ASO_PRODUCS.Desktop.Models"
              mc:Ignorable="d"
              d:DesignWidth="900">
+
+  <UserControl.Resources>
+    <!-- Las columnas del DataGrid no heredan DataContext; ver Controls/PuenteDeDatos.cs -->
+    <controls:PuenteDeDatos x:Key="Puente" Datos="{Binding}" />
+  </UserControl.Resources>
 
   <StackPanel>
 
@@ -115,6 +121,99 @@
 
     <TextBlock Text="{Binding ResumenTexto}" Margin="0,8,0,0" TextWrapping="Wrap"
                FontSize="{StaticResource FsBody}" Foreground="{DynamicResource TextSecondaryBrush}" />
+
+    <!-- Consumo adicional: merma o consumo no previsto en la receta de arriba. Misma grilla
+         editable que "Iniciar proceso" (Views/IniciarProcesoEditorView.xaml); se funde con la
+         receta al confirmar (TransformacionesService.Transformar → Fundir), así que agregar aquí
+         el mismo material que ya trae la receta suma cantidad, no duplica línea. -->
+    <TextBlock Text="Consumo adicional (opcional)" Style="{StaticResource CardTitleStyle}" Margin="{StaticResource TkTituloDeBloque}" />
+
+    <Border Style="{StaticResource SectionCardStyle}" Padding="0">
+      <Grid>
+        <DataGrid x:Name="TablaLineasExtra" Style="{StaticResource DataGridStyle}"
+                  ItemsSource="{Binding LineasExtra}"
+                  IsReadOnly="True"
+                  MaxHeight="200"
+                  HeadersVisibility="Column"
+                  CanUserSortColumns="False">
+          <DataGrid.Columns>
+            <DataGridTemplateColumn Header="Origen" Width="14*" MinWidth="110">
+              <DataGridTemplateColumn.CellTemplate>
+                <DataTemplate>
+                  <ComboBox Style="{StaticResource LineaComboBoxStyle}"
+                            SelectedValuePath="Tag"
+                            SelectedValue="{Binding OrigenSeleccionado, UpdateSourceTrigger=PropertyChanged}">
+                    <ComboBoxItem Content="Materia prima" Tag="{x:Static models:OrigenMaterial.MateriaPrima}" />
+                    <ComboBoxItem Content="Inventario" Tag="{x:Static models:OrigenMaterial.Articulo}" />
+                    <ComboBoxItem Content="Producto (lote)" Tag="{x:Static models:OrigenMaterial.Producto}" />
+                  </ComboBox>
+                </DataTemplate>
+              </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
+
+            <DataGridTemplateColumn Header="Material" Width="34*" MinWidth="220">
+              <DataGridTemplateColumn.CellTemplate>
+                <DataTemplate>
+                  <!-- Tres ComboBox superpuestos: la visibilidad es un binding LOCAL a la fila
+                       (EsMateriaPrima/EsArticulo/EsProducto), no necesita PuenteDeDatos. -->
+                  <Grid>
+                    <ComboBox Style="{StaticResource LineaComboBoxStyle}"
+                              ItemsSource="{Binding TiposMateriaPrima}"
+                              DisplayMemberPath="Nombre"
+                              SelectedItem="{Binding TipoSeleccionado, UpdateSourceTrigger=PropertyChanged}"
+                              Visibility="{Binding EsMateriaPrima, Converter={StaticResource BoolToVis}}" />
+                    <ComboBox Style="{StaticResource LineaComboBoxStyle}"
+                              ItemsSource="{Binding Articulos}"
+                              DisplayMemberPath="Etiqueta"
+                              SelectedItem="{Binding ArticuloSeleccionado, UpdateSourceTrigger=PropertyChanged}"
+                              Visibility="{Binding EsArticulo, Converter={StaticResource BoolToVis}}" />
+                    <ComboBox Style="{StaticResource LineaComboBoxStyle}"
+                              ItemsSource="{Binding Lotes}"
+                              DisplayMemberPath="EtiquetaConProducto"
+                              SelectedItem="{Binding LoteSeleccionado, UpdateSourceTrigger=PropertyChanged}"
+                              Visibility="{Binding EsProducto, Converter={StaticResource BoolToVis}}" />
+                  </Grid>
+                </DataTemplate>
+              </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
+
+            <controls:ColumnaTexto Header="Unidad" Binding="{Binding UnidadTexto}" Width="10*" MinWidth="70" />
+
+            <DataGridTemplateColumn Header="Cantidad" Width="14*" MinWidth="100">
+              <DataGridTemplateColumn.CellTemplate>
+                <DataTemplate>
+                  <TextBox Style="{StaticResource LineaTextBoxStyle}" TextAlignment="Right"
+                           Text="{Binding Cantidad, UpdateSourceTrigger=PropertyChanged}" />
+                </DataTemplate>
+              </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
+
+            <DataGridTemplateColumn Width="56">
+              <DataGridTemplateColumn.CellTemplate>
+                <DataTemplate>
+                  <Button Content="{x:Static controls:Iconos.Limpiar}"
+                          Style="{StaticResource LineaBotonQuitarStyle}"
+                          ToolTip="Quitar esta línea"
+                          Command="{Binding Datos.QuitarLineaExtraCommand, Source={StaticResource Puente}}"
+                          CommandParameter="{Binding}" />
+                </DataTemplate>
+              </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
+          </DataGrid.Columns>
+        </DataGrid>
+
+        <controls:EmptyState Compacto="True"
+                             Icono="{x:Static controls:Iconos.Produccion}"
+                             Titulo="Sin consumo adicional"
+                             Detalle="Opcional: material extra por merma o consumo no previsto en la receta."
+                             Visibility="{Binding HasItems, ElementName=TablaLineasExtra,
+                                                  Converter={StaticResource SinItemsAVis}}" />
+      </Grid>
+    </Border>
+
+    <Button Content="Agregar línea" Margin="0,8,0,0" HorizontalAlignment="Left"
+            Style="{StaticResource SecondaryButtonStyle}"
+            Command="{Binding AgregarLineaExtraCommand}" />
 
     <!-- Paso 3: cómo termina -->
     <CheckBox Content="Terminar ahora (sin etapas intermedias)" Margin="0,16,0,0" Cursor="Hand"

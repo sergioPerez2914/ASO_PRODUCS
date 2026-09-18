@@ -199,6 +199,11 @@ public sealed class InventarioService
         return articulos;
     }
 
+    /// <summary>Artículos activos, sin filtrar por existencia: para un combo de línea de consumo
+    /// manual (Transformar, Iniciar proceso), donde la validación de existencia es cosa del
+    /// servicio al confirmar, no del combo.</summary>
+    public IReadOnlyList<Articulo> ArticulosActivos() => [.. _articulos.GetActivos()];
+
     // --- Resúmenes para el panel del módulo ---
 
     public int TotalArticulosActivos() => _articulos.GetAll().Count(a => a.Activo);

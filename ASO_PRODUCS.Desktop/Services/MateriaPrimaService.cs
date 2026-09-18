@@ -136,6 +136,11 @@ public sealed class MateriaPrimaService
         return tipos;
     }
 
+    /// <summary>Tipos activos, sin filtrar por existencia: para un combo de línea de consumo
+    /// manual (Transformar, Iniciar proceso), donde la validación de existencia es cosa del
+    /// servicio al confirmar, no del combo.</summary>
+    public IReadOnlyList<TipoMateriaPrima> TiposActivos() => [.. _tipos.GetActivos()];
+
     // --- Resúmenes para el panel del módulo ---
 
     public int TotalTiposActivos() => _tipos.GetAll().Count(t => t.Activo);

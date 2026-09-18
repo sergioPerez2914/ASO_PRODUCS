@@ -23,6 +23,7 @@ public sealed class ReporteProcesosViewModel : PantallaViewModelBase
 {
     public const string VistaProduccion = "Produccion";
     public const string VistaConsumo = "Consumo";
+    public const string VistaLotes = "Lotes";
     public const string VistaCostos = "Costos";
 
     private readonly IProcesoProduccionDataSource _procesos;
@@ -81,6 +82,7 @@ public sealed class ReporteProcesosViewModel : PantallaViewModelBase
     public ObservableCollection<Indicador> Indicadores { get; } = [];
     public ObservableCollection<FilaProduccionPorDia> Produccion { get; } = [];
     public ObservableCollection<FilaConsumoInsumo> Consumo { get; } = [];
+    public ObservableCollection<FilaConsumoLote> Lotes { get; } = [];
     public ObservableCollection<FilaCostoProceso> Costos { get; } = [];
 
     private string _vistaActual = VistaProduccion;
@@ -96,6 +98,7 @@ public sealed class ReporteProcesosViewModel : PantallaViewModelBase
 
     public bool MostrarProduccion => VistaActual == VistaProduccion;
     public bool MostrarConsumo => VistaActual == VistaConsumo;
+    public bool MostrarLotes => VistaActual == VistaLotes;
     public bool MostrarCostos => VistaActual == VistaCostos;
 
     public bool EsCostos
@@ -114,6 +117,12 @@ public sealed class ReporteProcesosViewModel : PantallaViewModelBase
     {
         get => MostrarConsumo;
         set { if (value) VistaActual = VistaConsumo; }
+    }
+
+    public bool EsLotes
+    {
+        get => MostrarLotes;
+        set { if (value) VistaActual = VistaLotes; }
     }
 
     public override void Recargar() => Recalcular();
@@ -180,6 +189,32 @@ public sealed class ReporteProcesosViewModel : PantallaViewModelBase
         foreach (var fila in consumo)
             Consumo.Add(fila);
 
+        // Consumo de lotes (transformaciones): a diferencia de lo de arriba, este consumo NUNCA
+        // genera una Salida en Inventario/Materia Prima (ver "Productos derivados" en CLAUDE.md) —
+        // vive solo dentro de LineasIniciales/Etapas del PROPIO proceso que consume, así que hay
+        // que recorrerlas directo en vez de salir a buscar un documento aparte. Sin fecha propia
+        // de la línea, se usa la Fecha del proceso que consume (igual criterio que "Producción":
+        // sin eso no se sabe cuándo pasó). No se agrupa por día+material como el consumo de
+        // insumos: cada línea es justo el rastro que antes se perdía al agotarse un lote (qué
+        // transformación se lo llevó), así que agregarlas lo volvería a esconder.
+        var deLineasIniciales = procesosEnRango.SelectMany(p => p.LineasIniciales
+            .Where(l => l.Origen == OrigenMaterial.Producto)
+            .Select(l => new FilaConsumoLote(p.Fecha, p.Numero, p.ProductoNombre,
+                l.LoteNumero ?? "—", l.MaterialNombre, l.UnidadMedidaSnapshot, l.Cantidad, "Consumo")));
+
+        var deEtapas = procesosEnRango.SelectMany(p => p.Etapas.SelectMany(e => e.Lineas)
+            .Where(l => l.Origen == OrigenMaterial.Producto)
+            .Select(l => new FilaConsumoLote(p.Fecha, p.Numero, p.ProductoNombre,
+                l.LoteNumero ?? "—", l.MaterialNombre, l.UnidadMedidaSnapshot, l.Cantidad, l.MotivoTexto)));
+
+        var consumoLotes = deLineasIniciales.Concat(deEtapas)
+            .OrderBy(f => f.Fecha).ThenBy(f => f.ProcesoNumero)
+            .ToList();
+
+        Lotes.Clear();
+        foreach (var fila in consumoLotes)
+            Lotes.Add(fila);
+
         // Solo Terminados: sin cantidad producida no hay costo por unidad ni margen que comparar.
         var procesosTerminados = procesosEnRango
             .Where(p => p.Estado == EstadoProcesoProduccion.Terminado)
@@ -221,6 +256,15 @@ public sealed class ReporteProcesosViewModel : PantallaViewModelBase
             filas = Consumo.Select(f => (IReadOnlyList<string>)
                 [f.FechaTexto, f.Origen, f.MaterialNombre, f.Unidad, f.CantidadTexto]).ToList();
         }
+        else if (VistaActual == VistaLotes)
+        {
+            nombreVista = "Consumo de lotes";
+            encabezados = ["Fecha", "Proceso", "Se obtiene", "Lote consumido", "Producto del lote",
+                           "Cantidad consumida", "Motivo"];
+            filas = Lotes.Select(f => (IReadOnlyList<string>)
+                [f.FechaTexto, f.ProcesoNumero, f.ProductoObtenido, f.LoteNumero, f.MaterialNombre,
+                 f.CantidadTexto, f.MotivoTexto]).ToList();
+        }
         else
         {
             nombreVista = "Producción";
@@ -259,6 +303,20 @@ public sealed record FilaCostoProceso(ProcesoProduccion Proceso, CostoProceso Co
 /// <summary>Fila del desglose "Consumo de insumos": un día + un material (Origen es "Materia
 /// prima" o "Inventario"), tomando la Fecha del encabezado de la salida que lo consumió.</summary>
 public sealed record FilaConsumoInsumo(DateTime Fecha, string Origen, string MaterialNombre, string Unidad, decimal Cantidad)
+{
+    public string FechaTexto => Fecha.ToString("dd/MM/yyyy");
+    public string CantidadTexto => $"{Cantidad:N2} {Unidad}".Trim();
+}
+
+/// <summary>
+/// Fila del desglose "Consumo de lotes": una línea de origen Producto, sin agrupar —cada una es un
+/// proceso (<paramref name="ProcesoNumero"/>, fabricando <paramref name="ProductoObtenido"/>) que
+/// se llevó <paramref name="Cantidad"/> del lote <paramref name="LoteNumero"/> de
+/// <paramref name="MaterialNombre"/>. Es el rastro que antes desaparecía sin dejar nada al
+/// agotarse un lote — ver "Filtro Agotados" en CLAUDE.md.
+/// </summary>
+public sealed record FilaConsumoLote(DateTime Fecha, string ProcesoNumero, string ProductoObtenido,
+    string LoteNumero, string MaterialNombre, string Unidad, decimal Cantidad, string MotivoTexto)
 {
     public string FechaTexto => Fecha.ToString("dd/MM/yyyy");
     public string CantidadTexto => $"{Cantidad:N2} {Unidad}".Trim();

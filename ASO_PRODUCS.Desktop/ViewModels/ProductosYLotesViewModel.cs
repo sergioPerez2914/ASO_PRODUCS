@@ -366,13 +366,25 @@ public sealed class LotesViewModel : ViewModelBase
 {
     private const string FiltroTodos = "Todos";
 
+    /// <summary>Lotes en 0 (despachados y/o transformados del todo): por defecto invisibles, como
+    /// siempre — se piden a propósito con este filtro. Antes desaparecían sin dejar rastro en
+    /// ningún lado en cuanto llegaban a 0, ni siquiera acá.</summary>
+    private const string FiltroAgotados = "Agotados";
+
     private readonly ProductosService _productos;
     private readonly TransformacionesService _transformaciones;
     private readonly IServicioDialogo _dialogos;
     private readonly ISesionActual _sesion;
     private readonly Action _alTransformar;
     private readonly Action<LoteProducto> _alVerProceso;
+
+    /// <summary>Lotes CON existencia: lo que ya se mostraba, y lo que siguen usando el resumen de
+    /// cabecera, los indicadores del contenedor y la tarjeta del catálogo (<see cref="Todos"/>).
+    /// Agotados no entra aquí a propósito, para no inflar esos conteos con lotes que ya no tienen
+    /// nada que dar.</summary>
     private IReadOnlyList<LoteProducto> _todos = [];
+
+    private IReadOnlyList<LoteProducto> _agotados = [];
     private string _filtro = FiltroTodos;
 
     public LotesViewModel(ProductosService productos, TransformacionesService transformaciones,
@@ -396,7 +408,7 @@ public sealed class LotesViewModel : ViewModelBase
         });
 
         TransformarCommand = new RelayCommand(Transformar,
-            () => SelectedItem is not null
+            () => SelectedItem is { Existencia: > 0 }
                   && _sesion.Puede(Permisos.ProcesosProduccion.Crear)
                   && _sesion.Puede(Permisos.ProcesosProduccion.Terminar));
 
@@ -497,20 +509,28 @@ public sealed class LotesViewModel : ViewModelBase
     public string Resumen =>
         $"{_todos.Count} lotes con existencia · " +
         $"{_todos.Count(l => l.Estado == EstadoVencimientoLote.PorVencer)} por vencer · " +
-        $"{_todos.Count(l => l.Estado == EstadoVencimientoLote.Vencido)} vencidos";
+        $"{_todos.Count(l => l.Estado == EstadoVencimientoLote.Vencido)} vencidos" +
+        (_agotados.Count > 0 ? $" · {_agotados.Count} agotados" : string.Empty);
 
     public void Recargar()
     {
-        _todos = _productos.LotesConExistencia();
+        // Una sola pasada por procesos y despachos (Lotes() la recorre entera); de ahí se separan
+        // los agotados, que antes ProductosService.LotesConExistencia() descartaba sin que
+        // quedaran en ningún lado — un lote en 0 no dejaba ningún rastro navegable.
+        var completos = _productos.Lotes();
+        _todos = [.. completos.Where(l => l.Existencia > 0)];
+        _agotados = [.. completos.Where(l => l.Existencia <= 0)];
+
         RefrescarProductos();
         Filtrar();
         OnPropertyChanged(nameof(Resumen));
     }
 
     /// <summary>
-    /// Repuebla el desplegable de productos con los que de verdad tienen lotes ahora. Conserva la
-    /// selección si el producto elegido sigue existiendo; si desapareció (se agotó su último
-    /// lote), vuelve a "Todos" en vez de dejar la tabla vacía sin explicación.
+    /// Repuebla el desplegable de productos con los que tienen algún lote ahora, con existencia o
+    /// agotado —así filtrar por producto sigue sirviendo también dentro de "Agotados"—. Conserva
+    /// la selección si el producto elegido sigue apareciendo; si no, vuelve a "Todos" en vez de
+    /// dejar la tabla vacía sin explicación.
     /// </summary>
     private void RefrescarProductos()
     {
@@ -519,12 +539,17 @@ public sealed class LotesViewModel : ViewModelBase
         Productos.Clear();
         Productos.Add(FiltroTodos);
 
-        foreach (var nombre in _todos.Select(l => l.ProductoNombre).Distinct().OrderBy(n => n))
+        foreach (var nombre in _todos.Concat(_agotados).Select(l => l.ProductoNombre).Distinct().OrderBy(n => n))
             Productos.Add(nombre);
 
         _productoFiltro = Productos.Contains(elegido) ? elegido : FiltroTodos;
         OnPropertyChanged(nameof(ProductoFiltro));
     }
+
+    /// <summary>La lista base antes de producto/texto: agotados si se pidieron, si no lo de
+    /// siempre (con existencia). Los dos estados de vencimiento solo tienen sentido sobre esa
+    /// segunda lista —un lote agotado no "vence" en un sentido que importe operar.</summary>
+    private IReadOnlyList<LoteProducto> ListaBase() => _filtro == FiltroAgotados ? _agotados : _todos;
 
     private void Filtrar()
     {
@@ -532,7 +557,7 @@ public sealed class LotesViewModel : ViewModelBase
 
         var texto = _textoBusqueda.Trim();
 
-        foreach (var lote in _todos.Where(l => _filtro switch
+        foreach (var lote in ListaBase().Where(l => _filtro switch
                  {
                      "Por vencer" => l.Estado == EstadoVencimientoLote.PorVencer,
                      "Vencidos" => l.Estado == EstadoVencimientoLote.Vencido,
@@ -550,17 +575,20 @@ public sealed class LotesViewModel : ViewModelBase
     /// <summary>
     /// "12 de 30" con filtro puesto, "30 lotes" sin él — mismo criterio y mismo texto que el
     /// contador de <c>CrudViewModelBase.Conteo</c>, que esta pestaña no hereda por no ser un CRUD.
+    /// El total es el de la lista base activa (agotados o con existencia), no siempre <c>_todos</c>.
     /// </summary>
     public string Conteo
     {
         get
         {
-            if (_todos.Count == 0)
+            var total = ListaBase().Count;
+
+            if (total == 0)
                 return string.Empty;
 
-            return Items.Count == _todos.Count
-                ? $"{_todos.Count} {(_todos.Count == 1 ? "lote" : "lotes")}"
-                : $"{Items.Count} de {_todos.Count}";
+            return Items.Count == total
+                ? $"{total} {(total == 1 ? "lote" : "lotes")}"
+                : $"{Items.Count} de {total}";
         }
     }
 }

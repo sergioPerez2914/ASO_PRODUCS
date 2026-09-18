@@ -58,6 +58,13 @@ public static class Iconos
     public const string Pedidos =          "";     // clipboard-text U+E398
     public const string Reportes =         ""; // chart-bar
 
+    // Confirmado en dos pasos (no "mejor esfuerzo" como los de arriba): contra
+    // @phosphor-icons/web/src/regular/style.css Y contra el cmap real de
+    // Assets/Fonts/Phosphor.ttf (el glifo esta embebido).
+    public const string ProductoDerivado = ""; // flow-arrow U+E6EC - marca en la
+                                                // tarjeta del catalogo que un producto sale
+                                                // de transformar otro (presentacion/subproducto)
+
     public const string Administracion =   "";     // shield-check U+E40C
     public const string Configuracion =    "";     // gear U+E270
 

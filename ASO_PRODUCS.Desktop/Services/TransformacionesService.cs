@@ -57,6 +57,13 @@ public sealed class TransformacionesService
 
     public IReadOnlyList<Producto> ProductosDerivados() => _productos.DerivadosActivos();
 
+    /// <summary>Catálogos para el combo de origen del consumo adicional del editor (Materia prima,
+    /// Inventario, Producto): el editor no tiene por qué conocer <see cref="MateriaPrimaService"/>/
+    /// <see cref="InventarioService"/> de por sí, ya están inyectados aquí.</summary>
+    public IReadOnlyList<TipoMateriaPrima> TiposMateriaPrima() => _materiaPrima.TiposActivos();
+
+    public IReadOnlyList<Articulo> Articulos() => _inventario.ArticulosActivos();
+
     /// <summary>Foto de las existencias que usa <see cref="Planificar"/>: el formulario la toma una
     /// vez al abrir para que la vista previa no relea la base en cada tecla. La transformación
     /// real toma una nueva, y el servicio de procesos vuelve a validar en vivo.</summary>
@@ -148,9 +155,15 @@ public sealed class TransformacionesService
     /// Inicia el proceso de transformación con el consumo planeado y, si
     /// <paramref name="terminarAhora"/>, lo termina en el mismo paso (un fraccionado no tiene
     /// etapas). Si no, queda En proceso para seguir por etapas como cualquier otro.
+    ///
+    /// <paramref name="extra"/> es lo que el operador agregó a mano en el formulario —merma,
+    /// consumo no previsto en la receta—, mismo mecanismo que la grilla de líneas manuales de
+    /// "Iniciar proceso". Se funde con lo que propone la receta antes de pasarlo a
+    /// <see cref="ProcesosProduccionService"/>: ver <see cref="Fundir"/>.
     /// </summary>
     public ProcesoProduccion Transformar(Producto derivado, decimal unidades, int? loteId, bool terminarAhora,
-                                         DateTime? fechaVencimiento, string observaciones, int usuarioId)
+                                         DateTime? fechaVencimiento, string observaciones, int usuarioId,
+                                         IReadOnlyList<ProcesoProduccionLineaInicial>? extra = null)
     {
         if (!derivado.EsDerivado)
             throw new InvalidOperationException($"{derivado.Nombre} no está configurado como presentación de otro producto.");
@@ -171,7 +184,30 @@ public sealed class TransformacionesService
             UnidadMedidaSnapshot = derivado.UnidadMedida,
             CantidadPlaneada = unidades,
             Observaciones = observaciones.Trim(),
-            LineasIniciales = [.. plan.Select(c => new ProcesoProduccionLineaInicial
+            LineasIniciales = Fundir(plan, extra ?? [])
+        };
+
+        var iniciado = _procesos.Iniciar(proceso, usuarioId);
+
+        return terminarAhora
+            ? _procesos.Terminar(iniciado, unidades, fechaVencimiento, new EtapaProcesoProduccion(), usuarioId)
+            : iniciado;
+    }
+
+    /// <summary>
+    /// Junta la receta con lo agregado a mano, sumando cantidades cuando coinciden en
+    /// <c>(Origen, MaterialId, LoteProcesoId)</c> — sin esto, agregar a mano un Pote extra cuando
+    /// la receta ya propone uno choca con la guarda de línea duplicada de
+    /// <c>ProcesosProduccionService.ValidarLineas</c> ("está en más de una línea con el mismo
+    /// motivo"), que tiene sentido para dos líneas cargadas a mano por error pero no para la
+    /// receta (que el operador no ve en esta misma grilla) más un extra legítimo del mismo
+    /// material.
+    /// </summary>
+    private static List<ProcesoProduccionLineaInicial> Fundir(IReadOnlyList<ConsumoPlaneado> plan,
+                                                               IReadOnlyList<ProcesoProduccionLineaInicial> extra)
+    {
+        var todas = plan
+            .Select(c => new ProcesoProduccionLineaInicial
             {
                 Origen = c.Origen,
                 MaterialId = c.MaterialId,
@@ -180,13 +216,20 @@ public sealed class TransformacionesService
                 Cantidad = c.Cantidad,
                 LoteProcesoId = c.LoteProcesoId,
                 LoteNumero = c.LoteNumero
-            })]
-        };
+            })
+            .Concat(extra);
 
-        var iniciado = _procesos.Iniciar(proceso, usuarioId);
-
-        return terminarAhora
-            ? _procesos.Terminar(iniciado, unidades, fechaVencimiento, new EtapaProcesoProduccion(), usuarioId)
-            : iniciado;
+        return [.. todas
+            .GroupBy(l => (l.Origen, l.MaterialId, l.LoteProcesoId))
+            .Select(g => g.Count() == 1 ? g.First() : new ProcesoProduccionLineaInicial
+            {
+                Origen = g.Key.Origen,
+                MaterialId = g.Key.MaterialId,
+                MaterialNombre = g.First().MaterialNombre,
+                UnidadMedidaSnapshot = g.First().UnidadMedidaSnapshot,
+                Cantidad = g.Sum(l => l.Cantidad),
+                LoteProcesoId = g.Key.LoteProcesoId,
+                LoteNumero = g.First().LoteNumero
+            })];
     }
 }

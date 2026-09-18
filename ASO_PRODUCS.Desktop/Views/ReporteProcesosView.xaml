@@ -65,6 +65,9 @@
       <RadioButton Content="Consumo de insumos" GroupName="VistaReporteProcesos"
                    Style="{StaticResource SegmentedTabStyle}"
                    IsChecked="{Binding EsConsumo, Mode=TwoWay}" />
+      <RadioButton Content="Consumo de lotes" GroupName="VistaReporteProcesos"
+                   Style="{StaticResource SegmentedTabStyle}"
+                   IsChecked="{Binding EsLotes, Mode=TwoWay}" />
       <RadioButton Content="Costos" GroupName="VistaReporteProcesos"
                    Style="{StaticResource SegmentedTabStyle}"
                    IsChecked="{Binding EsCostos, Mode=TwoWay}" />
@@ -115,6 +118,37 @@
                                Titulo="No hay consumo registrado en el período"
                                Detalle="El consumo sale de las salidas de materia prima e inventario que generan los procesos."
                                Visibility="{Binding HasItems, ElementName=TablaConsumo, Converter={StaticResource SinItemsAVis}}" />
+        </Grid>
+      </Border>
+    </Grid>
+
+    <!-- ===================== Consumo de lotes (transformaciones) =====================
+         A diferencia de "Consumo de insumos", esto NUNCA generó una Salida en otro módulo (ver
+         "Productos derivados" en CLAUDE.md): sin esta tabla no había ningún lugar donde ver, por
+         período, qué transformación se llevó qué de cada lote — solo la ficha de cada proceso, de
+         a uno. Cada fila es una línea, sin agrupar: agregarlas por día+material escondería
+         justo el rastro que se pide ver (qué proceso consumió qué lote). -->
+    <Grid Grid.Row="4" Margin="0,16,0,0"
+          Visibility="{Binding MostrarLotes, Converter={StaticResource BoolToVis}}">
+      <Border Style="{StaticResource SectionCardStyle}" Padding="0">
+        <Grid>
+          <DataGrid x:Name="TablaLotes" Style="{StaticResource DataGridStyle}"
+                    ItemsSource="{Binding Lotes}" IsReadOnly="True">
+            <DataGrid.Columns>
+              <controls:ColumnaTexto Header="Fecha" Binding="{Binding FechaTexto}" Width="12*" MinWidth="90" />
+              <controls:ColumnaTexto Header="Proceso" Binding="{Binding ProcesoNumero}" Width="12*" MinWidth="90" />
+              <controls:ColumnaTexto Header="Se obtiene" Binding="{Binding ProductoObtenido}" Width="18*" MinWidth="130" />
+              <controls:ColumnaTexto Header="Lote consumido" Binding="{Binding LoteNumero}" Width="14*" MinWidth="100" />
+              <controls:ColumnaTexto Header="Producto del lote" Binding="{Binding MaterialNombre}" Width="18*" MinWidth="130" />
+              <controls:ColumnaNumero Header="Cantidad" Binding="{Binding CantidadTexto}" Width="14*" MinWidth="100" />
+              <controls:ColumnaTexto Header="Motivo" Binding="{Binding MotivoTexto}" Width="12*" MinWidth="90" />
+            </DataGrid.Columns>
+          </DataGrid>
+
+          <controls:EmptyState Icono="{x:Static controls:Iconos.ProductoDerivado}"
+                               Titulo="No hay consumo de lotes en el período"
+                               Detalle="Se llena cuando una transformación (Mantequilla 200 g, Ghee…) consume un lote de otro producto."
+                               Visibility="{Binding HasItems, ElementName=TablaLotes, Converter={StaticResource SinItemsAVis}}" />
         </Grid>
       </Border>
     </Grid>
