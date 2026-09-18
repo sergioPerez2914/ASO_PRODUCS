@@ -43,65 +43,74 @@
     </Grid>
 
     <!-- Tipos de materia prima que salen -->
-    <TextBlock Text="Materia prima que sale" Style="{StaticResource CardTitleStyle}" Margin="0,20,0,8" />
+    <TextBlock Text="Materia prima que sale" Style="{StaticResource CardTitleStyle}" Margin="{StaticResource TkTituloDeBloque}" />
 
     <Border Style="{StaticResource SectionCardStyle}" Padding="0">
-      <DataGrid Style="{StaticResource DataGridStyle}"
-                ItemsSource="{Binding Lineas}"
-                IsReadOnly="True"
-                MaxHeight="260"
-                HeadersVisibility="Column"
-                CanUserSortColumns="False">
-        <DataGrid.Columns>
-          <DataGridTemplateColumn Header="Tipo" Width="36*" MinWidth="220">
-            <DataGridTemplateColumn.CellTemplate>
-              <DataTemplate>
-                <ComboBox Style="{StaticResource LineaComboBoxStyle}"
-                          ItemsSource="{Binding Tipos}"
-                          DisplayMemberPath="Nombre"
-                          SelectedItem="{Binding TipoSeleccionado, UpdateSourceTrigger=PropertyChanged}" />
-              </DataTemplate>
-            </DataGridTemplateColumn.CellTemplate>
-          </DataGridTemplateColumn>
+      <Grid>
+        <DataGrid x:Name="TablaLineas" Style="{StaticResource DataGridStyle}"
+                  ItemsSource="{Binding Lineas}"
+                  IsReadOnly="True"
+                  MaxHeight="260"
+                  HeadersVisibility="Column"
+                  CanUserSortColumns="False">
+          <DataGrid.Columns>
+            <DataGridTemplateColumn Header="Tipo" Width="36*" MinWidth="220">
+              <DataGridTemplateColumn.CellTemplate>
+                <DataTemplate>
+                  <ComboBox Style="{StaticResource LineaComboBoxStyle}"
+                            ItemsSource="{Binding Tipos}"
+                            DisplayMemberPath="Nombre"
+                            SelectedItem="{Binding TipoSeleccionado, UpdateSourceTrigger=PropertyChanged}" />
+                </DataTemplate>
+              </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
 
-          <controls:ColumnaNumero Header="Disponible" Binding="{Binding DisponibleTexto}" Width="16*" MinWidth="96" />
+            <controls:ColumnaNumero Header="Disponible" Binding="{Binding DisponibleTexto}" Width="16*" MinWidth="96" />
 
-          <DataGridTemplateColumn Header="Cantidad" Width="16*" MinWidth="100">
-            <DataGridTemplateColumn.CellTemplate>
-              <DataTemplate>
-                <TextBox TextAlignment="Right"
-                         Text="{Binding Cantidad, UpdateSourceTrigger=PropertyChanged}">
-                  <TextBox.Style>
-                    <!-- Aviso inmediato de que se pide más de lo que hay en existencia. Quien
-                         decide de verdad es SalidasMateriaPrimaService.Validar al registrar. -->
-                    <Style TargetType="TextBox" BasedOn="{StaticResource LineaTextBoxStyle}">
-                      <Style.Triggers>
-                        <DataTrigger Binding="{Binding SePasa}" Value="True">
-                          <Setter Property="BorderBrush" Value="{DynamicResource DangerTextBrush}" />
-                          <Setter Property="Foreground" Value="{DynamicResource DangerTextBrush}" />
-                          <Setter Property="ToolTip" Value="No hay tanta existencia de este tipo." />
-                        </DataTrigger>
-                      </Style.Triggers>
-                    </Style>
-                  </TextBox.Style>
-                </TextBox>
-              </DataTemplate>
-            </DataGridTemplateColumn.CellTemplate>
-          </DataGridTemplateColumn>
+            <DataGridTemplateColumn Header="Cantidad" Width="16*" MinWidth="100">
+              <DataGridTemplateColumn.CellTemplate>
+                <DataTemplate>
+                  <TextBox TextAlignment="Right"
+                           Text="{Binding Cantidad, UpdateSourceTrigger=PropertyChanged}">
+                    <TextBox.Style>
+                      <!-- Aviso inmediato de que se pide más de lo que hay en existencia. Quien
+                           decide de verdad es SalidasMateriaPrimaService.Validar al registrar. -->
+                      <Style TargetType="TextBox" BasedOn="{StaticResource LineaTextBoxStyle}">
+                        <Style.Triggers>
+                          <DataTrigger Binding="{Binding SePasa}" Value="True">
+                            <Setter Property="BorderBrush" Value="{DynamicResource DangerTextBrush}" />
+                            <Setter Property="Foreground" Value="{DynamicResource DangerTextBrush}" />
+                            <Setter Property="ToolTip" Value="No hay tanta existencia de este tipo." />
+                          </DataTrigger>
+                        </Style.Triggers>
+                      </Style>
+                    </TextBox.Style>
+                  </TextBox>
+                </DataTemplate>
+              </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
 
-          <DataGridTemplateColumn Width="56">
-            <DataGridTemplateColumn.CellTemplate>
-              <DataTemplate>
-                <Button Content="{x:Static controls:Iconos.Limpiar}"
-                        Style="{StaticResource LineaBotonQuitarStyle}"
-                        ToolTip="Quitar esta línea"
-                        Command="{Binding Datos.QuitarLineaCommand, Source={StaticResource Puente}}"
-                        CommandParameter="{Binding}" />
-              </DataTemplate>
-            </DataGridTemplateColumn.CellTemplate>
-          </DataGridTemplateColumn>
-        </DataGrid.Columns>
-      </DataGrid>
+            <DataGridTemplateColumn Width="56">
+              <DataGridTemplateColumn.CellTemplate>
+                <DataTemplate>
+                  <Button Content="{x:Static controls:Iconos.Limpiar}"
+                          Style="{StaticResource LineaBotonQuitarStyle}"
+                          ToolTip="Quitar esta línea"
+                          Command="{Binding Datos.QuitarLineaCommand, Source={StaticResource Puente}}"
+                          CommandParameter="{Binding}" />
+                </DataTemplate>
+              </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
+          </DataGrid.Columns>
+        </DataGrid>
+
+        <controls:EmptyState Compacto="True"
+                             Icono="{x:Static controls:Iconos.Salidas}"
+                             Titulo="Sin materia prima todavía"
+                             Detalle="Agregue con «Agregar línea» lo que sale."
+                             Visibility="{Binding HasItems, ElementName=TablaLineas,
+                                                  Converter={StaticResource SinItemsAVis}}" />
+      </Grid>
     </Border>
 
     <Grid Margin="0,12,0,0">

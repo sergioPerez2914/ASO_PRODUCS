@@ -113,66 +113,75 @@
     </controls:FormField>
 
     <!-- Tipos de materia prima que llegan -->
-    <TextBlock Text="Materia prima que llega" Style="{StaticResource CardTitleStyle}" Margin="0,20,0,8" />
+    <TextBlock Text="Materia prima que llega" Style="{StaticResource CardTitleStyle}" Margin="{StaticResource TkTituloDeBloque}" />
 
     <Border Style="{StaticResource SectionCardStyle}" Padding="0">
-      <DataGrid Style="{StaticResource DataGridStyle}"
-                ItemsSource="{Binding Lineas}"
-                IsReadOnly="True"
-                MaxHeight="260"
-                HeadersVisibility="Column"
-                CanUserSortColumns="False">
-        <DataGrid.Columns>
-          <DataGridTemplateColumn Header="Tipo" Width="30*" MinWidth="180">
-            <DataGridTemplateColumn.CellTemplate>
-              <DataTemplate>
-                <ComboBox Style="{StaticResource LineaComboBoxStyle}"
-                          ItemsSource="{Binding Tipos}"
-                          DisplayMemberPath="Nombre"
-                          SelectedItem="{Binding TipoSeleccionado, UpdateSourceTrigger=PropertyChanged}" />
-              </DataTemplate>
-            </DataGridTemplateColumn.CellTemplate>
-          </DataGridTemplateColumn>
+      <Grid>
+        <DataGrid x:Name="TablaLineas" Style="{StaticResource DataGridStyle}"
+                  ItemsSource="{Binding Lineas}"
+                  IsReadOnly="True"
+                  MaxHeight="260"
+                  HeadersVisibility="Column"
+                  CanUserSortColumns="False">
+          <DataGrid.Columns>
+            <DataGridTemplateColumn Header="Tipo" Width="30*" MinWidth="180">
+              <DataGridTemplateColumn.CellTemplate>
+                <DataTemplate>
+                  <ComboBox Style="{StaticResource LineaComboBoxStyle}"
+                            ItemsSource="{Binding Tipos}"
+                            DisplayMemberPath="Nombre"
+                            SelectedItem="{Binding TipoSeleccionado, UpdateSourceTrigger=PropertyChanged}" />
+                </DataTemplate>
+              </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
 
-          <controls:ColumnaNumero Header="Existencia" Binding="{Binding ExistenciaTexto}" Width="14*" MinWidth="90" />
+            <controls:ColumnaNumero Header="Existencia" Binding="{Binding ExistenciaTexto}" Width="14*" MinWidth="90" />
 
-          <DataGridTemplateColumn Header="Cantidad" Width="14*" MinWidth="100">
-            <DataGridTemplateColumn.CellTemplate>
-              <DataTemplate>
-                <TextBox Style="{StaticResource LineaTextBoxStyle}" TextAlignment="Right"
-                         Text="{Binding Cantidad, UpdateSourceTrigger=PropertyChanged}" />
-              </DataTemplate>
-            </DataGridTemplateColumn.CellTemplate>
-          </DataGridTemplateColumn>
+            <DataGridTemplateColumn Header="Cantidad" Width="14*" MinWidth="100">
+              <DataGridTemplateColumn.CellTemplate>
+                <DataTemplate>
+                  <TextBox Style="{StaticResource LineaTextBoxStyle}" TextAlignment="Right"
+                           Text="{Binding Cantidad, UpdateSourceTrigger=PropertyChanged}" />
+                </DataTemplate>
+              </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
 
-          <DataGridTemplateColumn Header="Precio" Width="14*" MinWidth="90"
-                                  Visibility="{Binding Datos.MuestraPrecios, Source={StaticResource Puente},
-                                                       Converter={StaticResource BoolToVis}}">
-            <DataGridTemplateColumn.CellTemplate>
-              <DataTemplate>
-                <TextBox Style="{StaticResource LineaTextBoxStyle}" TextAlignment="Right"
-                         Text="{Binding PrecioUnitario, UpdateSourceTrigger=PropertyChanged}" />
-              </DataTemplate>
-            </DataGridTemplateColumn.CellTemplate>
-          </DataGridTemplateColumn>
+            <DataGridTemplateColumn Header="Precio" Width="14*" MinWidth="90"
+                                    Visibility="{Binding Datos.MuestraPrecios, Source={StaticResource Puente},
+                                                         Converter={StaticResource BoolToVis}}">
+              <DataGridTemplateColumn.CellTemplate>
+                <DataTemplate>
+                  <TextBox Style="{StaticResource LineaTextBoxStyle}" TextAlignment="Right"
+                           Text="{Binding PrecioUnitario, UpdateSourceTrigger=PropertyChanged}" />
+                </DataTemplate>
+              </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
 
-          <controls:ColumnaNumero Header="Subtotal" Binding="{Binding SubtotalTexto}" Width="14*" MinWidth="90"
-                                  Visibility="{Binding Datos.MuestraPrecios, Source={StaticResource Puente},
-                                                       Converter={StaticResource BoolToVis}}" />
+            <controls:ColumnaNumero Header="Subtotal" Binding="{Binding SubtotalTexto}" Width="14*" MinWidth="90"
+                                    Visibility="{Binding Datos.MuestraPrecios, Source={StaticResource Puente},
+                                                         Converter={StaticResource BoolToVis}}" />
 
-          <DataGridTemplateColumn Width="56">
-            <DataGridTemplateColumn.CellTemplate>
-              <DataTemplate>
-                <Button Content="{x:Static controls:Iconos.Limpiar}"
-                        Style="{StaticResource LineaBotonQuitarStyle}"
-                        ToolTip="Quitar esta línea"
-                        Command="{Binding Datos.QuitarLineaCommand, Source={StaticResource Puente}}"
-                        CommandParameter="{Binding}" />
-              </DataTemplate>
-            </DataGridTemplateColumn.CellTemplate>
-          </DataGridTemplateColumn>
-        </DataGrid.Columns>
-      </DataGrid>
+            <DataGridTemplateColumn Width="56">
+              <DataGridTemplateColumn.CellTemplate>
+                <DataTemplate>
+                  <Button Content="{x:Static controls:Iconos.Limpiar}"
+                          Style="{StaticResource LineaBotonQuitarStyle}"
+                          ToolTip="Quitar esta línea"
+                          Command="{Binding Datos.QuitarLineaCommand, Source={StaticResource Puente}}"
+                          CommandParameter="{Binding}" />
+                </DataTemplate>
+              </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
+          </DataGrid.Columns>
+        </DataGrid>
+
+        <controls:EmptyState Compacto="True"
+                             Icono="{x:Static controls:Iconos.Entradas}"
+                             Titulo="Sin materia prima todavía"
+                             Detalle="Agregue con «Agregar línea» lo que se recibe."
+                             Visibility="{Binding HasItems, ElementName=TablaLineas,
+                                                  Converter={StaticResource SinItemsAVis}}" />
+      </Grid>
     </Border>
 
     <Grid Margin="0,12,0,0">

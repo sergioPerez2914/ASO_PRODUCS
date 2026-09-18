@@ -52,6 +52,12 @@
          dentada. -->
     <Style TargetType="Button">
         <Setter Property="FontFamily" Value="{DynamicResource AppFont}" />
+        <!-- El tooltip se ve TAMBIEN con el boton apagado, y ese es justo el momento en que hace
+             falta: los botones se deshabilitan por permiso (CrudViewModelBase) o por el estado
+             del documento, se atenuan a Opacity 0.45 mas abajo, y sin esto lo unico que veia
+             quien no podia pulsarlos era un boton gris sin explicacion — el tooltip que la daba
+             es lo primero que WPF deja de mostrar en un control deshabilitado. -->
+        <Setter Property="ToolTipService.ShowOnDisabled" Value="True" />
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
         <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />

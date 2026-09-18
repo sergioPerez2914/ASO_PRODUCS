@@ -85,7 +85,7 @@
                           <!-- Cuantas cosas esperan aqui. Hoy solo Peticiones: la bandeja no
                                decia cuantas solicitudes tenia sin resolver, asi que habia que
                                entrar para saber si habia trabajo. -->
-                          <Border Grid.Column="2" Margin="8,0,4,0" Padding="8,1"
+                          <Border Grid.Column="2" Margin="8,0,4,0" Padding="{StaticResource TkChip}"
                                   VerticalAlignment="Center"
                                   CornerRadius="{StaticResource RadPill}"
                                   Background="{DynamicResource WarningSoftBrush}"
@@ -119,6 +119,11 @@
                           <TranslateTransform x:Name="Deslizar" Y="0" />
                         </Grid.RenderTransform>
 
+                        <!-- El 29 no es un espaciado, es una alineacion optica: la guia cae en el
+                             centro del icono del modulo de arriba. Por eso no se lleva a la
+                             escala de 4 como el resto de los margenes de la aplicacion —
+                             redondearlo a 28 o 32 la descuadra del icono, que es lo unico que
+                             esta linea tiene que decir. -->
                         <Border Width="1" HorizontalAlignment="Left" Margin="29,4,0,4"
                                 Background="{DynamicResource SidebarBorderBrush}" />
 

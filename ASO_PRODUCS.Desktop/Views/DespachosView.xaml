@@ -1,0 +1,116 @@
+<UserControl x:Class="ASO_PRODUCS.Desktop.Views.DespachosView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:controls="clr-namespace:ASO_PRODUCS.Desktop.Controls"
+             mc:Ignorable="d"
+             d:DesignHeight="640" d:DesignWidth="1100">
+
+  <Grid Style="{StaticResource PantallaPlenaStyle}">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto" />
+      <RowDefinition Height="*" />
+    </Grid.RowDefinitions>
+
+    <controls:PageHeader Grid.Row="0"
+                         Titulo="{Binding Submodulo.Nombre}"
+                         Descripcion="{Binding Submodulo.Descripcion}" />
+
+    <Grid Grid.Row="1" Margin="0,16,0,0" DataContext="{Binding Despachos}">
+      <Grid.RowDefinitions>
+        <RowDefinition Height="Auto" />
+        <RowDefinition Height="Auto" />
+        <RowDefinition Height="*" />
+      </Grid.RowDefinitions>
+
+      <Border Grid.Row="0" Style="{StaticResource ToolbarStyle}">
+        <Grid>
+          <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+          </Grid.RowDefinitions>
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="Auto" />
+          </Grid.ColumnDefinitions>
+
+          <WrapPanel Grid.Row="0" Grid.Column="0" VerticalAlignment="Center">
+            <controls:SearchBox Width="280" Margin="0,0,12,0" VerticalAlignment="Center"
+                                Texto="{Binding TextoBusqueda, Mode=TwoWay}" />
+
+            <controls:FiltroDropdown Style="{StaticResource FiltroDropdownStyle}" SelectedIndex="0"
+                                     Margin="0,0,12,0" VerticalAlignment="Center"
+                                     Command="{Binding CambiarFiltroCommand}">
+              <ComboBoxItem Content="Todos" />
+              <ComboBoxItem Content="Ventas" />
+              <ComboBoxItem Content="Ajustes" />
+              <ComboBoxItem Content="Anulados" />
+            </controls:FiltroDropdown>
+            <TextBlock Text="{Binding Conteo}" VerticalAlignment="Center"
+                       FontSize="{StaticResource FsCaption}"
+                       Foreground="{DynamicResource TextMutedBrush}" />
+          </WrapPanel>
+
+          <TextBlock Grid.Row="0" Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center"
+                     Text="{Binding Resumen}" FontSize="{StaticResource FsBody}"
+                     Foreground="{DynamicResource TextSecondaryBrush}" />
+
+          <StackPanel Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Orientation="Horizontal"
+                      Margin="0,12,0,0">
+            <Button Content="Registrar ajuste" Style="{StaticResource PrimaryButtonStyle}"
+                    Command="{Binding AgregarCommand}"
+                    ToolTip="Registra un ajuste de existencia de producto terminado; no genera cuenta por cobrar." />
+            <Button Content="Ver cuenta por cobrar" Style="{StaticResource SecondaryButtonStyle}"
+                    Command="{Binding VerFacturaCommand}"
+                    ToolTip="Abre Finanzas · Cuentas por Cobrar con la factura que generó este despacho ya marcada." />
+            <Button Content="Imprimir" Style="{StaticResource SecondaryButtonStyle}"
+                    Command="{Binding ImprimirCommand}"
+                    ToolTip="Saca el documento por la impresora, tal como se ve aquí." />
+            <Button Content="Anular" Style="{StaticResource SecondaryButtonStyle}"
+                    Foreground="{DynamicResource DangerTextBrush}"
+                    Command="{Binding AnularCommand}" />
+          </StackPanel>
+        </Grid>
+      </Border>
+
+      <TextBlock Grid.Row="1" Text="Doble clic o Enter sobre una fila para ver el detalle completo del despacho."
+                 Margin="0,12,0,4" FontSize="{StaticResource FsCaption}"
+                 Foreground="{DynamicResource TextMutedBrush}" />
+
+      <Border Grid.Row="2" Style="{StaticResource SectionCardStyle}" Padding="0">
+        <Grid>
+          <DataGrid x:Name="TablaDespachos" Style="{StaticResource DataGridStyle}"
+                    ItemsSource="{Binding ItemsView}"
+                    SelectedItem="{Binding SelectedItem}"
+                    controls:AbrirFila.Comando="{Binding VerDetalleCommand}">
+            <DataGrid.Columns>
+              <controls:ColumnaTexto Header="Nº" Binding="{Binding Numero}" Width="10*" MinWidth="80" />
+              <controls:ColumnaTexto Header="Fecha" Binding="{Binding FechaTexto}" Width="8*" MinWidth="72" />
+              <controls:ColumnaTexto Header="Tipo" Binding="{Binding TipoTexto}" Width="8*" MinWidth="64" />
+              <controls:ColumnaTexto Header="Cliente" Binding="{Binding ClienteNombre}" Width="16*" MinWidth="100" />
+              <controls:ColumnaTexto Header="Autorizó" Binding="{Binding AutorizadoPorNombre}" Width="14*" MinWidth="100" />
+              <controls:ColumnaNumero Header="Unidades" Binding="{Binding TotalCantidad, StringFormat=N2}" Width="10*" MinWidth="76" />
+              <controls:ColumnaNumero Header="Monto" Binding="{Binding TotalTexto}" Width="10*" MinWidth="76" />
+              <controls:ColumnaTexto Header="Cta. x cobrar" Binding="{Binding CuentaPorCobrarTexto}" Width="12*" MinWidth="90" />
+              <DataGridTemplateColumn Header="Estado" Width="96">
+                <DataGridTemplateColumn.CellTemplate>
+                  <DataTemplate>
+                    <Border Style="{StaticResource ChipEstadoDespachoStyle}">
+                      <TextBlock Text="{Binding EstadoTexto}" FontSize="{StaticResource FsCaption}" />
+                    </Border>
+                  </DataTemplate>
+                </DataGridTemplateColumn.CellTemplate>
+              </DataGridTemplateColumn>
+            </DataGrid.Columns>
+          </DataGrid>
+
+          <controls:EmptyState Icono="{x:Static controls:Iconos.Despacho}"
+                               Titulo="No hay despachos registrados"
+                               Detalle="Los despachos de Venta salen de &quot;Despachar pedido&quot;, en Procesos · Pedidos; un ajuste se registra directo desde acá."
+                               Visibility="{Binding HasItems, ElementName=TablaDespachos, Converter={StaticResource SinItemsAVis}}" />
+        </Grid>
+      </Border>
+    </Grid>
+  </Grid>
+</UserControl>

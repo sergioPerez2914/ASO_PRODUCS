@@ -20,6 +20,8 @@ public sealed class UsuariosCrudViewModel : CrudViewModelBase<Usuario, int>
 
     protected override string ModuloPermiso => "Usuarios";
 
+    protected override string Describir(Usuario item) => item.NombreUsuario;
+
     protected override bool CoincideBusqueda(Usuario item, string texto) =>
         item.NombreUsuario.Contains(texto, StringComparison.OrdinalIgnoreCase)
         || item.NombreCompleto.Contains(texto, StringComparison.OrdinalIgnoreCase)

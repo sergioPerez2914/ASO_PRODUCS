@@ -53,80 +53,89 @@
     </Grid>
 
     <!-- Consumo inicial: opcional, se puede consumir todo por etapas después. -->
-    <TextBlock Text="Consumo al iniciar (opcional)" Style="{StaticResource CardTitleStyle}" Margin="0,20,0,8" />
+    <TextBlock Text="Consumo al iniciar (opcional)" Style="{StaticResource CardTitleStyle}" Margin="{StaticResource TkTituloDeBloque}" />
 
     <Border Style="{StaticResource SectionCardStyle}" Padding="0">
-      <DataGrid Style="{StaticResource DataGridStyle}"
-                ItemsSource="{Binding LineasIniciales}"
-                IsReadOnly="True"
-                MaxHeight="260"
-                HeadersVisibility="Column"
-                CanUserSortColumns="False">
-        <DataGrid.Columns>
-          <DataGridTemplateColumn Header="Origen" Width="14*" MinWidth="110">
-            <DataGridTemplateColumn.CellTemplate>
-              <DataTemplate>
-                <ComboBox Style="{StaticResource LineaComboBoxStyle}"
-                          SelectedValuePath="Tag"
-                          SelectedValue="{Binding OrigenSeleccionado, UpdateSourceTrigger=PropertyChanged}">
-                  <ComboBoxItem Content="Materia prima" Tag="{x:Static models:OrigenMaterial.MateriaPrima}" />
-                  <ComboBoxItem Content="Inventario" Tag="{x:Static models:OrigenMaterial.Articulo}" />
-                  <ComboBoxItem Content="Producto (lote)" Tag="{x:Static models:OrigenMaterial.Producto}" />
-                </ComboBox>
-              </DataTemplate>
-            </DataGridTemplateColumn.CellTemplate>
-          </DataGridTemplateColumn>
-
-          <DataGridTemplateColumn Header="Material" Width="34*" MinWidth="220">
-            <DataGridTemplateColumn.CellTemplate>
-              <DataTemplate>
-                <!-- Tres ComboBox superpuestos: la visibilidad es un binding LOCAL a la fila
-                     (EsMateriaPrima/EsArticulo/EsProducto), no necesita PuenteDeDatos. -->
-                <Grid>
+      <Grid>
+        <DataGrid x:Name="TablaLineas" Style="{StaticResource DataGridStyle}"
+                  ItemsSource="{Binding LineasIniciales}"
+                  IsReadOnly="True"
+                  MaxHeight="260"
+                  HeadersVisibility="Column"
+                  CanUserSortColumns="False">
+          <DataGrid.Columns>
+            <DataGridTemplateColumn Header="Origen" Width="14*" MinWidth="110">
+              <DataGridTemplateColumn.CellTemplate>
+                <DataTemplate>
                   <ComboBox Style="{StaticResource LineaComboBoxStyle}"
-                            ItemsSource="{Binding TiposMateriaPrima}"
-                            DisplayMemberPath="Nombre"
-                            SelectedItem="{Binding TipoSeleccionado, UpdateSourceTrigger=PropertyChanged}"
-                            Visibility="{Binding EsMateriaPrima, Converter={StaticResource BoolToVis}}" />
-                  <ComboBox Style="{StaticResource LineaComboBoxStyle}"
-                            ItemsSource="{Binding Articulos}"
-                            DisplayMemberPath="Etiqueta"
-                            SelectedItem="{Binding ArticuloSeleccionado, UpdateSourceTrigger=PropertyChanged}"
-                            Visibility="{Binding EsArticulo, Converter={StaticResource BoolToVis}}" />
-                  <ComboBox Style="{StaticResource LineaComboBoxStyle}"
-                            ItemsSource="{Binding Lotes}"
-                            DisplayMemberPath="EtiquetaConProducto"
-                            SelectedItem="{Binding LoteSeleccionado, UpdateSourceTrigger=PropertyChanged}"
-                            Visibility="{Binding EsProducto, Converter={StaticResource BoolToVis}}" />
-                </Grid>
-              </DataTemplate>
-            </DataGridTemplateColumn.CellTemplate>
-          </DataGridTemplateColumn>
+                            SelectedValuePath="Tag"
+                            SelectedValue="{Binding OrigenSeleccionado, UpdateSourceTrigger=PropertyChanged}">
+                    <ComboBoxItem Content="Materia prima" Tag="{x:Static models:OrigenMaterial.MateriaPrima}" />
+                    <ComboBoxItem Content="Inventario" Tag="{x:Static models:OrigenMaterial.Articulo}" />
+                    <ComboBoxItem Content="Producto (lote)" Tag="{x:Static models:OrigenMaterial.Producto}" />
+                  </ComboBox>
+                </DataTemplate>
+              </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
 
-          <controls:ColumnaTexto Header="Unidad" Binding="{Binding UnidadTexto}" Width="10*" MinWidth="70" />
+            <DataGridTemplateColumn Header="Material" Width="34*" MinWidth="220">
+              <DataGridTemplateColumn.CellTemplate>
+                <DataTemplate>
+                  <!-- Tres ComboBox superpuestos: la visibilidad es un binding LOCAL a la fila
+                       (EsMateriaPrima/EsArticulo/EsProducto), no necesita PuenteDeDatos. -->
+                  <Grid>
+                    <ComboBox Style="{StaticResource LineaComboBoxStyle}"
+                              ItemsSource="{Binding TiposMateriaPrima}"
+                              DisplayMemberPath="Nombre"
+                              SelectedItem="{Binding TipoSeleccionado, UpdateSourceTrigger=PropertyChanged}"
+                              Visibility="{Binding EsMateriaPrima, Converter={StaticResource BoolToVis}}" />
+                    <ComboBox Style="{StaticResource LineaComboBoxStyle}"
+                              ItemsSource="{Binding Articulos}"
+                              DisplayMemberPath="Etiqueta"
+                              SelectedItem="{Binding ArticuloSeleccionado, UpdateSourceTrigger=PropertyChanged}"
+                              Visibility="{Binding EsArticulo, Converter={StaticResource BoolToVis}}" />
+                    <ComboBox Style="{StaticResource LineaComboBoxStyle}"
+                              ItemsSource="{Binding Lotes}"
+                              DisplayMemberPath="EtiquetaConProducto"
+                              SelectedItem="{Binding LoteSeleccionado, UpdateSourceTrigger=PropertyChanged}"
+                              Visibility="{Binding EsProducto, Converter={StaticResource BoolToVis}}" />
+                  </Grid>
+                </DataTemplate>
+              </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
 
-          <DataGridTemplateColumn Header="Cantidad" Width="14*" MinWidth="100">
-            <DataGridTemplateColumn.CellTemplate>
-              <DataTemplate>
-                <TextBox Style="{StaticResource LineaTextBoxStyle}" TextAlignment="Right"
-                         Text="{Binding Cantidad, UpdateSourceTrigger=PropertyChanged}" />
-              </DataTemplate>
-            </DataGridTemplateColumn.CellTemplate>
-          </DataGridTemplateColumn>
+            <controls:ColumnaTexto Header="Unidad" Binding="{Binding UnidadTexto}" Width="10*" MinWidth="70" />
 
-          <DataGridTemplateColumn Width="56">
-            <DataGridTemplateColumn.CellTemplate>
-              <DataTemplate>
-                <Button Content="{x:Static controls:Iconos.Limpiar}"
-                        Style="{StaticResource LineaBotonQuitarStyle}"
-                        ToolTip="Quitar esta línea"
-                        Command="{Binding Datos.QuitarLineaCommand, Source={StaticResource Puente}}"
-                        CommandParameter="{Binding}" />
-              </DataTemplate>
-            </DataGridTemplateColumn.CellTemplate>
-          </DataGridTemplateColumn>
-        </DataGrid.Columns>
-      </DataGrid>
+            <DataGridTemplateColumn Header="Cantidad" Width="14*" MinWidth="100">
+              <DataGridTemplateColumn.CellTemplate>
+                <DataTemplate>
+                  <TextBox Style="{StaticResource LineaTextBoxStyle}" TextAlignment="Right"
+                           Text="{Binding Cantidad, UpdateSourceTrigger=PropertyChanged}" />
+                </DataTemplate>
+              </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
+
+            <DataGridTemplateColumn Width="56">
+              <DataGridTemplateColumn.CellTemplate>
+                <DataTemplate>
+                  <Button Content="{x:Static controls:Iconos.Limpiar}"
+                          Style="{StaticResource LineaBotonQuitarStyle}"
+                          ToolTip="Quitar esta línea"
+                          Command="{Binding Datos.QuitarLineaCommand, Source={StaticResource Puente}}"
+                          CommandParameter="{Binding}" />
+                </DataTemplate>
+              </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
+          </DataGrid.Columns>
+        </DataGrid>
+
+        <controls:EmptyState Compacto="True"
+                             Icono="{x:Static controls:Iconos.Produccion}"
+                             Titulo="Sin consumo inicial"
+                             Detalle="Opcional: lo que se consume al iniciar. También puede añadirse después, en cada etapa."
+                             Visibility="{Binding HasItems, ElementName=TablaLineas,
+                                                  Converter={StaticResource SinItemsAVis}}" />
+      </Grid>
     </Border>
 
     <Grid Margin="0,12,0,0">

@@ -72,6 +72,11 @@ public sealed class EntradasViewModel : PantallaCrudViewModel<EntradaInventario,
                   && _sesionActual.Puede(Permisos.EntradasInventario.Anular));
 
         VerDetalleCommand = new RelayCommand(VerDetalle);
+
+        ImprimirCommand = new RelayCommand(Imprimir, () => SelectedItem is not null);
+
+        VerFacturaCommand = new RelayCommand(VerFactura,
+            () => SelectedItem?.FacturaProveedorId is not null);
     }
 
     public ICommand CambiarFiltroCommand { get; }
@@ -83,11 +88,21 @@ public sealed class EntradasViewModel : PantallaCrudViewModel<EntradaInventario,
     /// sin importar el <see cref="EstadoEntrada"/> de la entrada.</summary>
     public ICommand VerDetalleCommand { get; }
 
+    /// <summary>Saca el documento por la impresora. Ver <see cref="Services.ImpresionDocumento"/>.</summary>
+    public ICommand ImprimirCommand { get; }
+
+    /// <summary>Abre la cuenta por pagar que generó esta entrada, con la fila ya marcada.</summary>
+    public ICommand VerFacturaCommand { get; }
+
     public string Resumen =>
         $"{Items.Count(e => e.Estado == EstadoEntrada.Registrada)} entradas · " +
         $"comprado este mes {_servicio.TotalComprasDelMes():N2}";
 
     protected override string ModuloPermiso => "EntradasInventario";
+
+    protected override string Describir(EntradaInventario item) => item.Numero;
+
+    protected override string NombreDelTipo => "Entrada";
 
     protected override bool CoincideBusqueda(EntradaInventario item, string texto) =>
         item.Numero.Contains(texto, StringComparison.OrdinalIgnoreCase)
@@ -139,7 +154,8 @@ public sealed class EntradasViewModel : PantallaCrudViewModel<EntradaInventario,
             return;
 
         Aplicar(() => _servicio.Registrar(editor.ObtenerResultado(),
-                                          _sesionActual.UsuarioActual?.Id ?? 0));
+                                          _sesionActual.UsuarioActual?.Id ?? 0),
+                e => $"Entrada {e.Numero} registrada");
     }
 
     private void Anular()
@@ -156,7 +172,39 @@ public sealed class EntradasViewModel : PantallaCrudViewModel<EntradaInventario,
         if (!_dialogos.MostrarEditor(editor))
             return;
 
-        Aplicar(() => _servicio.Anular(entrada, editor.Motivo));
+        Aplicar(() => _servicio.Anular(entrada, editor.Motivo),
+                e => $"Entrada {e.Numero} anulada");
+    }
+
+    /// <summary>
+    /// Salta a la cuenta por pagar que generó esta entrada.
+    ///
+    /// El enlace ya estaba guardado en el documento (<c>EntradaInventario.FacturaProveedorId</c>) y la ficha lo
+    /// pintaba como texto: se veia el numero de la factura pero llegar a ella era volver al
+    /// menu, entrar al submodulo y buscarla a mano.
+    /// </summary>
+    private void VerFactura()
+    {
+        if (SelectedItem?.FacturaProveedorId is not { } facturaId)
+            return;
+
+        if (ModuloCatalogo.BuscarModulo("Finanzas") is { } destino
+            && ModuloCatalogo.BuscarSubmodulo("Finanzas.CuentasPorPagar") is { } seccion)
+            SolicitarNavegacion(destino, seccion, facturaId);
+    }
+
+    /// <summary>
+    /// Imprime la fila seleccionada. El documento no se vuelve a leer de la base: se imprime
+    /// EXACTAMENTE lo que está en pantalla, porque el papel que se entrega tiene que
+    /// coincidir con lo que vio quien lo emitió.
+    /// </summary>
+    private void Imprimir()
+    {
+        if (SelectedItem is not { } documento)
+            return;
+
+        if (ImpresionDocumento.Imprimir(DocumentosImprimibles.De(documento)))
+            Aviso.Mostrar($"Enviado a la impresora: {documento.Numero}");
     }
 
     private void VerDetalle()
@@ -171,15 +219,26 @@ public sealed class EntradasViewModel : PantallaCrudViewModel<EntradaInventario,
     /// La lista la repuebla la recarga que dispara la escritura del servicio; aquí solo se apunta
     /// qué entrada dejar seleccionada.
     /// </summary>
-    private void Aplicar(Func<EntradaInventario> transicion)
+    private void Aplicar(Func<EntradaInventario> transicion, Func<EntradaInventario, string> aviso)
     {
         try
         {
-            SeleccionarTrasRecargar(transicion().Id);
+            var resultado = transicion();
+            SeleccionarTrasRecargar(resultado.Id);
+            Aviso.Mostrar(aviso(resultado));
         }
         catch (InvalidOperationException ex)
         {
             _dialogos.Informar("No se pudo completar la operación", ex.Message);
+        }
+        catch (Exception ex)
+        {
+            // Lo que NO es una regla de negocio —la conexión que se cae, la escritura que choca
+            // con un índice— subía sin capturar hasta el despachador y cerraba la aplicación a
+            // media operación. Va en un catch aparte a propósito: el mensaje de arriba lo redactó
+            // el servicio para quien lo lee, este es técnico y no se puede prometer más.
+            _dialogos.Informar("No se pudo guardar",
+                "La operación no llegó a completarse. " + ex.Message);
         }
     }
 }

@@ -39,15 +39,36 @@ public class ServicioDialogo : IServicioDialogo
         return ventana.ShowDialog() == true;
     }
 
-    public bool Confirmar(string titulo, string mensaje)
-    {
-        var resultado = MessageBox.Show(mensaje, titulo, MessageBoxButton.YesNo, MessageBoxImage.Question);
-        return resultado == MessageBoxResult.Yes;
-    }
+    public bool Confirmar(string titulo, string mensaje, string? textoAceptar = null, bool destructivo = false)
+        => Mostrar(new DialogoViewModel(titulo, mensaje,
+                                        textoAceptar ?? (destructivo ? "Eliminar" : "Aceptar"),
+                                        "Cancelar",
+                                        destructivo)) == true;
 
     public void Informar(string titulo, string mensaje)
+        => Mostrar(new DialogoViewModel(titulo, mensaje, "Entendido"));
+
+    /// <summary>
+    /// Abre <see cref="DialogoWindow"/> con las mismas tres cortesías que ya recibe el editor
+    /// CRUD, y por los mismos motivos: dueño (para que se centre sobre el shell y no sobre la
+    /// pantalla), escala de interfaz, y tope contra el área de trabajo por si el mensaje es largo
+    /// y la escala alta. Sin esto un aviso a 150 % se salía de la pantalla y, con
+    /// <c>ResizeMode="NoResize"</c>, no había forma de recuperarlo.
+    /// </summary>
+    private static bool? Mostrar(DialogoViewModel dialogo)
     {
-        MessageBox.Show(mensaje, titulo, MessageBoxButton.OK, MessageBoxImage.Information);
+        var ventana = new DialogoWindow { DataContext = dialogo };
+
+        if (Application.Current?.MainWindow is { } owner && owner != ventana)
+            ventana.Owner = owner;
+
+        EscalaVentana.Aplicar(ventana);
+
+        var areaTrabajo = SystemParameters.WorkArea;
+        ventana.Width = Math.Min(ventana.Width, areaTrabajo.Width * 0.9);
+        ventana.MaxHeight = areaTrabajo.Height * 0.9;
+
+        return ventana.ShowDialog();
     }
 
     public string? GuardarArchivo(string titulo, string nombreSugerido, string filtro)

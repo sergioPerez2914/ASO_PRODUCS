@@ -112,10 +112,15 @@ public static class ModuloCatalogo
             [
                 new Submodulo("Procesos.Produccion", "Producción",
                     "Etapas de fabricación y los procesos que van transformando materia prima y artículos en producto terminado.", Iconos.Produccion),
+                // El icono es el de Almacén, igual que Inventario · Almacén y Materia Prima ·
+                // Existencias: los tres son lo mismo —un catálogo con su existencia derivada— y
+                // antes este llevaba el de Despacho, que además es el mismo glifo que Pedidos.
                 new Submodulo("Procesos.ProductosYLotes", "Productos y Lotes",
-                    "Catálogo de productos terminados y su existencia por lote.", Iconos.Despacho),
+                    "Catálogo de productos terminados y su existencia por lote.", Iconos.Almacen),
                 new Submodulo("Procesos.Pedidos", "Pedidos",
-                    "Lo que los clientes pidieron, antes de despacharlo.", Iconos.Pedidos)
+                    "Lo que los clientes pidieron, antes de despacharlo.", Iconos.Pedidos),
+                new Submodulo("Procesos.Despachos", "Despachos",
+                    "Historial de lo que salió hacia el cliente y registro de ajustes de existencia.", Iconos.Despacho)
             ]),
 
         new Modulo(

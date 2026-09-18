@@ -38,6 +38,10 @@ public sealed class EtapasProduccionCrudViewModel : CrudViewModelBase<EtapaProdu
 
     protected override string ModuloPermiso => "EtapasProduccion";
 
+    protected override string Describir(EtapaProduccion item) => item.Nombre;
+
+    protected override string NombreDelTipo => "Etapa";
+
     protected override bool CoincideBusqueda(EtapaProduccion item, string texto) =>
         item.Nombre.Contains(texto, StringComparison.OrdinalIgnoreCase)
         || item.Descripcion.Contains(texto, StringComparison.OrdinalIgnoreCase);
@@ -54,13 +58,12 @@ public sealed class EtapasProduccionCrudViewModel : CrudViewModelBase<EtapaProdu
     /// exista, así que se puede pulsar más de una vez sin riesgo.</summary>
     private void CargarSugeridos()
     {
-        var creadas = _servicio.CargarSugeridas(CatalogoLacteoSugerido.EtapasProduccion);
+        var creadas = _servicio.CargarSugeridos(CatalogoLacteoSugerido.EtapasProduccion);
         Recargar();
 
-        _dialogos.Informar("Catálogo cargado",
-            creadas > 0
-                ? $"Se agregaron {creadas} etapas sugeridas."
-                : "Las etapas sugeridas ya estaban todas cargadas.");
+        Aviso.Mostrar(creadas > 0
+            ? $"Se agregaron {creadas} etapas sugeridas."
+            : "Las etapas sugeridas ya estaban todas cargadas.");
     }
 }
 
@@ -203,6 +206,10 @@ public sealed class ProcesosProduccionCrudViewModel : CrudViewModelBase<ProcesoP
 
     protected override string ModuloPermiso => "ProcesosProduccion";
 
+    protected override string Describir(ProcesoProduccion item) => item.Numero;
+
+    protected override string NombreDelTipo => "Proceso";
+
     protected override bool CoincideBusqueda(ProcesoProduccion item, string texto) =>
         item.Numero.Contains(texto, StringComparison.OrdinalIgnoreCase)
         || item.ProductoNombre.Contains(texto, StringComparison.OrdinalIgnoreCase);
@@ -253,7 +260,8 @@ public sealed class ProcesosProduccionCrudViewModel : CrudViewModelBase<ProcesoP
         if (!_dialogos.MostrarEditor(editor))
             return;
 
-        Aplicar(() => _servicio.Iniciar(editor.ObtenerResultado(), _sesionActual.UsuarioActual?.Id ?? 0));
+        Aplicar(() => _servicio.Iniciar(editor.ObtenerResultado(), _sesionActual.UsuarioActual?.Id ?? 0),
+                p => $"Proceso {p.Numero} iniciado");
     }
 
     /// <summary>
@@ -279,7 +287,10 @@ public sealed class ProcesosProduccionCrudViewModel : CrudViewModelBase<ProcesoP
             ? _servicio.AgregarEtapa(proceso, editor.ObtenerResultado(), editor.EtapaSeleccionada!,
                                      _sesionActual.UsuarioActual?.Id ?? 0)
             : _servicio.Terminar(proceso, editor.CantidadProducidaValor, editor.FechaVencimiento,
-                                 editor.ObtenerResultado(), _sesionActual.UsuarioActual?.Id ?? 0));
+                                 editor.ObtenerResultado(), _sesionActual.UsuarioActual?.Id ?? 0),
+                p => p.Estado == EstadoProcesoProduccion.Terminado
+                    ? $"Proceso {p.Numero} terminado: lote con {p.CantidadProducidaTexto}"
+                    : $"Etapa agregada al proceso {p.Numero}");
     }
 
     private void Transformar()
@@ -316,7 +327,8 @@ public sealed class ProcesosProduccionCrudViewModel : CrudViewModelBase<ProcesoP
         if (!_dialogos.MostrarEditor(editor))
             return;
 
-        Aplicar(() => _servicio.Anular(proceso, editor.Motivo));
+        Aplicar(() => _servicio.Anular(proceso, editor.Motivo),
+                p => $"Proceso {p.Numero} anulado");
     }
 
     private void VerDetalle()
@@ -331,15 +343,26 @@ public sealed class ProcesosProduccionCrudViewModel : CrudViewModelBase<ProcesoP
     /// La lista la repuebla la recarga que dispara la escritura del servicio; aquí solo se apunta
     /// qué proceso dejar seleccionado y se traduce el rechazo de una regla en un aviso.
     /// </summary>
-    private void Aplicar(Func<ProcesoProduccion> transicion)
+    private void Aplicar(Func<ProcesoProduccion> transicion, Func<ProcesoProduccion, string> aviso)
     {
         try
         {
-            SeleccionarTrasRecargar(transicion().Id);
+            var resultado = transicion();
+            SeleccionarTrasRecargar(resultado.Id);
+            Aviso.Mostrar(aviso(resultado));
         }
         catch (InvalidOperationException ex)
         {
             _dialogos.Informar("No se pudo completar la operación", ex.Message);
+        }
+        catch (Exception ex)
+        {
+            // Lo que NO es una regla de negocio —la conexión que se cae, la escritura que choca
+            // con un índice— subía sin capturar hasta el despachador y cerraba la aplicación a
+            // media operación. Va en un catch aparte a propósito: el mensaje de arriba lo redactó
+            // el servicio para quien lo lee, este es técnico y no se puede prometer más.
+            _dialogos.Informar("No se pudo guardar",
+                "La operación no llegó a completarse. " + ex.Message);
         }
     }
 }

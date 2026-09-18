@@ -69,7 +69,7 @@
         <RowDefinition Height="*" />
       </Grid.RowDefinitions>
 
-      <TextBlock Grid.Row="0" Text="Doble clic en una fila para ver el detalle completo del despacho."
+      <TextBlock Grid.Row="0" Text="Doble clic o Enter sobre una fila para ver el detalle completo del despacho."
                  Margin="0,0,0,4" FontSize="{StaticResource FsCaption}"
                  Foreground="{DynamicResource TextMutedBrush}" />
 
@@ -78,7 +78,7 @@
           <DataGrid x:Name="TablaDetalle" Style="{StaticResource DataGridStyle}"
                     ItemsSource="{Binding Detalle}" IsReadOnly="True"
                     SelectedItem="{Binding Seleccionada}"
-                    MouseDoubleClick="TablaDetalle_MouseDoubleClick">
+                    controls:AbrirFila.Comando="{Binding VerDetalleCommand}">
             <DataGrid.Columns>
               <controls:ColumnaTexto Header="Fecha" Binding="{Binding FechaTexto}" Width="12*" MinWidth="90" />
               <controls:ColumnaTexto Header="Despacho" Binding="{Binding DespachoNumero}" Width="14*" MinWidth="100" />

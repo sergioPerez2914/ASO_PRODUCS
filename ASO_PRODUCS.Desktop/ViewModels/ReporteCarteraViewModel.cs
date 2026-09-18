@@ -219,7 +219,7 @@ public sealed class ReporteCarteraViewModel : PantallaViewModelBase
                 Periodo: $"Período: {FechaDesde:dd/MM/yyyy} - {FechaHasta:dd/MM/yyyy}")
         ]);
 
-        _dialogos.Informar("Reporte exportado", $"El archivo se guardó en:\n{ruta}");
+        Aviso.Mostrar($"Reporte exportado a {System.IO.Path.GetFileName(ruta)}");
     }
 
     private void VerDetalleCliente()

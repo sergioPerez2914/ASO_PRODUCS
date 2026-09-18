@@ -77,7 +77,7 @@ public sealed class DatosOrganizacionViewModel : ViewModelBase
             Codigo = actualizado.Codigo;
             Nombre = actualizado.Nombre;
 
-            _dialogos.Informar("Organización actualizada", "Los datos se guardaron correctamente.");
+            Aviso.Mostrar("Datos de la organización guardados");
         }
         catch (Exception ex)
         {

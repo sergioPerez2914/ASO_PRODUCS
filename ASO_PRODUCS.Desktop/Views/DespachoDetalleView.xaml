@@ -97,7 +97,7 @@
     </Border>
 
     <!-- Detalle del despacho -->
-    <TextBlock Text="Detalle" Style="{StaticResource CardTitleStyle}" Margin="0,20,0,8" />
+    <TextBlock Text="Detalle" Style="{StaticResource CardTitleStyle}" Margin="{StaticResource TkTituloDeBloque}" />
 
     <Border Style="{StaticResource SectionCardStyle}">
       <StackPanel Grid.IsSharedSizeScope="True">
@@ -131,7 +131,7 @@
                   <TextBlock Grid.Column="3" Text="{Binding SubtotalTexto}" HorizontalAlignment="Right" />
                 </Grid>
                 <TextBlock Text="{Binding ProcesoOrigenTexto}" FontSize="{StaticResource FsCaption}"
-                           Foreground="{DynamicResource TextMutedBrush}" Margin="0,2,0,0" />
+                           Foreground="{DynamicResource TextMutedBrush}" Margin="{StaticResource TkAyuda}" />
               </StackPanel>
             </DataTemplate>
           </ItemsControl.ItemTemplate>

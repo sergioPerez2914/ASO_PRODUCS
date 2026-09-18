@@ -11,7 +11,11 @@ public interface IServicioDialogo
     /// <returns><c>true</c> si el usuario guardó los cambios.</returns>
     bool MostrarEditor(CrudEditorViewModelBase editor);
 
-    bool Confirmar(string titulo, string mensaje);
+    /// <param name="textoAceptar">El verbo del botón que confirma ("Eliminar", "Anular"). Un
+    /// botón que dice lo que va a pasar se lee sin releer la pregunta; "Sí" no.</param>
+    /// <param name="destructivo">Pinta el botón en rojo y, sobre todo, deja el Enter en Cancelar:
+    /// lo irreversible no se confirma de inercia.</param>
+    bool Confirmar(string titulo, string mensaje, string? textoAceptar = null, bool destructivo = false);
 
     /// <summary>Aviso sin decisión: reglas de negocio rechazadas, resultados de una acción.</summary>
     void Informar(string titulo, string mensaje);

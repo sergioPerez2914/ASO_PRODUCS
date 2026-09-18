@@ -155,7 +155,19 @@ public sealed class MovimientosBancoCrudViewModel : CrudViewModelBase<Movimiento
     public string SaldoConciliadoTexto => SaldoConciliado.ToString("N2");
     public string DiferenciaTexto => DiferenciaConciliacion.ToString("N2");
 
-    protected override string ModuloPermiso => "Movimientos";
+    /// <summary>
+    /// "Banco" y no "Movimientos", aunque la pantalla se llame así: el prefijo tiene que coincidir
+    /// con el literal de <see cref="Permisos.Movimientos"/>, que sigue siendo "Banco.*" a propósito
+    /// (ver el comentario de allá). Con "Movimientos" se pedía "Movimientos.Crear", una cadena que
+    /// no existe en <see cref="MatrizPermisos.Todos"/>, y los tres comandos quedaban apagados para
+    /// todos los roles —incluido Desarrollador— porque <c>SesionActual.Puede</c> es un
+    /// <c>Contains</c> sin escape de superusuario.
+    /// </summary>
+    protected override string ModuloPermiso => "Banco";
+
+    protected override string Describir(MovimientoBanco item) => item.Concepto;
+
+    protected override string NombreDelTipo => "Movimiento";
 
     protected override bool CoincideBusqueda(MovimientoBanco item, string texto) =>
         item.Concepto.Contains(texto, StringComparison.OrdinalIgnoreCase)
@@ -205,12 +217,45 @@ public sealed class MovimientosBancoCrudViewModel : CrudViewModelBase<Movimiento
     protected override CrudEditorViewModelBase<MovimientoBanco> CrearEditor(MovimientoBanco item) =>
         new MovimientoBancoEditorViewModel(item, _servicio.CuentasActivas(), _servicio);
 
+    /// <summary>
+    /// El alta pasa por el servicio de dominio, igual que en Entradas, Salidas, Recepciones,
+    /// Procesos, Pedidos y Despachos. Este era el único documento con máquina de estados que
+    /// seguía escribiendo directo contra la fuente de datos con el <c>Agregar</c> genérico.
+    /// </summary>
+    protected override void Agregar()
+    {
+        var editor = CrearEditor(CrearNuevo());
+
+        if (!_dialogos.MostrarEditor(editor))
+            return;
+
+        Aplicar(() => _servicio.RegistrarManual(editor.ObtenerResultado(),
+                                                _sesionActual.UsuarioActual?.Id ?? 0),
+                m => $"Movimiento registrado por {m.MontoTexto}");
+    }
+
+    /// <summary>La corrección, por el mismo camino que el alta. Ver <see cref="Agregar"/>.</summary>
+    protected override void Editar()
+    {
+        if (SelectedItem is not { } actual)
+            return;
+
+        var editor = CrearEditor(actual);
+
+        if (!_dialogos.MostrarEditor(editor))
+            return;
+
+        Aplicar(() => _servicio.EditarManual(editor.ObtenerResultado()),
+                _ => "Movimiento actualizado");
+    }
+
     private void Conciliar()
     {
         if (SelectedItem is not { } movimiento)
             return;
 
-        Aplicar(() => _servicio.Conciliar(movimiento, _sesionActual.UsuarioActual?.Id ?? 0));
+        Aplicar(() => _servicio.Conciliar(movimiento, _sesionActual.UsuarioActual?.Id ?? 0),
+                _ => "Movimiento conciliado");
     }
 
     private void Desconciliar()
@@ -218,7 +263,8 @@ public sealed class MovimientosBancoCrudViewModel : CrudViewModelBase<Movimiento
         if (SelectedItem is not { } movimiento)
             return;
 
-        Aplicar(() => _servicio.Desconciliar(movimiento));
+        Aplicar(() => _servicio.Desconciliar(movimiento),
+                _ => "Movimiento desconciliado");
     }
 
     private void Anular()
@@ -239,7 +285,8 @@ public sealed class MovimientosBancoCrudViewModel : CrudViewModelBase<Movimiento
         if (!_dialogos.MostrarEditor(editor))
             return;
 
-        Aplicar(() => _servicio.Anular(movimiento, editor.Motivo));
+        Aplicar(() => _servicio.Anular(movimiento, editor.Motivo),
+                _ => "Movimiento anulado");
     }
 
     private void Transferir()
@@ -256,7 +303,8 @@ public sealed class MovimientosBancoCrudViewModel : CrudViewModelBase<Movimiento
             editor.Fecha,
             editor.Concepto,
             editor.Referencia,
-            _sesionActual.UsuarioActual?.Id ?? 0).Salida);
+            _sesionActual.UsuarioActual?.Id ?? 0).Salida,
+                m => $"Transferencia registrada por {m.MontoTexto}");
     }
 
     private void VerDetalle()
@@ -271,15 +319,26 @@ public sealed class MovimientosBancoCrudViewModel : CrudViewModelBase<Movimiento
     /// La lista la repuebla la recarga que dispara la escritura del servicio; aquí solo se apunta
     /// qué movimiento dejar seleccionado y se traduce el rechazo de una regla en un aviso.
     /// </summary>
-    private void Aplicar(Func<MovimientoBanco> transicion)
+    private void Aplicar(Func<MovimientoBanco> transicion, Func<MovimientoBanco, string> aviso)
     {
         try
         {
-            SeleccionarTrasRecargar(transicion().Id);
+            var resultado = transicion();
+            SeleccionarTrasRecargar(resultado.Id);
+            Aviso.Mostrar(aviso(resultado));
         }
         catch (InvalidOperationException ex)
         {
             _dialogos.Informar("No se pudo completar la operación", ex.Message);
+        }
+        catch (Exception ex)
+        {
+            // Lo que NO es una regla de negocio —la conexión que se cae, la escritura que choca
+            // con un índice— subía sin capturar hasta el despachador y cerraba la aplicación a
+            // media operación. Va en un catch aparte a propósito: el mensaje de arriba lo redactó
+            // el servicio para quien lo lee, este es técnico y no se puede prometer más.
+            _dialogos.Informar("No se pudo guardar",
+                "La operación no llegó a completarse. " + ex.Message);
         }
     }
 
@@ -387,6 +446,10 @@ public sealed class CuentasBancariasCrudViewModel : CrudViewModelBase<CuentaBanc
     }
 
     protected override string ModuloPermiso => "CuentasBancarias";
+
+    protected override string Describir(CuentaBancaria item) => item.Nombre;
+
+    protected override string NombreDelTipo => "Cuenta";
 
     /// <summary>El disponible de todas las cuentas activas, que es la cifra que importa.</summary>
     public string ResumenDisponible => $"Disponible {_servicio.DisponibleTotal():N2}";

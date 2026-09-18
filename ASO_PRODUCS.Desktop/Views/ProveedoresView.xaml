@@ -26,14 +26,30 @@
         </Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
           <ColumnDefinition Width="*" />
+          <ColumnDefinition Width="Auto" />
         </Grid.ColumnDefinitions>
 
         <WrapPanel Grid.Row="0" Grid.Column="0" VerticalAlignment="Center">
           <controls:SearchBox Width="280" Margin="0,0,12,0" VerticalAlignment="Center"
                               Texto="{Binding TextoBusqueda, Mode=TwoWay}" />
+
+          <controls:FiltroDropdown Style="{StaticResource FiltroDropdownStyle}" SelectedIndex="0"
+                                   Margin="0,0,12,0" VerticalAlignment="Center"
+                                   Command="{Binding CambiarFiltroCommand}">
+            <ComboBoxItem Content="Todos" />
+            <ComboBoxItem Content="Activos" />
+            <ComboBoxItem Content="Inactivos" />
+          </controls:FiltroDropdown>
+          <TextBlock Text="{Binding Conteo}" VerticalAlignment="Center"
+                     FontSize="{StaticResource FsCaption}"
+                     Foreground="{DynamicResource TextMutedBrush}" />
         </WrapPanel>
 
-        <StackPanel Grid.Row="1" Grid.Column="0" Orientation="Horizontal" Margin="0,12,0,0">
+        <TextBlock Grid.Row="0" Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center"
+                   Text="{Binding Resumen}" FontSize="{StaticResource FsBody}"
+                   Foreground="{DynamicResource TextSecondaryBrush}" />
+
+        <StackPanel Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,12,0,0">
           <Button Content="Nuevo proveedor" Style="{StaticResource PrimaryButtonStyle}"
                   Command="{Binding AgregarCommand}" />
           <Button Content="Editar" Style="{StaticResource SecondaryButtonStyle}"
@@ -49,9 +65,9 @@
       <Grid>
         <DataGrid x:Name="Tabla" Style="{StaticResource DataGridStyle}"
                   ItemsSource="{Binding ItemsView}"
-                  SelectedItem="{Binding SelectedItem}">
+                  SelectedItem="{Binding SelectedItem}"
+                  controls:AbrirFila.Comando="{Binding EditarCommand}">
           <DataGrid.Columns>
-            <controls:ColumnaTexto Header="Nº" Binding="{Binding Id}" Width="44" />
             <controls:ColumnaTexto Header="Proveedor" Binding="{Binding Nombre}" Width="26*" MinWidth="140" />
             <controls:ColumnaTexto Header="RIF" Binding="{Binding Rif}" Width="14*" MinWidth="100" />
             <controls:ColumnaTexto Header="Teléfono" Binding="{Binding Telefono}" Width="14*" MinWidth="100" />

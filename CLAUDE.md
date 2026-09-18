@@ -3,9 +3,10 @@
 Aplicación de gestión de escritorio para **productores locales de distinta índole**: **WPF ·
 .NET 8** (`net8.0-windows`), instalación local en LAN, una sola organización por instalación.
 Arranca desde el scaffold **ASO Genérico** con su armazón completo y tres módulos heredados
-(Finanzas, Inventario y Materia Prima). Sobre ese armazón ya se construyó, con la receta de "Cómo
-se agrega un submódulo", un cuarto módulo — **Procesos** (Producción y Despacho) — con Finanzas
-ganando además Clientes y Cuentas por Cobrar; ver la sección "Procesos" más abajo.
+(Finanzas, Inventario y Materia Prima). Sobre ese armazón se construyeron, con la receta de "Cómo
+se agrega un submódulo", **Procesos** (Producción, Productos y Lotes, Pedidos y Despachos) y
+**Reportes**, con Finanzas ganando además Clientes y Cuentas por Cobrar; ver la sección "Procesos"
+más abajo.
 
 ## Origen de este proyecto (2026-09-11)
 
@@ -133,11 +134,12 @@ certificado de código es un paso aparte para cuando el cliente lo pida.
 
 ## Estructura de módulos
 
-Hoy hay **cuatro módulos de negocio**: los tres heredados del scaffold — **Finanzas** (Cuentas por
+Hoy hay **cinco módulos de negocio**: los tres heredados del scaffold — **Finanzas** (Cuentas por
 Pagar, Cuentas por Cobrar, Movimientos, Proveedores y Clientes), **Inventario** (Almacén, Entradas
-y Salidas) y **Materia Prima** (Existencias, Recepciones y Salidas) — más **Procesos** (Producción
-y Despacho), agregado después con la receta de "Cómo se agrega un submódulo" (ver la sección
-"Procesos" más abajo). A esto se suman **cuatro módulos fijados** sin submódulos: **Inicio**,
+y Salidas) y **Materia Prima** (Recepciones, Existencias y Salidas) — más **Procesos** (Producción,
+Productos y Lotes, Pedidos y Despachos) y **Reportes** (Procesos, Ventas, Gastos y Cartera),
+agregados después con la receta de "Cómo se agrega un submódulo" (ver la sección "Procesos" más
+abajo). A esto se suman **cuatro módulos fijados** sin submódulos: **Inicio**,
 **Peticiones** (bandeja de solicitudes de cambio), **Administración** (usuarios con sus permisos,
 y los datos de la propia organización) y **Configuración** (apariencia, cuenta propia,
 preferencias de la máquina — anclada al pie del sidebar, fuera de su `ScrollViewer`, porque no es
@@ -150,7 +152,8 @@ trabajo del día).
 - `Views/InicioView` — lanzador con una tarjeta por módulo.
 - `Views/ModuloDashboardView` — resumen del módulo: indicadores + tarjeta por submódulo. Los
   valores los calcula `ModuloDashboardViewModel.CalcularIndicadores` (un `switch` por clave de
-  módulo) — hoy con los casos `"Finanzas"`, `"Inventario"`, `"MateriaPrima"` y `"Procesos"`.
+  módulo) — hoy con los casos `"Finanzas"`, `"Inventario"`, `"MateriaPrima"`, `"Procesos"` y
+  `"Reportes"`.
 - `Views/SubmoduloView` — submódulo en construcción, para cuando se agregue uno nuevo al catálogo
   antes de tener su pantalla real.
 - Framework CRUD reutilizable (`CrudViewModelBase`, `CrudEditorViewModelBase`, `CrudEditorWindow`,
@@ -304,10 +307,17 @@ específico de esa planta:
 
 ## Procesos (2026-09-11)
 
-Dos submódulos: **Producción** (fabricación de producto terminado a partir de materia prima y/o
-artículos de inventario) y **Despacho** (catálogo de `Producto` con existencia derivada + los
-despachos que la consumen). A diferencia de Materia Prima, este módulo no viene de ningún scaffold
-anterior: se construyó de cero contra este armazón.
+Cuatro submódulos: **Producción** (fabricación de producto terminado a partir de materia prima
+y/o artículos de inventario), **Productos y Lotes** (catálogo de `Producto` con existencia derivada
++ la existencia por lote), **Pedidos** (lo que el cliente pidió, antes de despacharlo) y
+**Despachos** (el historial de lo que salió, y el alta de ajustes). A diferencia de Materia Prima,
+este módulo no viene de ningún scaffold anterior: se construyó de cero contra este armazón.
+
+**Despachos fue pestaña de Pedidos hasta 2026-09-18** y pasó a submódulo propio
+(`Procesos.Despachos`, `ViewModels/DespachosViewModel.cs`, `Views/DespachosView.xaml`). El motivo
+no era solo de menú: `Ver.Procesos.Pedidos` era lo único que gateaba el acceso a los despachos, así
+que quien no viera Pedidos no los veía aunque tuviera `Despachos.Crear`. "Despachar pedido" se
+queda en Pedidos — es donde se sabe qué falta entregar.
 
 - **`ProcesoProduccion` es un agregado de DOS niveles**: `LineasIniciales` (lo que se consume al
   iniciar) y `Etapas` (una lista de `EtapaProcesoProduccion`, cada una con sus propias `Lineas`).
@@ -592,6 +602,66 @@ cambiar contraseña) y **Aplicación** (hoy solo "abrir en la última sección";
 propio porque no decide nada del negocio). Las preferencias NO van a la base de datos: viven en
 `%AppData%\ASO Productores\ajustes.json` (`Models/AjustesApp.cs` + `Configuration/AjustesStoreJson.cs`).
 
+## Consistencia y UX (2026-09-18)
+
+Repaso transversal de las asimetrías que dejó el crecimiento por tandas. Lo que cambió, con el
+porqué en el código:
+
+- **Bug de permisos en Finanzas · Movimientos**: `MovimientosViewModel.ModuloPermiso` devolvía
+  `"Movimientos"` y `Permisos.Movimientos` declara los literales como `"Banco.*"` (residuo del
+  rename de 2026-09-11). `MatrizPermisos.Todos` se arma por reflexión sobre esos literales, así
+  que `"Movimientos.Crear"` no existía en el universo de permisos y Nuevo/Editar/Eliminar estaban
+  apagados **para todos los roles, incluido Desarrollador**. Se corrigió el `ModuloPermiso`, NO los
+  literales: `PermisoUsuario.Permiso` los persiste en base de datos y renombrarlos huerfanaría los
+  ajustes por usuario ya guardados.
+- **Diálogos propios** (`Views/DialogoWindow.xaml`, `ViewModels/DialogoViewModel.cs`):
+  `Confirmar`/`Informar` eran `MessageBox` del sistema, la única pieza que no pasaba por el sistema
+  visual (ni tema oscuro, ni escala, ni tipografía). La firma de `IServicioDialogo` no cambió: los
+  22 ViewModels que la llaman siguen igual. En lo destructivo, **el Enter va a Cancelar**.
+- **Aviso global** (`Services/Aviso.cs` + el `AvisoGuardado` que el shell pinta abajo a la
+  derecha). Existía desde antes pero solo lo usaba Configuración; ahora lo usa toda escritura.
+  Los `Informar` de éxito que quedaban pasaron al aviso — `Informar` es solo para errores.
+- **Red contra el cierre inesperado**: `App.DispatcherUnhandledException` (no había ninguno) y un
+  `catch (Exception)` en el `Aplicar()` de los ocho documentos y en el borrado del CRUD genérico,
+  además del `InvalidOperationException` de reglas de negocio que ya se capturaba.
+- **Despachos a submódulo propio** — ver "Procesos" arriba.
+- **Paridad entre pantallas**: Proveedores y Clientes ganan filtro de estado, pierden la columna
+  del Id y estrenan guarda de borrado (`Services/TercerosService.cs`, los dos únicos maestros que
+  no tenían servicio de dominio); Almacén estrena "Cargar sugeridos" (`CatalogoLacteoSugerido.Articulos`);
+  `EtapasProduccionService.CargarSugeridas` pasó a `CargarSugeridos`, como sus dos gemelos.
+- **El alta de un asiento manual de banco pasa por su servicio** (`MovimientosService.RegistrarManual`
+  /`EditarManual`): era el único documento con máquina de estados cuya alta escribía directo contra
+  la fuente de datos.
+- **`Controls/AbrirFila.cs`**: doble clic **y Enter** abren la fila. Sustituye los catorce
+  `MouseDoubleClick` del code-behind, y de paso los cinco catálogos maestros —que no abrían nada al
+  hacer doble clic— ahora abren su editor. Antes las tablas solo respondían al ratón.
+- **Contador de filas** (`CrudViewModelBase.Conteo`), junto al buscador de cada listado: "12 de
+  300" con filtro, "300 registros" sin él. Resuelve además que el estado vacío no distinguía
+  "catálogo vacío" de "el filtro no encontró nada".
+- **Estado vacío en las grillas de líneas** de los nueve editores, y **foco inicial** en
+  `CrudEditorWindow` (había que pulsar Tab antes de escribir, en los veintitrés editores).
+- **Saltar al documento relacionado**: `IPantalla` gana `NavegacionSolicitada` y
+  `SeleccionarAlAbrir`; `MainWindow.Conectar` los cablea. Los enlaces ya estaban guardados
+  (`EntradaInventario.FacturaProveedorId`, `Despacho.FacturaClienteId`…) pero se pintaban como
+  texto muerto. Hoy lo usan Entradas, Recepciones y Despachos con "Ver cuenta por pagar/cobrar".
+- **Impresión** (`Services/ImpresionDocumento.cs` + `DocumentosImprimibles.cs`): no había ninguna
+  en toda la aplicación. `FlowDocument` + `PrintDialog` de WPF, sin paquete nuevo, y los valores
+  salen de las propiedades `…Texto` de los modelos — mismo criterio que `ExportadorExcel`. Con
+  botón en Entradas, Salidas, Recepciones, Salidas MP, Pedidos y Despachos.
+- **Espaciado**: los tokens de `Styles/Tokens.xaml` existían y no se usaban (487 márgenes
+  literales contra 7 con token). Se corrigieron los ~34 valores **fuera de la escala de 4** y nace
+  `TkTituloDeBloque` para el `0,20,0,8` que se repetía veinte veces. Los que ya caían en la escala
+  se dejaron: migrarlos todos era un diff de 60 archivos sin cambio visible.
+- **`ToolTipService.ShowOnDisabled`** en el estilo implícito de `Button`: un botón apagado por
+  permiso se atenuaba sin decir por qué, y el tooltip que lo explicaba era justo lo que WPF deja
+  de mostrar en un control deshabilitado.
+
+**No se tocó a propósito**: los `DynamicResource` de forma en `Styles/Controles.xaml` —el propio
+archivo documenta que fue una decisión tras un fallo real, ver su comentario de cabecera— ni la
+ventana temporal por defecto en los padrones de documentos (sigue `GetAll()`; el contador ya avisa
+del volumen y acotar la consulta esconde filas por defecto, que es un cambio de comportamiento que
+conviene hacer cuando el volumen lo pida).
+
 ## PROVISIONAL — decisiones pendientes, marcadas a propósito
 
 Los módulos de los productores están por definir. Lo siguiente son placeholders deliberados, fáciles
@@ -615,8 +685,9 @@ de revisar y cambiar; no son bugs:
    hace falta migrarla de verdad algún día, hacerlo aparte, no como consecuencia automática de
    cambiar el nombre visible.
 5. **Módulos de negocio**: además de los tres heredados del scaffold (Finanzas, Inventario,
-   Materia Prima), ya se agregó **Procesos** (Producción y Despacho) construido de cero con la
-   receta de "Cómo se agrega un submódulo" — ver la sección "Procesos" arriba. Sigue sin haber
+   Materia Prima), ya se agregaron **Procesos** (Producción, Productos y Lotes, Pedidos y
+   Despachos) y **Reportes**, construidos de cero con la receta de "Cómo se agrega un submódulo"
+   — ver la sección "Procesos" arriba. Sigue sin haber
    certeza de que este sea el módulo definitivo que necesita el negocio real (roles, marca y
    nombre siguen siendo placeholders); si hace falta otro módulo específico, Finanzas sirve para
    los cuatro patrones del framework, Inventario para uno construido de cero, Materia Prima para
@@ -645,4 +716,10 @@ de revisar y cambiar; no son bugs:
 3. ~~Elegir el color de marca y el logo real~~ — hecho, ver "Marca" arriba (2026-09-15). Queda
    el nombre visible "ASO Producs" (punto 4 de PROVISIONAL) si el negocio pide otro.
 4. **Llevar la comprobación de permisos a los servicios de dominio** de cada módulo nuevo desde
-   el principio (no repetir el hueco que tiene hoy el CRUD genérico).
+   el principio (no repetir el hueco que tiene hoy el CRUD genérico). El alta de un asiento manual
+   de banco, que era el último documento con máquina de estados que escribía directo contra la
+   fuente, ya pasa por `MovimientosService` (ver "Consistencia y UX" arriba); lo que sigue abierto
+   es el CRUD de los maestros.
+5. **Acotar por fecha los padrones de documentos** cuando el volumen lo pida: hoy todos cargan
+   `GetAll()` en memoria y filtran en cliente. El contador de filas ya deja ver cuándo empieza a
+   doler.

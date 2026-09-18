@@ -70,6 +70,10 @@ public sealed class FacturasClienteCrudViewModel : CrudViewModelBase<FacturaClie
 
     protected override string ModuloPermiso => "FacturasCliente";
 
+    protected override string Describir(FacturaCliente item) => item.NumeroDocumento;
+
+    protected override string NombreDelTipo => "Factura";
+
     protected override bool CoincideBusqueda(FacturaCliente item, string texto) =>
         item.ClienteNombre.Contains(texto, StringComparison.OrdinalIgnoreCase)
         || item.NumeroDocumento.Contains(texto, StringComparison.OrdinalIgnoreCase)
@@ -121,7 +125,8 @@ public sealed class FacturasClienteCrudViewModel : CrudViewModelBase<FacturaClie
             return;
 
         Aplicar(() => _servicio.RegistrarCobro(factura, editor.Resultado,
-                                               _sesionActual.UsuarioActual?.Id ?? 0));
+                                               _sesionActual.UsuarioActual?.Id ?? 0),
+                f => $"Cobro registrado en la factura {f.NumeroDocumento}");
     }
 
     private void Anular()
@@ -138,7 +143,8 @@ public sealed class FacturasClienteCrudViewModel : CrudViewModelBase<FacturaClie
         if (!_dialogos.MostrarEditor(editor))
             return;
 
-        Aplicar(() => _servicio.Anular(factura, editor.Motivo));
+        Aplicar(() => _servicio.Anular(factura, editor.Motivo),
+                f => $"Factura {f.NumeroDocumento} anulada");
     }
 
     private void VerDetalle()
@@ -153,15 +159,26 @@ public sealed class FacturasClienteCrudViewModel : CrudViewModelBase<FacturaClie
     /// La lista la repuebla la recarga que dispara la escritura del servicio; aquí solo se
     /// apunta qué factura dejar seleccionada.
     /// </summary>
-    private void Aplicar(Func<FacturaCliente> transicion)
+    private void Aplicar(Func<FacturaCliente> transicion, Func<FacturaCliente, string> aviso)
     {
         try
         {
-            SeleccionarTrasRecargar(transicion().Id);
+            var resultado = transicion();
+            SeleccionarTrasRecargar(resultado.Id);
+            Aviso.Mostrar(aviso(resultado));
         }
         catch (InvalidOperationException ex)
         {
             _dialogos.Informar("No se pudo completar la operación", ex.Message);
+        }
+        catch (Exception ex)
+        {
+            // Lo que NO es una regla de negocio —la conexión que se cae, la escritura que choca
+            // con un índice— subía sin capturar hasta el despachador y cerraba la aplicación a
+            // media operación. Va en un catch aparte a propósito: el mensaje de arriba lo redactó
+            // el servicio para quien lo lee, este es técnico y no se puede prometer más.
+            _dialogos.Informar("No se pudo guardar",
+                "La operación no llegó a completarse. " + ex.Message);
         }
     }
 }
@@ -327,4 +344,14 @@ public sealed class CuentasPorCobrarViewModel : PantallaViewModelBase
     public FacturasClienteCrudViewModel Facturas { get; }
 
     public override void Recargar() => Facturas.Recargar();
+
+    /// <summary>
+    /// Marca la fila que pidio quien nos mando aqui. El contenedor no tiene listado propio: lo
+    /// pasa al padron, que si sabe recargar y reseleccionar.
+    /// </summary>
+    public override void SeleccionarAlAbrir(object id)
+    {
+        if (id is int clave)
+            Facturas.SeleccionarAlAbrir(clave);
+    }
 }

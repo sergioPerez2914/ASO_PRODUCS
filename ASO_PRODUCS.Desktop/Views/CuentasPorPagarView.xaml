@@ -96,6 +96,9 @@
               <ComboBoxItem Content="Pagadas" />
               <ComboBoxItem Content="Anuladas" />
             </controls:FiltroDropdown>
+            <TextBlock Text="{Binding Conteo}" VerticalAlignment="Center"
+                       FontSize="{StaticResource FsCaption}"
+                       Foreground="{DynamicResource TextMutedBrush}" />
           </WrapPanel>
 
           <TextBlock Grid.Row="0" Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center"
@@ -120,7 +123,7 @@
         </Grid>
       </Border>
 
-      <TextBlock Grid.Row="1" Text="Doble clic en una fila para ver el detalle completo de la factura."
+      <TextBlock Grid.Row="1" Text="Doble clic o Enter sobre una fila para ver el detalle completo de la factura."
                  Margin="0,12,0,4" FontSize="{StaticResource FsCaption}"
                  Foreground="{DynamicResource TextMutedBrush}" />
 
@@ -129,7 +132,7 @@
           <DataGrid x:Name="Tabla1" Style="{StaticResource DataGridStyle}"
                     ItemsSource="{Binding ItemsView}"
                     SelectedItem="{Binding SelectedItem}"
-                    MouseDoubleClick="Tabla1_MouseDoubleClick">
+                    controls:AbrirFila.Comando="{Binding VerDetalleCommand}">
             <DataGrid.RowStyle>
               <Style TargetType="DataGridRow" BasedOn="{StaticResource {x:Type DataGridRow}}">
                 <Setter Property="ToolTip" Value="{Binding}" />

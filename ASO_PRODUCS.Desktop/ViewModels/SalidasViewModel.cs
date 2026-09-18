@@ -61,6 +61,8 @@ public sealed class SalidasViewModel : PantallaCrudViewModel<SalidaInventario, i
                   && _sesionActual.Puede(Permisos.SalidasInventario.Anular));
 
         VerDetalleCommand = new RelayCommand(VerDetalle);
+
+        ImprimirCommand = new RelayCommand(Imprimir, () => SelectedItem is not null);
     }
 
     public ICommand CambiarFiltroCommand { get; }
@@ -72,11 +74,18 @@ public sealed class SalidasViewModel : PantallaCrudViewModel<SalidaInventario, i
     /// sin importar el <see cref="EstadoSalida"/> del boleto.</summary>
     public ICommand VerDetalleCommand { get; }
 
+    /// <summary>Saca el documento por la impresora. Ver <see cref="Services.ImpresionDocumento"/>.</summary>
+    public ICommand ImprimirCommand { get; }
+
     public string Resumen =>
         $"{Items.Count(s => s.Estado == EstadoSalida.Registrada)} boletos · " +
         $"{_servicio.DelMes().Count} este mes";
 
     protected override string ModuloPermiso => "SalidasInventario";
+
+    protected override string Describir(SalidaInventario item) => item.Numero;
+
+    protected override string NombreDelTipo => "Salida";
 
     protected override bool CoincideBusqueda(SalidaInventario item, string texto) =>
         item.Numero.Contains(texto, StringComparison.OrdinalIgnoreCase)
@@ -122,7 +131,8 @@ public sealed class SalidasViewModel : PantallaCrudViewModel<SalidaInventario, i
             return;
 
         Aplicar(() => _servicio.Registrar(editor.ObtenerResultado(),
-                                          _sesionActual.UsuarioActual?.Id ?? 0));
+                                          _sesionActual.UsuarioActual?.Id ?? 0),
+                s => $"Salida {s.Numero} registrada");
     }
 
     private void Anular()
@@ -139,7 +149,22 @@ public sealed class SalidasViewModel : PantallaCrudViewModel<SalidaInventario, i
         if (!_dialogos.MostrarEditor(editor))
             return;
 
-        Aplicar(() => _servicio.Anular(salida, editor.Motivo));
+        Aplicar(() => _servicio.Anular(salida, editor.Motivo),
+                s => $"Salida {s.Numero} anulada");
+    }
+
+    /// <summary>
+    /// Imprime la fila seleccionada. El documento no se vuelve a leer de la base: se imprime
+    /// EXACTAMENTE lo que está en pantalla, porque el papel que se entrega tiene que
+    /// coincidir con lo que vio quien lo emitió.
+    /// </summary>
+    private void Imprimir()
+    {
+        if (SelectedItem is not { } documento)
+            return;
+
+        if (ImpresionDocumento.Imprimir(DocumentosImprimibles.De(documento)))
+            Aviso.Mostrar($"Enviado a la impresora: {documento.Numero}");
     }
 
     private void VerDetalle()
@@ -150,15 +175,26 @@ public sealed class SalidasViewModel : PantallaCrudViewModel<SalidaInventario, i
         _dialogos.MostrarEditor(new SalidaDetalleViewModel(salida));
     }
 
-    private void Aplicar(Func<SalidaInventario> transicion)
+    private void Aplicar(Func<SalidaInventario> transicion, Func<SalidaInventario, string> aviso)
     {
         try
         {
-            SeleccionarTrasRecargar(transicion().Id);
+            var resultado = transicion();
+            SeleccionarTrasRecargar(resultado.Id);
+            Aviso.Mostrar(aviso(resultado));
         }
         catch (InvalidOperationException ex)
         {
             _dialogos.Informar("No se pudo completar la operación", ex.Message);
+        }
+        catch (Exception ex)
+        {
+            // Lo que NO es una regla de negocio —la conexión que se cae, la escritura que choca
+            // con un índice— subía sin capturar hasta el despachador y cerraba la aplicación a
+            // media operación. Va en un catch aparte a propósito: el mensaje de arriba lo redactó
+            // el servicio para quien lo lee, este es técnico y no se puede prometer más.
+            _dialogos.Informar("No se pudo guardar",
+                "La operación no llegó a completarse. " + ex.Message);
         }
     }
 }

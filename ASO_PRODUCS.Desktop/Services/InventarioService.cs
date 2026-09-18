@@ -103,6 +103,47 @@ public sealed class InventarioService
     }
 
     /// <summary>
+    /// Da de alta, de una sola vez, los artículos sugeridos que todavía no existan por nombre.
+    /// Pensado para precargar el almacén de una instalación nueva; correrlo más de una vez no
+    /// duplica nada. Devuelve cuántos se crearon.
+    ///
+    /// Compara por NOMBRE y no por código, a diferencia de <see cref="Validar"/>: el código lo
+    /// genera esta misma llamada, así que dos ejecuciones seguidas producirían dos códigos
+    /// distintos para el mismo artículo y ninguna se vería como repetida.
+    ///
+    /// Es el gemelo de <c>MateriaPrimaService.CargarSugeridos</c> y de
+    /// <c>ProductosService.CargarSugeridos</c>; Almacén era el único de los tres catálogos que
+    /// no tenía con qué arrancar.
+    /// </summary>
+    public int CargarSugeridos(IEnumerable<(string Nombre, string Categoria, UnidadMedida Unidad)> sugeridos)
+    {
+        var existentes = _articulos.GetAll()
+            .Select(a => a.Nombre.Trim())
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        var creados = 0;
+
+        foreach (var (nombre, categoria, unidad) in sugeridos)
+        {
+            if (!existentes.Add(nombre.Trim()))
+                continue;
+
+            _articulos.Add(new Articulo
+            {
+                Codigo = GenerarCodigo(),
+                Nombre = nombre,
+                Categoria = categoria,
+                Unidad = unidad,
+                Activo = true
+            });
+
+            creados++;
+        }
+
+        return creados;
+    }
+
+    /// <summary>
     /// Un artículo que ya se movió no se borra: se desactiva. Borrarlo dejaría las líneas de los
     /// documentos apuntando a un artículo que no existe y el kardex sin poder cuadrarse.
     /// </summary>

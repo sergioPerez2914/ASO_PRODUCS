@@ -56,7 +56,7 @@ public sealed class EtapasProduccionService
     /// catálogo de una planta nueva; correrlo más de una vez no duplica nada. Devuelve cuántas se
     /// crearon.
     /// </summary>
-    public int CargarSugeridas(IEnumerable<(string Nombre, string Descripcion)> sugeridas)
+    public int CargarSugeridos(IEnumerable<(string Nombre, string Descripcion)> sugeridas)
     {
         var creadas = 0;
 

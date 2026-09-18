@@ -1,9 +1,12 @@
+using System;
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Linq;
 using System.Windows.Data;
 using System.Windows.Input;
 using ASO_PRODUCS.Desktop.Models;
+using ASO_PRODUCS.Desktop.Navigation;
 using ASO_PRODUCS.Desktop.Services;
 
 namespace ASO_PRODUCS.Desktop.ViewModels;
@@ -34,6 +37,13 @@ public abstract class CrudViewModelBase<T, TId> : ViewModelBase where T : IEntid
         ItemsView = CollectionViewSource.GetDefaultView(Items);
         ItemsView.Filter = FiltrarItem;
 
+        // El contador se recalcula solo. Escuchar la VISTA y no la colección es lo que hace que
+        // funcione igual con el buscador, con los desplegables de filtro y con la recarga del
+        // bus: las tres terminan en ItemsView.Refresh(), que emite un Reset por aquí. Si
+        // escuchara Items, filtrar no movería el número.
+        if (ItemsView is INotifyCollectionChanged vista)
+            vista.CollectionChanged += (_, _) => OnPropertyChanged(nameof(Conteo));
+
         AgregarCommand = new RelayCommand(Agregar, () => _sesion.Puede($"{ModuloPermiso}.Crear"));
         EditarCommand = new RelayCommand(Editar, () => SelectedItem is { } e && PuedeEditar(e) && _sesion.Puede($"{ModuloPermiso}.Editar"));
         EliminarCommand = new RelayCommand(Eliminar, () => SelectedItem is { } b && PuedeEliminar(b) && _sesion.Puede($"{ModuloPermiso}.Eliminar"));
@@ -57,9 +67,47 @@ public abstract class CrudViewModelBase<T, TId> : ViewModelBase where T : IEntid
         set { if (SetProperty(ref _textoBusqueda, value)) ItemsView.Refresh(); }
     }
 
+    /// <summary>
+    /// El listado pide ir a otro submodulo, opcionalmente con una fila ya marcada: "ver la
+    /// cuenta por pagar de esta entrada", "ver la factura de este despacho".
+    ///
+    /// Vive aqui y no solo en <see cref="PantallaCrudViewModel{T, TId}"/> porque la mitad de los
+    /// padrones no son una pantalla: viven dentro de una conmutable (Movimientos, Produccion,
+    /// Pedidos, Productos y Lotes, Cuentas por Pagar/Cobrar) y necesitan que su contenedor
+    /// reenvie el aviso hasta el shell.
+    /// </summary>
+    public event EventHandler<NavegacionEventArgs>? NavegacionSolicitada;
+
+    protected void SolicitarNavegacion(Modulo modulo, Submodulo? submodulo, object? idASeleccionar = null)
+        => NavegacionSolicitada?.Invoke(this, new NavegacionEventArgs(modulo, submodulo, idASeleccionar));
+
     public ICommand AgregarCommand { get; }
     public ICommand EditarCommand { get; }
     public ICommand EliminarCommand { get; }
+
+    /// <summary>
+    /// Cuántas filas se están viendo y de cuántas.
+    ///
+    /// Ninguna tabla lo decía, y sin eso un filtro que deja la tabla vacía no se distingue de un
+    /// catálogo vacío —el estado vacío saca el mismo texto en los dos casos—, ni se sabe cuánto
+    /// se está ocultando cuando sí quedan filas. Sin filtro muestra el total a secas: "300
+    /// registros" y no "300 de 300", que no dice nada.
+    /// </summary>
+    public string Conteo
+    {
+        get
+        {
+            var total = Items.Count;
+            var visibles = ItemsView.Cast<object>().Count();
+
+            if (total == 0)
+                return string.Empty;
+
+            return visibles == total
+                ? $"{total} {(total == 1 ? "registro" : "registros")}"
+                : $"{visibles} de {total}";
+        }
+    }
 
     /// <summary>Prefijo de permiso RBAC del módulo, p. ej. "Empleados" (→ "Empleados.Crear").</summary>
     protected abstract string ModuloPermiso { get; }
@@ -84,6 +132,38 @@ public abstract class CrudViewModelBase<T, TId> : ViewModelBase where T : IEntid
     /// <summary>¿El elemento admite borrado? Ver <see cref="PuedeEditar"/>.</summary>
     protected virtual bool PuedeEliminar(T item) => true;
 
+    /// <summary>
+    /// Cómo nombrar la fila cuando hay que hablar de ella: «Se eliminará «Lácteos Pérez»» y no
+    /// «se eliminará el registro seleccionado», que es lo que decía la pregunta de borrado y no
+    /// permitía darse cuenta de que la fila marcada no era la que uno creía. Lo usa también el
+    /// aviso de guardado, para que confirme QUÉ se guardó.
+    ///
+    /// Nulo por defecto —no todo maestro tiene un nombre obvio— y entonces se cae al texto
+    /// genérico.
+    /// </summary>
+    protected virtual string? Describir(T item) => null;
+
+    /// <summary>
+    /// Cómo se llama una fila de este listado en el aviso de guardado: "Proveedor", "Artículo".
+    /// Por defecto el nombre del tipo, que es correcto para casi todos (<c>Proveedor</c>,
+    /// <c>Cliente</c>, <c>Producto</c>) y solo hace falta redefinir donde el tipo no se llama
+    /// como la cosa.
+    /// </summary>
+    protected virtual string NombreDelTipo => typeof(T).Name;
+
+    /// <summary>
+    /// "Guardado: Proveedor «Lácteos Pérez»". Guardar no confirmaba nada en ninguna pantalla que
+    /// no fuera Configuración: la única señal era que la tabla se recargaba sola, y con la fila
+    /// fuera de pantalla eso no se ve (ver <see cref="Services.Aviso"/>).
+    ///
+    /// El participio va delante, como etiqueta, y no detrás del nombre: "Factura … guardado"
+    /// concuerda mal y arreglarlo pediría declarar el género de cada maestro solo para esto.
+    /// </summary>
+    protected void Avisar(string participio, T item)
+        => Aviso.Mostrar(Describir(item) is { Length: > 0 } nombre
+            ? $"{participio}: {NombreDelTipo} «{nombre}»"
+            : $"{participio}: {NombreDelTipo}");
+
     private bool FiltrarItem(object obj)
         => obj is T item
            && (string.IsNullOrWhiteSpace(TextoBusqueda) || CoincideBusqueda(item, TextoBusqueda.Trim()))
@@ -107,6 +187,7 @@ public abstract class CrudViewModelBase<T, TId> : ViewModelBase where T : IEntid
 
         var agregado = _source.Add(editor.ObtenerResultado());
         _idASeleccionar = agregado.Id;
+        Avisar("Guardado", agregado);
     }
 
     /// <summary>
@@ -126,6 +207,7 @@ public abstract class CrudViewModelBase<T, TId> : ViewModelBase where T : IEntid
         var actualizado = editor.ObtenerResultado();
         _source.Update(actualizado);
         _idASeleccionar = actualizado.Id;
+        Avisar("Guardado", actualizado);
     }
 
     /// <summary>
@@ -137,12 +219,32 @@ public abstract class CrudViewModelBase<T, TId> : ViewModelBase where T : IEntid
         if (SelectedItem is not { } actual)
             return;
 
-        if (!_dialogo.Confirmar("Eliminar", "¿Eliminar el registro seleccionado? Esta acción no se puede deshacer."))
+        var queSeBorra = Describir(actual) is { Length: > 0 } nombre
+            ? $"Se eliminará «{nombre}»."
+            : "Se eliminará el registro seleccionado.";
+
+        if (!_dialogo.Confirmar("Eliminar", $"{queSeBorra} Esta acción no se puede deshacer.",
+                                "Eliminar", destructivo: true))
             return;
 
-        _source.Delete(actual.Id);
+        // El borrado va con red: no hay claves foráneas reales (ver BD/DbContext.cs), pero sí
+        // índices y restricciones que pueden rechazar, y la conexión puede caerse a media
+        // escritura. Sin este try la excepción subía hasta el despachador y cerraba la
+        // aplicación; ahora dice qué pasó y la fila se queda donde estaba.
+        try
+        {
+            _source.Delete(actual.Id);
+        }
+        catch (Exception ex)
+        {
+            _dialogo.Informar("No se pudo eliminar", ex.Message);
+            return;
+        }
+
         _idASeleccionar = null;
         SelectedItem = default;
+
+        Avisar("Eliminado", actual);
     }
 
     /// <summary>
@@ -154,6 +256,17 @@ public abstract class CrudViewModelBase<T, TId> : ViewModelBase where T : IEntid
 
     /// <summary>Deja apuntado qué fila reseleccionar; lo usan las pantallas con transiciones.</summary>
     protected void SeleccionarTrasRecargar(TId id) => _idASeleccionar = id;
+
+    /// <summary>
+    /// Marca una fila viniendo de fuera: el salto desde otro documento. Refresca ademas de
+    /// apuntar, porque el listado ya se leyo en el constructor y <see cref="SeleccionarTrasRecargar"/>
+    /// solo deja anotado a quien elegir en la PROXIMA recarga.
+    /// </summary>
+    public void SeleccionarAlAbrir(TId id)
+    {
+        SeleccionarTrasRecargar(id);
+        Recargar();
+    }
 
     /// <summary>
     /// Relee el listado.

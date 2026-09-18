@@ -148,6 +148,54 @@ public sealed class MovimientosService
         return true;
     }
 
+    /// <summary>
+    /// Da de alta un asiento tecleado a mano —la comisión del banco, un retiro, un aporte— y
+    /// estampa lo que no se escribe en el formulario: el estado inicial, quién lo creó y cuándo.
+    ///
+    /// <para>Existe porque era el único documento con máquina de estados cuya alta NO pasaba por
+    /// su servicio: <c>MovimientosBancoCrudViewModel</c> heredaba el <c>Agregar</c> genérico de
+    /// <c>CrudViewModelBase</c>, que escribe directo contra el <c>IDataSource</c>. Lo validado
+    /// era lo que el editor hubiera comprobado al pulsar Guardar, y el estado y el autor los
+    /// ponía el <c>CrearNuevo</c> del ViewModel: reglas de negocio repartidas por la interfaz,
+    /// justo lo que la regla de oro del proyecto deja en el servicio.</para>
+    ///
+    /// <para>Revalida en vez de confiar en el editor, por el mismo motivo que el resto de las
+    /// transiciones de esta clase: entre que se abrió el formulario y se pulsó guardar, la cuenta
+    /// pudo cerrarse desde otro puesto.</para>
+    /// </summary>
+    public MovimientoBanco RegistrarManual(MovimientoBanco movimiento, int usuarioId)
+    {
+        if (!Validar(movimiento, out var error))
+            throw new InvalidOperationException(error);
+
+        movimiento.Estado = EstadoMovimientoBanco.Registrado;
+        movimiento.CreadoPorId = usuarioId;
+        movimiento.FechaCreacion = DateTime.Now;
+
+        return _movimientos.Add(movimiento);
+    }
+
+    /// <summary>
+    /// Guarda la corrección de un asiento manual. Exige <see cref="PuedeEditar"/> —un asiento
+    /// conciliado o anulado ya no se toca— porque el <c>CanExecute</c> del botón mira el estado
+    /// que tenía la fila al pintarse, no el que tiene al guardar.
+    /// </summary>
+    public MovimientoBanco EditarManual(MovimientoBanco movimiento)
+    {
+        if (_movimientos.GetById(movimiento.Id) is not { } actual)
+            throw new InvalidOperationException("El movimiento ya no existe.");
+
+        if (!PuedeEditar(actual))
+            throw new InvalidOperationException(
+                "Solo se puede editar un movimiento manual que siga registrado.");
+
+        if (!Validar(movimiento, out var error))
+            throw new InvalidOperationException(error);
+
+        _movimientos.Update(movimiento);
+        return movimiento;
+    }
+
     // --- Asientos que nacen de un documento ---
 
     /// <summary>

@@ -73,6 +73,11 @@ public sealed class RecepcionesMateriaPrimaViewModel : PantallaCrudViewModel<Rec
                   && _sesionActual.Puede(Permisos.RecepcionesMateriaPrima.Anular));
 
         VerDetalleCommand = new RelayCommand(VerDetalle);
+
+        ImprimirCommand = new RelayCommand(Imprimir, () => SelectedItem is not null);
+
+        VerFacturaCommand = new RelayCommand(VerFactura,
+            () => SelectedItem?.FacturaProveedorId is not null);
     }
 
     public ICommand CambiarFiltroCommand { get; }
@@ -85,11 +90,21 @@ public sealed class RecepcionesMateriaPrimaViewModel : PantallaCrudViewModel<Rec
     /// importar el <see cref="EstadoRecepcionMateriaPrima"/> de la recepción.</summary>
     public ICommand VerDetalleCommand { get; }
 
+    /// <summary>Saca el documento por la impresora. Ver <see cref="Services.ImpresionDocumento"/>.</summary>
+    public ICommand ImprimirCommand { get; }
+
+    /// <summary>Abre la cuenta por pagar que generó esta recepción, con la fila ya marcada.</summary>
+    public ICommand VerFacturaCommand { get; }
+
     public string Resumen =>
         $"{Items.Count(r => r.Estado == EstadoRecepcionMateriaPrima.Registrada)} recepciones · " +
         $"{_servicio.DelMes().Count} este mes · comprado este mes {_servicio.TotalComprasDelMes():N2}";
 
     protected override string ModuloPermiso => "RecepcionesMateriaPrima";
+
+    protected override string Describir(RecepcionMateriaPrima item) => item.Numero;
+
+    protected override string NombreDelTipo => "Recepción";
 
     protected override bool CoincideBusqueda(RecepcionMateriaPrima item, string texto) =>
         item.Numero.Contains(texto, StringComparison.OrdinalIgnoreCase)
@@ -147,7 +162,8 @@ public sealed class RecepcionesMateriaPrimaViewModel : PantallaCrudViewModel<Rec
             return;
 
         Aplicar(() => _servicio.Registrar(editor.ObtenerResultado(),
-                                          _sesionActual.UsuarioActual?.Id ?? 0));
+                                          _sesionActual.UsuarioActual?.Id ?? 0),
+                r => $"Recepción {r.Numero} registrada");
     }
 
     private void Anular()
@@ -164,7 +180,39 @@ public sealed class RecepcionesMateriaPrimaViewModel : PantallaCrudViewModel<Rec
         if (!_dialogos.MostrarEditor(editor))
             return;
 
-        Aplicar(() => _servicio.Anular(recepcion, editor.Motivo));
+        Aplicar(() => _servicio.Anular(recepcion, editor.Motivo),
+                r => $"Recepción {r.Numero} anulada");
+    }
+
+    /// <summary>
+    /// Salta a la cuenta por pagar que generó esta recepción.
+    ///
+    /// El enlace ya estaba guardado en el documento (<c>RecepcionMateriaPrima.FacturaProveedorId</c>) y la ficha lo
+    /// pintaba como texto: se veia el numero de la factura pero llegar a ella era volver al
+    /// menu, entrar al submodulo y buscarla a mano.
+    /// </summary>
+    private void VerFactura()
+    {
+        if (SelectedItem?.FacturaProveedorId is not { } facturaId)
+            return;
+
+        if (ModuloCatalogo.BuscarModulo("Finanzas") is { } destino
+            && ModuloCatalogo.BuscarSubmodulo("Finanzas.CuentasPorPagar") is { } seccion)
+            SolicitarNavegacion(destino, seccion, facturaId);
+    }
+
+    /// <summary>
+    /// Imprime la fila seleccionada. El documento no se vuelve a leer de la base: se imprime
+    /// EXACTAMENTE lo que está en pantalla, porque el papel que se entrega tiene que
+    /// coincidir con lo que vio quien lo emitió.
+    /// </summary>
+    private void Imprimir()
+    {
+        if (SelectedItem is not { } documento)
+            return;
+
+        if (ImpresionDocumento.Imprimir(DocumentosImprimibles.De(documento)))
+            Aviso.Mostrar($"Enviado a la impresora: {documento.Numero}");
     }
 
     private void VerDetalle()
@@ -175,15 +223,26 @@ public sealed class RecepcionesMateriaPrimaViewModel : PantallaCrudViewModel<Rec
         _dialogos.MostrarEditor(new RecepcionMateriaPrimaDetalleViewModel(recepcion));
     }
 
-    private void Aplicar(Func<RecepcionMateriaPrima> transicion)
+    private void Aplicar(Func<RecepcionMateriaPrima> transicion, Func<RecepcionMateriaPrima, string> aviso)
     {
         try
         {
-            SeleccionarTrasRecargar(transicion().Id);
+            var resultado = transicion();
+            SeleccionarTrasRecargar(resultado.Id);
+            Aviso.Mostrar(aviso(resultado));
         }
         catch (InvalidOperationException ex)
         {
             _dialogos.Informar("No se pudo completar la operación", ex.Message);
+        }
+        catch (Exception ex)
+        {
+            // Lo que NO es una regla de negocio —la conexión que se cae, la escritura que choca
+            // con un índice— subía sin capturar hasta el despachador y cerraba la aplicación a
+            // media operación. Va en un catch aparte a propósito: el mensaje de arriba lo redactó
+            // el servicio para quien lo lee, este es técnico y no se puede prometer más.
+            _dialogos.Informar("No se pudo guardar",
+                "La operación no llegó a completarse. " + ex.Message);
         }
     }
 }

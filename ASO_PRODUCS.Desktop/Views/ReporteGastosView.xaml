@@ -62,7 +62,7 @@
         <RowDefinition Height="*" />
       </Grid.RowDefinitions>
 
-      <TextBlock Grid.Row="0" Text="Doble clic en una fila para ver el detalle completo del movimiento."
+      <TextBlock Grid.Row="0" Text="Doble clic o Enter sobre una fila para ver el detalle completo del movimiento."
                  Margin="0,0,0,4" FontSize="{StaticResource FsCaption}"
                  Foreground="{DynamicResource TextMutedBrush}" />
 
@@ -71,7 +71,7 @@
           <DataGrid x:Name="TablaGastos" Style="{StaticResource DataGridStyle}"
                     ItemsSource="{Binding Gastos}" IsReadOnly="True"
                     SelectedItem="{Binding Seleccionado}"
-                    MouseDoubleClick="TablaGastos_MouseDoubleClick">
+                    controls:AbrirFila.Comando="{Binding VerDetalleCommand}">
             <DataGrid.Columns>
               <controls:ColumnaTexto Header="Fecha" Binding="{Binding FechaTexto}" Width="14*" MinWidth="100" />
               <controls:ColumnaTexto Header="Categoría" Binding="{Binding Categoria}" Width="20*" MinWidth="140" />

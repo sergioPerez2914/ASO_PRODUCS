@@ -1,0 +1,65 @@
+<Window x:Class="ASO_PRODUCS.Desktop.Views.DialogoWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        mc:Ignorable="d"
+        Title="{Binding Titulo}"
+        Icon="pack://application:,,,/Assets/Logo/aso-icon.ico"
+        Width="420" SizeToContent="Height"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        WindowStyle="SingleBorderWindow"
+        ShowInTaskbar="False"
+        Background="{DynamicResource BackgroundBrush}"
+        FontFamily="{StaticResource AppFont}">
+
+  <!-- Mismo armazón que CrudEditorWindow: 24 de margen, título arriba, botones abajo a la
+       derecha, Esc y Enter cableados. La diferencia es que aquí el contenido es un párrafo y no
+       un formulario, así que no hace falta ScrollViewer: SizeToContent="Height" con un ancho fijo
+       deja que el texto decida el alto, y ServicioDialogo recorta con MaxHeight si se desmadra. -->
+  <Grid Margin="24">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto" />
+      <RowDefinition Height="Auto" />
+      <RowDefinition Height="Auto" />
+    </Grid.RowDefinitions>
+
+    <TextBlock Grid.Row="0" Text="{Binding Titulo}"
+               FontSize="{StaticResource FsTitle}"
+               FontWeight="{StaticResource FwMedium}"
+               Foreground="{DynamicResource TextPrimaryBrush}"
+               TextWrapping="Wrap" Margin="{StaticResource TkEtiqueta}" />
+
+    <TextBlock Grid.Row="1" Text="{Binding Mensaje}"
+               FontSize="{StaticResource FsBody}"
+               Foreground="{DynamicResource TextSecondaryBrush}"
+               TextWrapping="Wrap" LineHeight="19" LineStackingStrategy="BlockLineHeight"
+               Margin="{StaticResource TkBloque}" />
+
+    <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right">
+      <Button Content="{Binding TextoCancelar}" Style="{StaticResource SecondaryButtonStyle}"
+              Margin="0,0,8,0" MinWidth="88"
+              IsCancel="True" IsDefault="{Binding CancelarPorDefecto}"
+              Visibility="{Binding MuestraCancelar, Converter={StaticResource BoolToVis}}" />
+
+      <!-- Un solo botón de aceptar, repintado por trigger, y no dos alternándose por
+           Visibility: un Button colapsado con IsDefault sigue respondiendo al Enter, que es
+           justo lo que este diálogo viene a arreglar. -->
+      <Button Content="{Binding TextoAceptar}" MinWidth="88"
+              IsDefault="{Binding AceptarPorDefecto}" Click="Aceptar_Click">
+        <Button.Style>
+          <Style TargetType="Button" BasedOn="{StaticResource PrimaryButtonStyle}">
+            <Style.Triggers>
+              <DataTrigger Binding="{Binding EsDestructivo}" Value="True">
+                <Setter Property="Background" Value="{DynamicResource DangerButtonBrush}" />
+                <Setter Property="Foreground" Value="White" />
+                <Setter Property="BorderThickness" Value="0" />
+              </DataTrigger>
+            </Style.Triggers>
+          </Style>
+        </Button.Style>
+      </Button>
+    </StackPanel>
+  </Grid>
+</Window>

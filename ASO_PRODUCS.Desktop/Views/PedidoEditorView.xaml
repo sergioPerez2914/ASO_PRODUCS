@@ -39,60 +39,69 @@
     </Grid>
 
     <!-- Productos pedidos -->
-    <TextBlock Text="Productos pedidos" Style="{StaticResource CardTitleStyle}" Margin="0,20,0,8" />
+    <TextBlock Text="Productos pedidos" Style="{StaticResource CardTitleStyle}" Margin="{StaticResource TkTituloDeBloque}" />
 
     <Border Style="{StaticResource SectionCardStyle}" Padding="0">
-      <DataGrid Style="{StaticResource DataGridStyle}"
-                ItemsSource="{Binding Lineas}"
-                IsReadOnly="True"
-                MaxHeight="260"
-                HeadersVisibility="Column"
-                CanUserSortColumns="False">
-        <DataGrid.Columns>
-          <DataGridTemplateColumn Header="Producto" Width="34*" MinWidth="200">
-            <DataGridTemplateColumn.CellTemplate>
-              <DataTemplate>
-                <ComboBox Style="{StaticResource LineaComboBoxStyle}"
-                          ItemsSource="{Binding Productos}"
-                          DisplayMemberPath="Nombre"
-                          SelectedItem="{Binding ProductoSeleccionado, UpdateSourceTrigger=PropertyChanged}" />
-              </DataTemplate>
-            </DataGridTemplateColumn.CellTemplate>
-          </DataGridTemplateColumn>
+      <Grid>
+        <DataGrid x:Name="TablaLineas" Style="{StaticResource DataGridStyle}"
+                  ItemsSource="{Binding Lineas}"
+                  IsReadOnly="True"
+                  MaxHeight="260"
+                  HeadersVisibility="Column"
+                  CanUserSortColumns="False">
+          <DataGrid.Columns>
+            <DataGridTemplateColumn Header="Producto" Width="34*" MinWidth="200">
+              <DataGridTemplateColumn.CellTemplate>
+                <DataTemplate>
+                  <ComboBox Style="{StaticResource LineaComboBoxStyle}"
+                            ItemsSource="{Binding Productos}"
+                            DisplayMemberPath="Nombre"
+                            SelectedItem="{Binding ProductoSeleccionado, UpdateSourceTrigger=PropertyChanged}" />
+                </DataTemplate>
+              </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
 
-          <DataGridTemplateColumn Header="Cantidad" Width="16*" MinWidth="90">
-            <DataGridTemplateColumn.CellTemplate>
-              <DataTemplate>
-                <TextBox Style="{StaticResource LineaTextBoxStyle}" TextAlignment="Right"
-                         Text="{Binding Cantidad, UpdateSourceTrigger=PropertyChanged}" />
-              </DataTemplate>
-            </DataGridTemplateColumn.CellTemplate>
-          </DataGridTemplateColumn>
+            <DataGridTemplateColumn Header="Cantidad" Width="16*" MinWidth="90">
+              <DataGridTemplateColumn.CellTemplate>
+                <DataTemplate>
+                  <TextBox Style="{StaticResource LineaTextBoxStyle}" TextAlignment="Right"
+                           Text="{Binding Cantidad, UpdateSourceTrigger=PropertyChanged}" />
+                </DataTemplate>
+              </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
 
-          <DataGridTemplateColumn Header="Precio" Width="16*" MinWidth="90">
-            <DataGridTemplateColumn.CellTemplate>
-              <DataTemplate>
-                <TextBox Style="{StaticResource LineaTextBoxStyle}" TextAlignment="Right"
-                         Text="{Binding PrecioUnitario, UpdateSourceTrigger=PropertyChanged}" />
-              </DataTemplate>
-            </DataGridTemplateColumn.CellTemplate>
-          </DataGridTemplateColumn>
+            <DataGridTemplateColumn Header="Precio" Width="16*" MinWidth="90">
+              <DataGridTemplateColumn.CellTemplate>
+                <DataTemplate>
+                  <TextBox Style="{StaticResource LineaTextBoxStyle}" TextAlignment="Right"
+                           Text="{Binding PrecioUnitario, UpdateSourceTrigger=PropertyChanged}" />
+                </DataTemplate>
+              </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
 
-          <controls:ColumnaNumero Header="Subtotal" Binding="{Binding SubtotalTexto}" Width="16*" MinWidth="90" />
+            <controls:ColumnaNumero Header="Subtotal" Binding="{Binding SubtotalTexto}" Width="16*" MinWidth="90" />
 
-          <DataGridTemplateColumn Width="56">
-            <DataGridTemplateColumn.CellTemplate>
-              <DataTemplate>
-                <Button Content="{x:Static controls:Iconos.Limpiar}"
-                        Style="{StaticResource LineaBotonQuitarStyle}"
-                        ToolTip="Quitar esta línea"
-                        Command="{Binding Datos.QuitarLineaCommand, Source={StaticResource Puente}}"
-                        CommandParameter="{Binding}" />
-              </DataTemplate>
-            </DataGridTemplateColumn.CellTemplate>
-          </DataGridTemplateColumn>
-        </DataGrid.Columns>
-      </DataGrid>
+            <DataGridTemplateColumn Width="56">
+              <DataGridTemplateColumn.CellTemplate>
+                <DataTemplate>
+                  <Button Content="{x:Static controls:Iconos.Limpiar}"
+                          Style="{StaticResource LineaBotonQuitarStyle}"
+                          ToolTip="Quitar esta línea"
+                          Command="{Binding Datos.QuitarLineaCommand, Source={StaticResource Puente}}"
+                          CommandParameter="{Binding}" />
+                </DataTemplate>
+              </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
+          </DataGrid.Columns>
+        </DataGrid>
+
+        <controls:EmptyState Compacto="True"
+                             Icono="{x:Static controls:Iconos.Pedidos}"
+                             Titulo="Sin productos todavía"
+                             Detalle="Agregue con «Agregar línea» lo que pidió el cliente."
+                             Visibility="{Binding HasItems, ElementName=TablaLineas,
+                                                  Converter={StaticResource SinItemsAVis}}" />
+      </Grid>
     </Border>
 
     <Grid Margin="0,12,0,0">
@@ -107,7 +116,7 @@
               Style="{StaticResource SecondaryButtonStyle}"
               Command="{Binding AgregarLineaCommand}" />
 
-      <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,20,0">
+      <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,16,0">
         <TextBlock Text="Unidades" VerticalAlignment="Center" Margin="0,0,12,0"
                    Foreground="{DynamicResource TextSecondaryBrush}" />
         <TextBlock Text="{Binding TotalCantidad, StringFormat=N2}" Style="{StaticResource FormValorCalculadoStyle}" />

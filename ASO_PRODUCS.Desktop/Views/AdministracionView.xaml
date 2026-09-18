@@ -79,6 +79,9 @@
             <WrapPanel Grid.Row="0" VerticalAlignment="Center">
               <controls:SearchBox Width="280" Margin="0,0,12,0" VerticalAlignment="Center"
                                   Texto="{Binding TextoBusqueda, Mode=TwoWay}" />
+              <TextBlock Text="{Binding Conteo}" VerticalAlignment="Center"
+                         FontSize="{StaticResource FsCaption}"
+                         Foreground="{DynamicResource TextMutedBrush}" />
             </WrapPanel>
 
             <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,12,0,0">
@@ -96,7 +99,8 @@
           <Grid>
             <DataGrid x:Name="Tabla" Style="{StaticResource DataGridStyle}"
                       ItemsSource="{Binding ItemsView}"
-                      SelectedItem="{Binding SelectedItem}">
+                      SelectedItem="{Binding SelectedItem}"
+                      controls:AbrirFila.Comando="{Binding EditarCommand}">
               <DataGrid.Columns>
                 <controls:ColumnaTexto Header="Usuario" Binding="{Binding NombreUsuario}" Width="30*" MinWidth="160" />
                 <controls:ColumnaTexto Header="Rol" Binding="{Binding RolTexto}" Width="14*" MinWidth="100" />

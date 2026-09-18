@@ -67,6 +67,8 @@ public sealed class ProductosCrudViewModel : CrudViewModelBase<Producto, int>
 
     protected override string ModuloPermiso => "Productos";
 
+    protected override string Describir(Producto item) => item.Nombre;
+
     protected override bool CoincideBusqueda(Producto item, string texto) =>
         item.Nombre.Contains(texto, StringComparison.OrdinalIgnoreCase)
         || item.ProductoBaseNombre.Contains(texto, StringComparison.OrdinalIgnoreCase);
@@ -107,10 +109,9 @@ public sealed class ProductosCrudViewModel : CrudViewModelBase<Producto, int>
         var creados = _servicio.CargarSugeridos(CatalogoLacteoSugerido.Productos);
         Recargar();
 
-        _dialogos.Informar("Catálogo cargado",
-            creados > 0
-                ? $"Se agregaron {creados} productos sugeridos."
-                : "Los productos sugeridos ya estaban todos cargados.");
+        Aviso.Mostrar(creados > 0
+            ? $"Se agregaron {creados} productos sugeridos."
+            : "Los productos sugeridos ya estaban todos cargados.");
     }
 }
 
@@ -403,10 +404,9 @@ public sealed class LotesViewModel : ViewModelBase
         if (TransformarLoteEditorViewModel.Abrir(_transformaciones, _dialogos, _sesion, lote) is { } proceso)
         {
             _alTransformar();
-            _dialogos.Informar("Transformación registrada",
-                proceso.Estado == EstadoProcesoProduccion.Terminado
-                    ? $"Se creó el lote {proceso.Numero} con {proceso.CantidadProducidaTexto} de {proceso.ProductoNombre}."
-                    : $"El proceso {proceso.Numero} de {proceso.ProductoNombre} quedó En proceso; continúelo desde Producción.");
+            Aviso.Mostrar(proceso.Estado == EstadoProcesoProduccion.Terminado
+                ? $"Se creó el lote {proceso.Numero} con {proceso.CantidadProducidaTexto} de {proceso.ProductoNombre}."
+                : $"El proceso {proceso.Numero} quedó En proceso; continúelo desde Producción.");
         }
     }
 

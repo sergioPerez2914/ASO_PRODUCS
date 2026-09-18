@@ -47,6 +47,9 @@
               <ComboBoxItem Content="Sin existencia" />
               <ComboBoxItem Content="Inactivos" />
             </controls:FiltroDropdown>
+            <TextBlock Text="{Binding Conteo}" VerticalAlignment="Center"
+                       FontSize="{StaticResource FsCaption}"
+                       Foreground="{DynamicResource TextMutedBrush}" />
           </WrapPanel>
 
           <TextBlock Grid.Row="0" Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center"
@@ -63,6 +66,9 @@
                     Foreground="{DynamicResource DangerTextBrush}"
                     Command="{Binding EliminarCommand}"
                     ToolTip="Solo se puede eliminar un artículo que nunca se movió; el resto se desactiva." />
+            <Button Content="Cargar sugeridos" Style="{StaticResource SecondaryButtonStyle}"
+                    Command="{Binding CargarSugeridosCommand}"
+                    ToolTip="Carga los insumos de almacén recomendados para una planta láctea; no duplica lo que ya exista." />
           </StackPanel>
         </Grid>
       </Border>
@@ -71,7 +77,8 @@
         <Grid>
           <DataGrid x:Name="TablaArticulos" Style="{StaticResource DataGridStyle}"
                     ItemsSource="{Binding ItemsView}"
-                    SelectedItem="{Binding SelectedItem}">
+                    SelectedItem="{Binding SelectedItem}"
+                    controls:AbrirFila.Comando="{Binding EditarCommand}">
             <DataGrid.Columns>
               <controls:ColumnaTexto Header="Código" Binding="{Binding Codigo}" Width="12*" MinWidth="88" />
               <controls:ColumnaTexto Header="Artículo" Binding="{Binding Nombre}" Width="26*" MinWidth="140" />

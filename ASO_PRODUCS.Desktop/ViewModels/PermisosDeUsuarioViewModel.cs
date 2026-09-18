@@ -216,6 +216,6 @@ public sealed class PermisosDeUsuarioViewModel : ViewModelBase
         }
 
         Cargar(usuario);
-        _dialogos.Informar("Permisos guardados", NotaVigencia);
+        Aviso.Mostrar($"Permisos guardados. {NotaVigencia}");
     }
 }

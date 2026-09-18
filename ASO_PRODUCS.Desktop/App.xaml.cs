@@ -24,6 +24,8 @@ public partial class App : Application
     {
         base.OnStartup(e);
 
+        DispatcherUnhandledException += OnExcepcionNoControlada;
+
         RevisarActualizaciones();
 
         // El tema antes de abrir nada: si se aplicara despues, la pantalla de login parpadearia
@@ -61,6 +63,42 @@ public partial class App : Application
 
         // A partir de aquí sí queremos que cerrar la última ventana cierre la app.
         ShutdownMode = ShutdownMode.OnLastWindowClose;
+    }
+
+    /// <summary>
+    /// La última red: lo que ningún <c>catch</c> atrapó.
+    ///
+    /// Sin esto, cualquier excepción que subiera hasta el despachador —la conexión a SQL Server
+    /// que se cae a media escritura es el caso real— cerraba la aplicación de golpe, sin
+    /// mensaje, con el formulario abierto y sin que quien estaba tecleando supiera si se guardó
+    /// algo. Marcar <c>Handled</c> deja la ventana viva: lo que se estaba haciendo no se
+    /// completó, pero el resto de la sesión sigue en pie y se puede reintentar.
+    ///
+    /// No sustituye a los <c>catch</c> de los ViewModels, que sí saben de qué operación hablan y
+    /// pueden redactar el mensaje: esto es para lo que nadie previó, y por eso el texto no
+    /// promete nada sobre el estado de los datos.
+    ///
+    /// Va con <c>MessageBox</c> y no con el diálogo propio a propósito: si lo que falló fue el
+    /// árbol visual o un recurso del tema, abrir una ventana nuestra volvería a fallar dentro
+    /// del manejador. El cuadro del sistema no depende de nada de la aplicación.
+    /// </summary>
+    private void OnExcepcionNoControlada(object sender,
+                                         System.Windows.Threading.DispatcherUnhandledExceptionEventArgs e)
+    {
+        // Sin ventana principal todavía, el arranque tiene sus propios mensajes y su Shutdown:
+        // tragarse la excepción aquí dejaría el proceso vivo y sin interfaz.
+        if (MainWindow is null)
+            return;
+
+        MessageBox.Show(
+            "Se produjo un error inesperado y la operación no se completó.\n\n"
+            + e.Exception.Message
+            + "\n\nLa aplicación sigue abierta. Si vuelve a ocurrir, cierre sesión y vuelva a entrar.",
+            "ASO Producs",
+            MessageBoxButton.OK,
+            MessageBoxImage.Warning);
+
+        e.Handled = true;
     }
 
     /// <summary>

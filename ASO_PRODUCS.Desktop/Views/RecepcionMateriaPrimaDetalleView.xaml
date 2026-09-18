@@ -121,7 +121,7 @@
     </Border>
 
     <!-- Detalle de la recepción -->
-    <TextBlock Text="Detalle" Style="{StaticResource CardTitleStyle}" Margin="0,20,0,8" />
+    <TextBlock Text="Detalle" Style="{StaticResource CardTitleStyle}" Margin="{StaticResource TkTituloDeBloque}" />
 
     <Border Style="{StaticResource SectionCardStyle}">
       <StackPanel Grid.IsSharedSizeScope="True">

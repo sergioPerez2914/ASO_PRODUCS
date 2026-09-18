@@ -125,6 +125,9 @@
               <DatePicker Width="130" VerticalAlignment="Center"
                           Style="{StaticResource FormDatePickerStyle}"
                           SelectedDate="{Binding Hasta}" />
+              <TextBlock Text="{Binding Conteo}" VerticalAlignment="Center"
+                         FontSize="{StaticResource FsCaption}"
+                         Foreground="{DynamicResource TextMutedBrush}" />
             </WrapPanel>
 
             <StackPanel Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Orientation="Horizontal"
@@ -149,7 +152,7 @@
           </Grid>
         </Border>
 
-        <TextBlock Grid.Row="1" Text="Doble clic en una fila para ver el detalle completo del movimiento."
+        <TextBlock Grid.Row="1" Text="Doble clic o Enter sobre una fila para ver el detalle completo del movimiento."
                    Margin="0,12,0,4" FontSize="{StaticResource FsCaption}"
                    Foreground="{DynamicResource TextMutedBrush}" />
 
@@ -158,7 +161,7 @@
             <DataGrid x:Name="TablaMovimientos" Style="{StaticResource DataGridStyle}"
                       ItemsSource="{Binding ItemsView}"
                       SelectedItem="{Binding SelectedItem}"
-                      MouseDoubleClick="TablaMovimientos_MouseDoubleClick">
+                      controls:AbrirFila.Comando="{Binding VerDetalleCommand}">
               <DataGrid.Columns>
                 <controls:ColumnaTexto Header="Fecha" Binding="{Binding FechaTexto}" Width="9*" MinWidth="76" />
                 <controls:ColumnaTexto Header="Concepto" Binding="{Binding Concepto}" Width="26*" MinWidth="150" />
@@ -226,6 +229,9 @@
             <WrapPanel Grid.Row="0" Grid.Column="0" VerticalAlignment="Center">
               <controls:SearchBox Width="280" Margin="0,0,12,0" VerticalAlignment="Center"
                                   Texto="{Binding TextoBusqueda, Mode=TwoWay}" />
+              <TextBlock Text="{Binding Conteo}" VerticalAlignment="Center"
+                         FontSize="{StaticResource FsCaption}"
+                         Foreground="{DynamicResource TextMutedBrush}" />
             </WrapPanel>
 
             <TextBlock Grid.Row="0" Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center"

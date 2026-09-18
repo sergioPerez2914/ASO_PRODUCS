@@ -51,15 +51,38 @@ public sealed class AlmacenViewModel : PantallaCrudViewModel<Articulo, int>
             _filtro = filtro;
             ItemsView.Refresh();
         });
+
+        CargarSugeridosCommand = new RelayCommand(CargarSugeridos, () => sesion.Puede($"{ModuloPermiso}.Crear"));
     }
 
     public ICommand CambiarFiltroCommand { get; }
+    public ICommand CargarSugeridosCommand { get; }
+
+    /// <summary>
+    /// Precarga el almacén con los insumos sugeridos. Almacén era el único de los tres catálogos
+    /// —con Materia Prima · Existencias y Procesos · Productos— que no tenía con qué arrancar, y
+    /// dar de alta a mano ocho insumos de limpieza y empaque antes de poder registrar la primera
+    /// entrada es justo el trabajo que este botón evita en las otras dos pantallas.
+    /// </summary>
+    private void CargarSugeridos()
+    {
+        var creados = _servicio.CargarSugeridos(CatalogoLacteoSugerido.Articulos);
+        Recargar();
+
+        Aviso.Mostrar(creados > 0
+            ? $"Se agregaron {creados} artículos sugeridos."
+            : "Los artículos sugeridos ya estaban todos cargados.");
+    }
 
     /// <summary>Estado del almacén de un vistazo, sin ir al resumen del módulo.</summary>
     public string Resumen =>
         $"{Items.Count(a => a.Activo)} artículos activos · {Items.Count(a => a.BajoMinimo)} bajo mínimo";
 
     protected override string ModuloPermiso => "Articulos";
+
+    protected override string Describir(Articulo item) => item.Nombre;
+
+    protected override string NombreDelTipo => "Artículo";
 
     protected override bool CoincideBusqueda(Articulo item, string texto) =>
         item.Codigo.Contains(texto, StringComparison.OrdinalIgnoreCase)

@@ -40,9 +40,31 @@ public interface IPantalla : IRecargable
 {
     event EventHandler? VolverSolicitado;
 
+    /// <summary>
+    /// La pantalla pide ir a OTRA pantalla, opcionalmente con una fila ya marcada.
+    ///
+    /// Hasta ahora ninguna pantalla podía navegar: solo el lanzador de Inicio y el resumen del
+    /// módulo emitían navegación, y <see cref="VolverSolicitado"/> era el único camino de salida
+    /// —siempre hacia arriba—. Eso dejaba muertos los enlaces que los documentos ya guardan
+    /// entre sí (la factura que generó un despacho, el pedido del que salió, el proceso que
+    /// produjo el lote): el dato estaba, pero llegar al otro documento era volver al menú y
+    /// buscarlo a mano.
+    ///
+    /// Lo escucha <c>MainWindow.Conectar</c>, que es el único punto de navegación de la
+    /// aplicación; la pantalla no sabe ni quiere saber cómo se enruta.
+    /// </summary>
+    event EventHandler<NavegacionEventArgs>? NavegacionSolicitada;
+
     Modulo Modulo { get; }
     Submodulo? Submodulo { get; }
     ICommand VolverCommand { get; }
+
+    /// <summary>
+    /// Se lo dice el shell justo después de crearla, cuando el salto venía con destino concreto.
+    /// La pantalla decide qué hacer: los listados CRUD lo pasan a
+    /// <c>SeleccionarTrasRecargar</c>; las que no tienen fila que marcar lo ignoran.
+    /// </summary>
+    void SeleccionarAlAbrir(object id);
 }
 
 /// <summary>
@@ -58,6 +80,22 @@ public abstract class PantallaViewModelBase : ViewModelBase, IPantalla
 {
     /// <summary>Se dispara al pedir volver al resumen del modulo; la ventana principal navega.</summary>
     public event EventHandler? VolverSolicitado;
+
+    /// <inheritdoc />
+    public event EventHandler<NavegacionEventArgs>? NavegacionSolicitada;
+
+    /// <summary>Atajo para las subclases: pedir ir a otro submodulo, con una fila ya marcada.</summary>
+    protected void SolicitarNavegacion(Modulo modulo, Submodulo? submodulo, object? idASeleccionar = null)
+        => NavegacionSolicitada?.Invoke(this, new NavegacionEventArgs(modulo, submodulo, idASeleccionar));
+
+    /// <summary>
+    /// Por defecto no hace nada: una pantalla que no es un listado —Configuracion, el marcador
+    /// de un submodulo sin construir— no tiene fila que marcar. Las conmutables la redefinen
+    /// para pasarselo al padron que corresponda.
+    /// </summary>
+    public virtual void SeleccionarAlAbrir(object id)
+    {
+    }
 
     public Modulo Modulo { get; }
 
@@ -102,7 +140,7 @@ public abstract class PantallaViewModelBase : ViewModelBase, IPantalla
 /// es un descuido: C# no tiene herencia multiple y estas pantallas ya heredan de
 /// <see cref="CrudViewModelBase{T, TId}"/>. La alternativa —mover el preambulo a la base CRUD—
 /// se lo colgaria tambien a los siete ViewModels de padron que viven DENTRO de una pantalla
-/// conmutable (<see cref="FincaCrudViewModel"/> y companneros), que no tienen modulo ninguno.
+/// conmutable (los padrones de Movimientos, Produccion, Pedidos y Productos y Lotes), que no tienen modulo ninguno.
 ///
 /// Son dos copias de nueve lineas, no diecisiete, y no pueden desalinearse en silencio:
 /// <see cref="IPantalla"/> obliga a las dos a exponer lo mismo.
@@ -111,6 +149,19 @@ public abstract class PantallaCrudViewModel<T, TId> : CrudViewModelBase<T, TId>,
     where T : IEntidad<TId>
 {
     public event EventHandler? VolverSolicitado;
+
+    // NavegacionSolicitada y SolicitarNavegacion se heredan de CrudViewModelBase.
+
+    /// <summary>
+    /// Marca la fila que pidio quien nos mando aqui. El listado ya se leyo en el constructor,
+    /// asi que hay que refrescar ademas de apuntar: <c>SeleccionarTrasRecargar</c> solo deja
+    /// anotado a quien elegir en la PROXIMA recarga.
+    /// </summary>
+    public void SeleccionarAlAbrir(object id)
+    {
+        if (id is TId clave)
+            SeleccionarAlAbrir(clave);
+    }
 
     public Modulo Modulo { get; }
     public Submodulo? Submodulo { get; }

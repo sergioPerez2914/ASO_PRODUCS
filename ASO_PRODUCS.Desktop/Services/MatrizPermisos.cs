@@ -76,6 +76,7 @@ public static class MatrizPermisos
         Permisos.Ver("Procesos.Produccion"),
         Permisos.Ver("Procesos.ProductosYLotes"),
         Permisos.Ver("Procesos.Pedidos"),
+        Permisos.Ver("Procesos.Despachos"),
         Permisos.Ver("Reportes.Procesos"),
         Permisos.Ver("Reportes.Ventas"),
         Permisos.Ver("Reportes.Gastos"),

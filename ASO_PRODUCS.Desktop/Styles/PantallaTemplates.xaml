@@ -73,6 +73,10 @@
     <views:PedidosView />
   </DataTemplate>
 
+  <DataTemplate DataType="{x:Type vm:DespachosViewModel}">
+    <views:DespachosView />
+  </DataTemplate>
+
   <!-- Reportes: Procesos, Ventas, Gastos y Cartera -->
 
   <DataTemplate DataType="{x:Type vm:ReporteProcesosViewModel}">

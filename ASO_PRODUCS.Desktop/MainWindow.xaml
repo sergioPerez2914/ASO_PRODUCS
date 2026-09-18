@@ -52,7 +52,7 @@
     <Border Grid.Row="0" Grid.ColumnSpan="2" MinHeight="44"
             Background="{DynamicResource SurfaceBrush}"
             BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,0,1"
-            Padding="16,6">
+            Padding="16,4">
       <Grid>
         <Grid.ColumnDefinitions>
           <ColumnDefinition Width="*" />
@@ -108,9 +108,31 @@
          dentro del recuadro y sin arrastrar la pantalla entera. -->
     <ScrollViewer Grid.Row="1" Grid.Column="1"
                   VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
-                  Padding="20">
+                  Padding="24">
       <ContentControl x:Name="ContentArea" />
     </ScrollViewer>
+
+    <!-- El aviso de "hecho", flotando sobre el contenido.
+
+         Va FUERA del ScrollViewer y despues de el en el arbol, que es lo que le da las dos cosas
+         que necesita: no se desplaza con la pagina y se pinta encima. Lleva sombra porque flota
+         de verdad (regla 4 del sistema visual); una tarjeta de datos no la llevaria.
+
+         Se colapsa solo cuando AvisoGuardado vacia su texto a los tres segundos, asi que no hay
+         animacion de salida ni temporizador aqui: el reloj vive en el ViewModel. -->
+    <Border x:Name="AvisoFlotante" Grid.Row="1" Grid.Column="1"
+            HorizontalAlignment="Right" VerticalAlignment="Bottom"
+            Margin="0,0,24,24" Padding="12,8"
+            CornerRadius="{StaticResource RadMd}"
+            Background="{DynamicResource SuccessSoftBrush}"
+            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="{StaticResource BdFino}"
+            Effect="{DynamicResource SombraFlotante}"
+            AutomationProperties.LiveSetting="Polite"
+            Visibility="{Binding Texto, Converter={StaticResource TextoAVis}}">
+      <TextBlock Text="{Binding Texto}" MaxWidth="360" TextWrapping="Wrap"
+                 FontSize="{StaticResource FsBody}"
+                 Foreground="{DynamicResource SuccessTextBrush}" />
+    </Border>
 
   </Grid>
 </Window>

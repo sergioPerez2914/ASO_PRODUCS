@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using ASO_PRODUCS.Desktop.Models;
 
 namespace ASO_PRODUCS.Desktop.Configuration;
 
@@ -8,8 +9,8 @@ namespace ASO_PRODUCS.Desktop.Configuration;
 ///
 /// Es contenido específico de ESTE negocio, no del scaffold genérico — si la planta real trabaja
 /// otros productos o pasos, este es el único archivo que hay que editar. Lo consumen los botones
-/// "Cargar sugeridos" de Materia Prima · Existencias, Procesos · Producción (pestaña Etapas) y
-/// Procesos · Despacho (pestaña Productos).
+/// "Cargar sugeridos" de Inventario · Almacén, Materia Prima · Existencias, Procesos · Producción
+/// (pestaña Etapas) y Procesos · Productos y Lotes (pestaña Productos).
 /// </summary>
 public static class CatalogoLacteoSugerido
 {
@@ -20,6 +21,26 @@ public static class CatalogoLacteoSugerido
         ("Mantequilla", "Kg"),
         ("Crema de Leche", "Litros"),
         ("Suero", "Litros"),
+    ];
+
+    /// <summary>
+    /// Insumos de almacén: lo que no se transforma en el producto pero hace falta para
+    /// despacharlo. A diferencia de las otras tres listas, esta lleva categoría y unidad
+    /// tipada, porque <c>Articulo</c> las tiene y son lo que ordena la grilla del almacén.
+    ///
+    /// El código NO va aquí: lo genera <c>InventarioService.GenerarCodigo()</c> al crear cada
+    /// uno, igual que cuando se da de alta a mano dejando el campo vacío.
+    /// </summary>
+    public static IReadOnlyList<(string Nombre, string Categoria, UnidadMedida Unidad)> Articulos { get; } =
+    [
+        ("Bolsa de empaque", "Empaque", UnidadMedida.Pieza),
+        ("Etiqueta de producto", "Empaque", UnidadMedida.Pieza),
+        ("Molde para queso", "Utensilio", UnidadMedida.Pieza),
+        ("Caja de cartón", "Empaque", UnidadMedida.Caja),
+        ("Detergente alcalino", "Limpieza", UnidadMedida.Litro),
+        ("Desinfectante de superficies", "Limpieza", UnidadMedida.Litro),
+        ("Guantes desechables", "Higiene", UnidadMedida.Caja),
+        ("Gorro desechable", "Higiene", UnidadMedida.Caja),
     ];
 
     public static IReadOnlyList<(string Nombre, string UnidadMedida)> TiposMateriaPrima { get; } =

@@ -74,6 +74,15 @@ public static class Permisos
     /// El libro de banco: los movimientos que se teclean a mano. Los que nacen de un pago no
     /// piden permiso propio — ya lo guarda <see cref="Finanzas.Pagar"/>, y exigir otro más
     /// dejaría pagar la factura sin que el dinero apareciera en el libro.
+    ///
+    /// <para><b>La clase se llama Movimientos pero los literales siguen siendo "Banco.*", y es a
+    /// propósito.</b> <c>PermisoUsuario.Permiso</c> guarda esta cadena EN LA BASE DE DATOS:
+    /// renombrarlos a "Movimientos.*" huerfanaría los ajustes por usuario ya concedidos o
+    /// revocados sobre el libro de banco. Quien escriba un <c>ModuloPermiso</c> nuevo para esta
+    /// pantalla tiene que devolver "Banco" —ver <c>MovimientosViewModel.ModuloPermiso</c>—, no
+    /// "Movimientos": el prefijo se interpola contra estos literales y una cadena que no esté en
+    /// <see cref="MatrizPermisos.Todos"/> apaga el comando para todos los roles, en silencio y
+    /// sin excepción para Desarrollador.</para>
     /// </summary>
     public static class Movimientos
     {

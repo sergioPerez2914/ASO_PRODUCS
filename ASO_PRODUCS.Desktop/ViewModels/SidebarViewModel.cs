@@ -10,10 +10,26 @@ using ASO_PRODUCS.Desktop.Services;
 
 namespace ASO_PRODUCS.Desktop.ViewModels;
 
-public sealed class NavegacionEventArgs(Modulo modulo, Submodulo? submodulo) : EventArgs
+public sealed class NavegacionEventArgs(Modulo modulo, Submodulo? submodulo, object? idASeleccionar = null)
+    : EventArgs
 {
     public Modulo Modulo { get; } = modulo;
     public Submodulo? Submodulo { get; } = submodulo;
+
+    /// <summary>
+    /// Qué fila dejar marcada al llegar, o null para abrir la pantalla como siempre.
+    ///
+    /// Lo usa el salto entre documentos relacionados —de un despacho a su factura, de una
+    /// entrada a la cuenta por pagar que generó— que hasta ahora no existía: los documentos
+    /// guardan el número del otro (<c>Despacho.FacturaClienteNumero</c>,
+    /// <c>EntradaInventario.FacturaProveedorNumero</c>…) pero la ficha lo pintaba como texto
+    /// muerto, y llegar al otro documento era volver al menú, entrar al submódulo y buscarlo a
+    /// mano.
+    ///
+    /// Va como <c>object</c> por el mismo motivo que <c>CrudViewModelBase._idASeleccionar</c>:
+    /// el tipo de la clave depende de la entidad.
+    /// </summary>
+    public object? IdASeleccionar { get; } = idASeleccionar;
 }
 
 public sealed class SubmoduloNavItem(Modulo modulo, Submodulo submodulo) : ViewModelBase

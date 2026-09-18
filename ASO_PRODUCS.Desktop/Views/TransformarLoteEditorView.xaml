@@ -58,7 +58,10 @@
                FontSize="{StaticResource FsCaption}"
                Foreground="{DynamicResource TextSecondaryBrush}" />
 
-    <Border Margin="0,12,0,0" Padding="12,8" CornerRadius="6" BorderThickness="1"
+    <!-- AlertBoxStyle ya es exactamente esta caja (radio, relleno y borde); solo se le cambia el
+         color, que es para lo que el estilo deja Background y BorderBrush sin fijar. Antes iba
+         escrita a mano y era el unico CornerRadius literal que quedaba en toda la aplicacion. -->
+    <Border Style="{StaticResource AlertBoxStyle}" Margin="0,12,0,0"
             Background="{DynamicResource WarningSoftBrush}"
             BorderBrush="{DynamicResource WarningBordeBrush}"
             Visibility="{Binding SinLotes, Converter={StaticResource BoolToVis}}">
@@ -68,7 +71,7 @@
     </Border>
 
     <!-- Paso 2: vista previa del consumo -->
-    <TextBlock Text="Se va a consumir" Style="{StaticResource CardTitleStyle}" Margin="0,20,0,8" />
+    <TextBlock Text="Se va a consumir" Style="{StaticResource CardTitleStyle}" Margin="{StaticResource TkTituloDeBloque}" />
 
     <Border Style="{StaticResource SectionCardStyle}" Padding="0">
       <Grid>

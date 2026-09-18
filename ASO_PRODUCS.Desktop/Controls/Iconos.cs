@@ -49,8 +49,13 @@ public static class Iconos
     // maquina): si el glifo no es el esperado, cambiar el punto de codigo, no el nombre.
     public const string Procesos =         ""; // gear-six (procesos de producción/despacho)
     public const string Produccion =       ""; // factory
-    public const string Despacho =         ""; // package
-    public const string Pedidos =          "";     // clipboard-text (mismo glifo de Despacho por ahora; cambiar cuando se confirme un icono propio)
+    // Despacho comparte glifo con Salidas, y ahora a propósito: desde que Despachos es un
+    // submódulo propio, los tres —Inventario · Salidas, Materia Prima · Salidas y
+    // Procesos · Despachos— se leen seguidos en el menú y son la misma idea, lo que sale.
+    // Antes era el mismo punto de código que Pedidos, que sí era una colisión sin querer:
+    // los dos submódulos habrían quedado con el mismo dibujo, uno debajo del otro.
+    public const string Despacho =         "";     // tray-arrow-up U+EE52
+    public const string Pedidos =          "";     // clipboard-text U+E398
     public const string Reportes =         ""; // chart-bar
 
     public const string Administracion =   "";     // shield-check U+E40C

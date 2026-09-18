@@ -63,6 +63,9 @@
                 <ComboBoxItem Content="Sin existencia" />
                 <ComboBoxItem Content="Inactivos" />
               </controls:FiltroDropdown>
+              <TextBlock Text="{Binding Conteo}" VerticalAlignment="Center"
+                         FontSize="{StaticResource FsCaption}"
+                         Foreground="{DynamicResource TextMutedBrush}" />
             </WrapPanel>
 
             <TextBlock Grid.Row="0" Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center"
@@ -90,7 +93,8 @@
           <Grid>
             <DataGrid x:Name="TablaProductos" Style="{StaticResource DataGridStyle}"
                       ItemsSource="{Binding ItemsView}"
-                      SelectedItem="{Binding SelectedItem}">
+                      SelectedItem="{Binding SelectedItem}"
+                      controls:AbrirFila.Comando="{Binding EditarCommand}">
               <DataGrid.Columns>
                 <controls:ColumnaTexto Header="Producto" Binding="{Binding Nombre}" Width="34*" MinWidth="180" />
                 <controls:ColumnaTexto Header="Unidad" Binding="{Binding UnidadMedida}" Width="16*" MinWidth="90" />

@@ -73,6 +73,11 @@
   <Thickness x:Key="TkTarjeta">16</Thickness>              <!-- relleno interior de una tarjeta          -->
   <Thickness x:Key="TkTarjetaCompacta">12</Thickness>
   <Thickness x:Key="TkBarra">0,0,0,12</Thickness>          <!-- barra de acciones sobre la tabla         -->
+  <!-- Titulo de bloque DENTRO de un formulario o una ficha: "Articulos que entran", "Detalle",
+       "Costo". Se repetia a mano veinte veces como Margin="0,20,0,8" —el unico 20 de toda la
+       aplicacion, fuera de la escala de 4— asi que ademas de desalinear los formularios entre si
+       no habia forma de cambiar el ritmo sin repasar veinte archivos. -->
+  <Thickness x:Key="TkTituloDeBloque">0,16,0,8</Thickness>
   <Thickness x:Key="TkEntreTarjetas">0,0,12,12</Thickness> <!-- tarjeta junto a tarjeta en un WrapPanel  -->
 
   <!-- Rellenos de control. El alto real de un boton lo fija MinHeight en el estilo implicito, no

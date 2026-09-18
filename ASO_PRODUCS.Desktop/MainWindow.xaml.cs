@@ -16,11 +16,22 @@ namespace ASO_PRODUCS.Desktop;
 /// </summary>
 public partial class MainWindow : Window
 {
+    /// <summary>
+    /// El aviso de "hecho" que flota abajo a la derecha. Vive en el shell y no en cada pantalla
+    /// porque las pantallas se destruyen al navegar (ver <see cref="Navegar"/>) y el aviso tiene
+    /// que sobrevivir a eso: registrar un despacho desde Pedidos deja la confirmación en
+    /// pantalla aunque el usuario se vaya a otro sitio en el mismo segundo.
+    /// </summary>
+    private readonly AvisoGuardado _aviso = new();
+
     public MainWindow()
     {
         InitializeComponent();
 
         MainSidebar.NavegacionSolicitada += (_, e) => Navegar(e.Modulo, e.Submodulo);
+
+        AvisoFlotante.DataContext = _aviso;
+        Aviso.Pedido += _aviso.Mostrar;
 
         AplicarEscala();
         Ajustes.Cambiaron += AplicarEscala;
@@ -43,6 +54,7 @@ public partial class MainWindow : Window
     private void OnCerrada(object? sender, EventArgs e)
     {
         Ajustes.Cambiaron -= AplicarEscala;
+        Aviso.Pedido -= _aviso.Mostrar;
         DesconectarPantallaActual();
 
         if (Ajustes.Actual.AbrirEnUltimaSeccion)
@@ -111,7 +123,7 @@ public partial class MainWindow : Window
     /// Único punto de cambio de sección: sin submódulo muestra el resumen del módulo,
     /// con submódulo abre su pantalla. El menú lateral se sincroniza con lo que se muestra.
     /// </summary>
-    private void Navegar(Modulo modulo, Submodulo? submodulo)
+    private void Navegar(Modulo modulo, Submodulo? submodulo, object? idASeleccionar = null)
     {
         MainSidebar.Sincronizar(modulo, submodulo);
         Ruta.Segmentos = ArmarRuta(modulo, submodulo);
@@ -125,9 +137,17 @@ public partial class MainWindow : Window
         // seguiría viva y recargándose contra la base a espaldas del usuario.
         DesconectarPantallaActual();
 
-        ContentArea.Content = submodulo is not null
+        var contenido = submodulo is not null
             ? CrearVistaSubmodulo(modulo, submodulo)
             : CrearVistaModulo(modulo);
+
+        ContentArea.Content = contenido;
+
+        // Después de asignar el contenido, no antes: la pantalla puede recargar al recibirlo, y
+        // recargar sobre un ViewModel que todavía no está enlazado dejaría la fila marcada sin
+        // que la tabla llegue a desplazarse hasta ella.
+        if (idASeleccionar is not null && contenido is IPantalla pantalla)
+            pantalla.SeleccionarAlAbrir(idASeleccionar);
     }
 
     private void DesconectarPantallaActual()
@@ -173,6 +193,7 @@ public partial class MainWindow : Window
             ["Procesos.Produccion"] = (m, s) => new ProcesosProduccionViewModel(m, s),
             ["Procesos.ProductosYLotes"] = (m, s) => new ProductosYLotesViewModel(m, s),
             ["Procesos.Pedidos"] = (m, s) => new PedidosViewModel(m, s),
+            ["Procesos.Despachos"] = (m, s) => new DespachosViewModel(m, s),
 
             ["Reportes.Procesos"] = (m, s) => new ReporteProcesosViewModel(m, s),
             ["Reportes.Ventas"] = (m, s) => new ReporteVentasViewModel(m, s),
@@ -235,6 +256,12 @@ public partial class MainWindow : Window
     private IPantalla Conectar(IPantalla pantalla, Modulo destinoAlVolver)
     {
         pantalla.VolverSolicitado += (_, _) => Navegar(destinoAlVolver, null);
+
+        // El salto entre documentos relacionados. Se cablea aquí, en el mismo sitio y por el
+        // mismo motivo que el de volver: la pantalla solo pide, y quién enruta sigue siendo esta
+        // ventana y nadie más.
+        pantalla.NavegacionSolicitada += (_, e) => Navegar(e.Modulo, e.Submodulo, e.IdASeleccionar);
+
         return pantalla;
     }
 

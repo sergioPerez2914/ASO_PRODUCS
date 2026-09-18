@@ -68,6 +68,10 @@ public sealed class ExistenciasMateriaPrimaViewModel : PantallaCrudViewModel<Tip
 
     protected override string ModuloPermiso => "TiposMateriaPrima";
 
+    protected override string Describir(TipoMateriaPrima item) => item.Nombre;
+
+    protected override string NombreDelTipo => "Tipo de materia prima";
+
     protected override bool CoincideBusqueda(TipoMateriaPrima item, string texto) =>
         item.Nombre.Contains(texto, StringComparison.OrdinalIgnoreCase);
 
@@ -107,10 +111,9 @@ public sealed class ExistenciasMateriaPrimaViewModel : PantallaCrudViewModel<Tip
         var creados = _servicio.CargarSugeridos(CatalogoLacteoSugerido.TiposMateriaPrima);
         Recargar();
 
-        _dialogos.Informar("Catálogo cargado",
-            creados > 0
-                ? $"Se agregaron {creados} tipos de materia prima sugeridos."
-                : "Los tipos sugeridos ya estaban todos cargados.");
+        Aviso.Mostrar(creados > 0
+            ? $"Se agregaron {creados} tipos de materia prima sugeridos."
+            : "Los tipos sugeridos ya estaban todos cargados.");
     }
 }
 
