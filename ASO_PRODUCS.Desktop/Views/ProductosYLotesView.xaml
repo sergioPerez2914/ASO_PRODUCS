@@ -11,6 +11,7 @@
     <Grid.RowDefinitions>
       <RowDefinition Height="Auto" />
       <RowDefinition Height="Auto" />
+      <RowDefinition Height="Auto" />
       <RowDefinition Height="*" />
     </Grid.RowDefinitions>
 
@@ -18,9 +19,29 @@
                          Titulo="{Binding Submodulo.Nombre}"
                          Descripcion="{Binding Submodulo.Descripcion}" />
 
+    <!-- Indicadores de la pantalla entera, encima del conmutador: hablan del catálogo Y de los
+         lotes, así que no pertenecen a ninguna de las dos pestañas. Se calculan con lo que los
+         dos padrones ya tienen en memoria (ver ProductosYLotesViewModel.CalcularIndicadores). -->
+    <ItemsControl Grid.Row="1" ItemsSource="{Binding Indicadores}" Margin="0,16,0,4">
+      <ItemsControl.ItemsPanel>
+        <ItemsPanelTemplate>
+          <WrapPanel />
+        </ItemsPanelTemplate>
+      </ItemsControl.ItemsPanel>
+      <ItemsControl.ItemTemplate>
+        <DataTemplate>
+          <controls:KpiTile Margin="0,0,12,12" MinWidth="180"
+                            Etiqueta="{Binding Etiqueta}"
+                            Valor="{Binding Valor}"
+                            Nota="{Binding Nota}"
+                            Estado="{Binding Estado}" />
+        </DataTemplate>
+      </ItemsControl.ItemTemplate>
+    </ItemsControl>
+
     <!-- Conmutador: el catálogo de productos y la existencia por lote. Mismo patrón que
          Procesos · Producción. -->
-    <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,4,0,0">
+    <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,4,0,0">
       <RadioButton Content="Productos" GroupName="VistaProductosYLotes"
                    Style="{StaticResource SegmentedTabStyle}"
                    IsChecked="{Binding EsProductos, Mode=TwoWay}" />
@@ -29,10 +50,10 @@
                    IsChecked="{Binding EsLotes, Mode=TwoWay}" />
     </StackPanel>
 
-    <Border Grid.Row="1" Style="{StaticResource TabStripStyle}" VerticalAlignment="Bottom" />
+    <Border Grid.Row="2" Style="{StaticResource TabStripStyle}" VerticalAlignment="Bottom" />
 
     <!-- ===================== Productos: el catálogo con existencia ===================== -->
-    <Grid Grid.Row="2" Margin="0,16,0,0"
+    <Grid Grid.Row="3" Margin="0,16,0,0"
           Visibility="{Binding MostrarProductos, Converter={StaticResource BoolToVis}}">
       <Grid DataContext="{Binding Productos}">
         <Grid.RowDefinitions>
@@ -89,49 +110,105 @@
           </Grid>
         </Border>
 
-        <Border Grid.Row="1" Style="{StaticResource SectionCardStyle}" Padding="0">
-          <Grid>
-            <DataGrid x:Name="TablaProductos" Style="{StaticResource DataGridStyle}"
-                      ItemsSource="{Binding ItemsView}"
-                      SelectedItem="{Binding SelectedItem}"
-                      controls:AbrirFila.Comando="{Binding EditarCommand}">
-              <DataGrid.Columns>
-                <controls:ColumnaTexto Header="Producto" Binding="{Binding Nombre}" Width="34*" MinWidth="180" />
-                <controls:ColumnaTexto Header="Unidad" Binding="{Binding UnidadMedida}" Width="16*" MinWidth="90" />
-                <controls:ColumnaTexto Header="Se obtiene" Binding="{Binding OrigenTexto}" Width="18*" MinWidth="110" />
-                <controls:ColumnaNumero Header="Precio" Binding="{Binding PrecioUnitarioTexto}" Width="14*" MinWidth="90" />
-                <controls:ColumnaNumero Header="Vida útil" Binding="{Binding VidaUtilTexto}" Width="12*" MinWidth="80" />
-                <controls:ColumnaNumero Header="Mínimo" Binding="{Binding MinimoTexto}" Width="12*" MinWidth="80" />
-                <controls:ColumnaNumero Header="Existencia" Binding="{Binding ExistenciaTexto}" Width="18*" MinWidth="110">
-                  <controls:ColumnaNumero.ElementStyle>
-                    <Style TargetType="TextBlock">
-                      <Setter Property="FontWeight" Value="{StaticResource FwMedium}" />
-                    </Style>
-                  </controls:ColumnaNumero.ElementStyle>
-                </controls:ColumnaNumero>
-                <DataGridTemplateColumn Header="Estado" Width="110">
-                  <DataGridTemplateColumn.CellTemplate>
-                    <DataTemplate>
-                      <Border Style="{StaticResource ChipExistenciaStyle}">
-                        <TextBlock Text="{Binding EstadoTexto}" FontSize="{StaticResource FsCaption}" />
-                      </Border>
-                    </DataTemplate>
-                  </DataGridTemplateColumn.CellTemplate>
-                </DataGridTemplateColumn>
-              </DataGrid.Columns>
-            </DataGrid>
+        <!-- El catálogo como rejilla de tarjetas, no como tabla.
 
-            <controls:EmptyState Icono="{x:Static controls:Iconos.Produccion}"
-                                 Titulo="No hay productos"
-                                 Detalle="Da de alta los productos que fabrica la organización; su existencia sale sola de los procesos terminados y los despachos."
-                                 Visibility="{Binding HasItems, ElementName=TablaProductos, Converter={StaticResource SinItemsAVis}}" />
-          </Grid>
-        </Border>
+             Es un ListBox y no un ItemsControl de botones porque la tarjeta tiene que poder
+             quedar MARCADA: Editar y Eliminar de la barra miran el SelectedItem. Atado a
+             ItemsView (el ICollectionView), el buscador, el filtro y el contador siguen
+             funcionando sin tocar el ViewModel. -->
+        <Grid Grid.Row="1">
+          <ListBox x:Name="RejillaProductos"
+                   Style="{StaticResource RejillaDeTarjetasStyle}"
+                   ItemContainerStyle="{StaticResource TarjetaSeleccionableStyle}"
+                   ItemsSource="{Binding ItemsView}"
+                   SelectedItem="{Binding SelectedItem}"
+                   MouseDoubleClick="RejillaProductos_MouseDoubleClick">
+            <ListBox.ItemTemplate>
+              <DataTemplate>
+                <!-- Ancho fijo: con estrella, el WrapPanel le daría a cada tarjeta lo que pidiera
+                     su texto y quedarían de tamaños distintos en la misma fila. -->
+                <StackPanel Width="252">
+                  <Grid>
+                    <Grid.ColumnDefinitions>
+                      <ColumnDefinition Width="*" />
+                      <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock Grid.Column="0" Text="{Binding Nombre}" TextWrapping="Wrap"
+                               FontSize="{StaticResource FsSubtitle}"
+                               FontWeight="{StaticResource FwMedium}"
+                               Foreground="{DynamicResource TextPrimaryBrush}" />
+
+                    <Border Grid.Column="1" Style="{StaticResource ChipExistenciaStyle}"
+                            VerticalAlignment="Top" Margin="8,0,0,0">
+                      <TextBlock Text="{Binding EstadoTexto}" FontSize="{StaticResource FsCaption}" />
+                    </Border>
+                  </Grid>
+
+                  <!-- Solo en los derivados: en el resto OrigenTexto es "—" y una línea con un
+                       guion no dice nada. -->
+                  <TextBlock Text="{Binding OrigenTexto}" Margin="{StaticResource TkAyuda}"
+                             FontSize="{StaticResource FsCaption}"
+                             Foreground="{DynamicResource TextMutedBrush}"
+                             Visibility="{Binding EsDerivado, Converter={StaticResource BoolToVis}}" />
+
+                  <TextBlock Text="{Binding ExistenciaTexto}" Margin="0,12,0,0"
+                             FontSize="{StaticResource FsMetric}"
+                             FontWeight="{StaticResource FwBold}"
+                             Typography.NumeralAlignment="Tabular"
+                             Foreground="{DynamicResource TextPrimaryBrush}" />
+
+                  <!-- Lo que antes eran tres columnas de la tabla, y solo lo que esté puesto:
+                       ver Producto.FichaTexto. Se oculta entera si no hay ninguno. -->
+                  <TextBlock Text="{Binding FichaTexto}" TextWrapping="Wrap"
+                             Margin="{StaticResource TkEtiqueta}"
+                             FontSize="{StaticResource FsCaption}"
+                             Foreground="{DynamicResource TextMutedBrush}"
+                             Visibility="{Binding FichaTexto, Converter={StaticResource TextoAVis}}" />
+
+                  <Border Height="1" Margin="0,12,0,0"
+                          Background="{DynamicResource BorderBrush}" />
+
+                  <!-- El puente a la otra pestaña. El comando vive en la pantalla, no en el
+                       producto, así que se sube por RelativeSource igual que en InicioView. -->
+                  <Button Style="{StaticResource GhostButtonStyle}" Padding="0,8,0,0"
+                          HorizontalContentAlignment="Stretch"
+                          Command="{Binding DataContext.VerLotesDeCommand,
+                                            RelativeSource={RelativeSource AncestorType=UserControl}}"
+                          CommandParameter="{Binding}"
+                          AutomationProperties.Name="{Binding Nombre}"
+                          ToolTip="Ver los lotes de este producto">
+                    <Grid>
+                      <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                      </Grid.ColumnDefinitions>
+                      <TextBlock Grid.Column="0" Text="{Binding ResumenLotesTexto}"
+                                 TextWrapping="Wrap" HorizontalAlignment="Left"
+                                 FontSize="{StaticResource FsCaption}"
+                                 Foreground="{DynamicResource PrimaryBrush}" />
+                      <TextBlock Grid.Column="1" Text="{x:Static controls:Iconos.ChevronDerecha}"
+                                 FontFamily="{StaticResource IconFont}"
+                                 FontSize="{StaticResource FsCaption}"
+                                 VerticalAlignment="Center"
+                                 Foreground="{DynamicResource PrimaryBrush}" />
+                    </Grid>
+                  </Button>
+                </StackPanel>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+
+          <controls:EmptyState Icono="{x:Static controls:Iconos.Produccion}"
+                               Titulo="No hay productos"
+                               Detalle="Da de alta los productos que fabrica la organización; su existencia sale sola de los procesos terminados y los despachos."
+                               Visibility="{Binding HasItems, ElementName=RejillaProductos, Converter={StaticResource SinItemsAVis}}" />
+        </Grid>
       </Grid>
     </Grid>
 
     <!-- ===================== Lotes: existencia por lote y vencimiento ===================== -->
-    <Grid Grid.Row="2" Margin="0,16,0,0"
+    <Grid Grid.Row="3" Margin="0,16,0,0"
           Visibility="{Binding MostrarLotes, Converter={StaticResource BoolToVis}}">
       <Grid DataContext="{Binding Lotes}">
         <Grid.RowDefinitions>
@@ -151,15 +228,35 @@
               <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
-            <controls:FiltroDropdown Grid.Column="0" Style="{StaticResource FiltroDropdownStyle}" SelectedIndex="0"
-                                     HorizontalAlignment="Left" VerticalAlignment="Center"
-                                     Command="{Binding CambiarFiltroCommand}">
-              <ComboBoxItem Content="Todos" />
-              <ComboBoxItem Content="Por vencer" />
-              <ComboBoxItem Content="Vencidos" />
-            </controls:FiltroDropdown>
+            <WrapPanel Grid.Row="0" Grid.Column="0" VerticalAlignment="Center">
+              <!-- Era la única tabla de listado de la aplicación sin buscador. -->
+              <controls:SearchBox Width="240" Margin="0,0,12,0" VerticalAlignment="Center"
+                                  Texto="{Binding TextoBusqueda, Mode=TwoWay}" />
 
-            <TextBlock Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center"
+              <!-- El filtro por producto: la lista sale de los lotes cargados, así que va con
+                   ItemsSource y no con ComboBoxItem fijos. Mismo patrón que el filtro de
+                   Producto de Reportes · Ventas. Es también lo que fija el botón "N lotes" de
+                   la tarjeta del catálogo. -->
+              <ComboBox Width="200" Margin="0,0,12,0" VerticalAlignment="Center"
+                        Style="{StaticResource FormComboBoxStyle}"
+                        ItemsSource="{Binding Productos}"
+                        SelectedItem="{Binding ProductoFiltro}"
+                        ToolTip="Acota los lotes a un producto" />
+
+              <controls:FiltroDropdown Style="{StaticResource FiltroDropdownStyle}" SelectedIndex="0"
+                                       Margin="0,0,12,0" VerticalAlignment="Center"
+                                       Command="{Binding CambiarFiltroCommand}">
+                <ComboBoxItem Content="Todos" />
+                <ComboBoxItem Content="Por vencer" />
+                <ComboBoxItem Content="Vencidos" />
+              </controls:FiltroDropdown>
+
+              <TextBlock Text="{Binding Conteo}" VerticalAlignment="Center"
+                         FontSize="{StaticResource FsCaption}"
+                         Foreground="{DynamicResource TextMutedBrush}" />
+            </WrapPanel>
+
+            <TextBlock Grid.Row="0" Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center"
                        Text="{Binding Resumen}" FontSize="{StaticResource FsBody}"
                        Foreground="{DynamicResource TextSecondaryBrush}" />
 
@@ -168,6 +265,9 @@
               <Button Content="Transformar lote" Style="{StaticResource PrimaryButtonStyle}"
                       Command="{Binding TransformarCommand}"
                       ToolTip="Produce una presentación o subproducto (Mantequilla 200 g, Ghee…) a partir del lote seleccionado." />
+              <Button Content="Ver proceso" Style="{StaticResource SecondaryButtonStyle}"
+                      Command="{Binding VerProcesoCommand}"
+                      ToolTip="Abre Procesos · Producción con el proceso que produjo este lote ya marcado." />
             </StackPanel>
           </Grid>
         </Border>
@@ -176,7 +276,8 @@
           <Grid>
             <DataGrid x:Name="TablaLotes" Style="{StaticResource DataGridStyle}"
                       ItemsSource="{Binding Items}" IsReadOnly="True"
-                      SelectedItem="{Binding SelectedItem}">
+                      SelectedItem="{Binding SelectedItem}"
+                      controls:AbrirFila.Comando="{Binding VerProcesoCommand}">
               <DataGrid.Columns>
                 <controls:ColumnaTexto Header="Lote" Binding="{Binding Numero}" Width="12*" MinWidth="90" />
                 <controls:ColumnaTexto Header="Producto" Binding="{Binding ProductoNombre}" Width="20*" MinWidth="130" />

@@ -67,6 +67,70 @@ public class Producto : IEntidad<int>, IDeOrganizacion
 
     public string MinimoTexto => Minimo > 0 ? $"{Minimo:N2} {UnidadMedida}".Trim() : "—";
 
+    // --- Resumen de lotes (derivado, no persistido) ---
+
+    /// <summary>
+    /// Cuántos lotes con existencia tiene este producto ahora mismo.
+    ///
+    /// NO se persiste, igual que <see cref="Existencia"/> y por el mismo motivo: sale de recorrer
+    /// procesos y despachos enteros. La rellena <c>ProductosService.RellenarResumenDeLotes</c>
+    /// antes de pintar la tarjeta del catálogo. Va con <c>Ignore</c> en el DbContext.
+    /// </summary>
+    public int LotesConExistencia { get; set; }
+
+    /// <summary>La fecha de vencimiento más próxima entre esos lotes (orden FEFO). Nula si
+    /// ninguno vence o si no hay lotes.</summary>
+    public DateTime? ProximoVencimiento { get; set; }
+
+    /// <summary>
+    /// La línea secundaria de la tarjeta: mínimo, precio y vida útil, pero SOLO los que están
+    /// configurados.
+    ///
+    /// En la tabla cada uno tenía su columna y un "—" decía "esto no está puesto" sin estorbar.
+    /// En una tarjeta, en cambio, "mín. — · 0,00 por unidad · —" es una línea entera de ruido:
+    /// en este catálogo la mayoría de los productos no tienen ni precio ni vida útil todavía.
+    /// Vacía si no hay ninguno, y entonces la tarjeta ni pinta la línea.
+    /// </summary>
+    public string FichaTexto
+    {
+        get
+        {
+            var partes = new List<string>(3);
+
+            if (Minimo > 0)
+                partes.Add($"mín. {MinimoTexto}");
+
+            // Cero es "sin precio configurado" (ver PrecioUnitario), no un precio de cero.
+            if (PrecioUnitario > 0)
+                partes.Add($"{PrecioUnitarioTexto} por {UnidadMedida}".Trim());
+
+            if (DiasVidaUtil is not null)
+                partes.Add(VidaUtilTexto);
+
+            return string.Join(" · ", partes);
+        }
+    }
+
+    /// <summary>
+    /// La línea de lotes de la tarjeta: "3 lotes · vence 01/10". Es lo único que se pinta, así
+    /// que resuelve aquí los tres casos —sin lotes, uno, varios— en vez de repartir
+    /// <c>StringFormat</c> y conversores por el XAML.
+    /// </summary>
+    public string ResumenLotesTexto
+    {
+        get
+        {
+            if (LotesConExistencia == 0)
+                return "Sin lotes con existencia";
+
+            var lotes = LotesConExistencia == 1 ? "1 lote" : $"{LotesConExistencia} lotes";
+
+            return ProximoVencimiento is { } vence
+                ? $"{lotes} · vence {vence:dd/MM}"
+                : lotes;
+        }
+    }
+
     // --- Presentación / subproducto de otro producto ---
 
     /// <summary>Si este producto sale de transformar otro (Mantequilla 200 g sale de Mantequilla).

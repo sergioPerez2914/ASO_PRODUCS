@@ -1031,6 +1031,23 @@ public sealed class ProcesosProduccionViewModel : PantallaViewModelBase
         Procesos.Recargar();
     }
 
+    /// <summary>
+    /// Marca el proceso que pidió quien nos mandó aquí — hoy, el botón "Ver proceso" de un lote
+    /// en Productos y Lotes.
+    ///
+    /// A diferencia de los otros contenedores que ya aceptan destino (Cuentas por Pagar, por
+    /// Cobrar, Despachos), este tiene DOS pestañas: además de pasarle el id al padrón hay que
+    /// conmutar a la de Procesos, o el proceso quedaría marcado en una tabla que no se ve.
+    /// </summary>
+    public override void SeleccionarAlAbrir(object id)
+    {
+        if (id is not int clave)
+            return;
+
+        VistaActual = VistaProcesos;
+        Procesos.SeleccionarAlAbrir(clave);
+    }
+
     private string _vistaActual = VistaProcesos;
     public string VistaActual
     {

@@ -855,6 +855,105 @@
     </Setter>
   </Style>
 
+  <!-- Tarjeta SELECCIONABLE de una lista (el catalogo de Productos y Lotes).
+
+       Misma mecanica que CardButtonStyle —velo de realce superpuesto cuya OPACIDAD se anima,
+       porque un brush de la paleta no se puede animar— pero sobre ListBoxItem, que es lo que
+       trae la seleccion.
+
+       Por que ListBoxItem y no un Button: la tarjeta tiene que poder quedar MARCADA, porque los
+       botones Editar y Eliminar de la barra miran el SelectedItem del ViewModel. Con botones
+       habria que reinventar la seleccion, el recorrido con las flechas del teclado y el enlace
+       con el ICollectionView que ya filtra el buscador.
+
+       El marcado es un borde de acento, no un relleno: el relleno tenido ya significa otra cosa
+       en esta aplicacion (el chip de estado vive DENTRO de la tarjeta, y dos fondos de color
+       compitiendo no se leen). -->
+  <Style x:Key="TarjetaSeleccionableStyle" TargetType="ListBoxItem">
+    <Setter Property="FontFamily" Value="{StaticResource AppFont}" />
+    <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}" />
+    <Setter Property="BorderThickness" Value="{StaticResource BdFino}" />
+    <Setter Property="Padding" Value="{StaticResource TkTarjeta}" />
+    <Setter Property="Margin" Value="{StaticResource TkEntreTarjetas}" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="VerticalContentAlignment" Value="Top" />
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="ListBoxItem">
+          <Grid>
+            <Border x:Name="Root" Background="{TemplateBinding Background}"
+                    BorderBrush="{TemplateBinding BorderBrush}"
+                    BorderThickness="{TemplateBinding BorderThickness}"
+                    CornerRadius="{StaticResource RadMd}" Padding="{TemplateBinding Padding}">
+              <ContentPresenter />
+            </Border>
+            <Border x:Name="Realce" Opacity="0" IsHitTestVisible="False"
+                    Background="{DynamicResource HoverOverlayBrush}"
+                    BorderBrush="{DynamicResource BorderStrongBrush}"
+                    BorderThickness="{StaticResource BdFino}"
+                    CornerRadius="{StaticResource RadMd}" />
+            <Border x:Name="Marcada" Opacity="0" IsHitTestVisible="False"
+                    BorderBrush="{DynamicResource AccentBlueBrush}"
+                    BorderThickness="{StaticResource BdFoco}"
+                    CornerRadius="{StaticResource RadMd}" />
+          </Grid>
+          <ControlTemplate.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+              <Trigger.EnterActions>
+                <BeginStoryboard>
+                  <Storyboard>
+                    <DoubleAnimation Storyboard.TargetName="Realce"
+                                     Storyboard.TargetProperty="Opacity" To="1"
+                                     Duration="{StaticResource DurNormal}"
+                                     EasingFunction="{StaticResource CurvaSalida}" />
+                  </Storyboard>
+                </BeginStoryboard>
+              </Trigger.EnterActions>
+              <Trigger.ExitActions>
+                <BeginStoryboard>
+                  <Storyboard>
+                    <DoubleAnimation Storyboard.TargetName="Realce"
+                                     Storyboard.TargetProperty="Opacity" To="0"
+                                     Duration="{StaticResource DurNormal}"
+                                     EasingFunction="{StaticResource CurvaSalida}" />
+                  </Storyboard>
+                </BeginStoryboard>
+              </Trigger.ExitActions>
+            </Trigger>
+            <!-- Seleccionada y enfocada por teclado se ven igual a proposito: las dos responden
+                 a "esta es la tarjeta sobre la que van a actuar Editar y Eliminar". -->
+            <Trigger Property="IsSelected" Value="True">
+              <Setter TargetName="Marcada" Property="Opacity" Value="1" />
+            </Trigger>
+            <Trigger Property="IsKeyboardFocused" Value="True">
+              <Setter TargetName="Marcada" Property="Opacity" Value="1" />
+            </Trigger>
+          </ControlTemplate.Triggers>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
+
+  <!-- El contenedor de esas tarjetas: transparente y sin borde, porque la caja la pone cada
+       tarjeta. Sin esto el ListBox trae el fondo y el marco de fabrica y la rejilla queda
+       dentro de un recuadro que no pinta nada. -->
+  <Style x:Key="RejillaDeTarjetasStyle" TargetType="ListBox">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled" />
+    <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Auto" />
+    <Setter Property="ItemsPanel">
+      <Setter.Value>
+        <ItemsPanelTemplate>
+          <WrapPanel />
+        </ItemsPanelTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
+
   <!-- Toggle de rango temporal -->
   <!-- ================= Pestanas y filtros: dos cosas, no una =================
 

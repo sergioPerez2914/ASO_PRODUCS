@@ -291,6 +291,46 @@ public sealed class ProductosService
             producto.Existencia = saldos.GetValueOrDefault(producto.Id);
     }
 
+    /// <summary>
+    /// Rellena el resumen de lotes de cada producto —cuántos tienen existencia y cuál vence
+    /// primero—, que es lo que pinta la tarjeta del catálogo.
+    ///
+    /// <paramref name="lotes"/> existe para no pagar dos veces el mismo cálculo: <see cref="Lotes"/>
+    /// recorre procesos y despachos enteros, y la pantalla de Productos y Lotes ya los tiene
+    /// calculados para su otra pestaña. Quien no los tenga, lo omite y se calculan aquí.
+    ///
+    /// Mismo contrato que <see cref="RellenarExistencias"/>: los modelos no avisan de sus cambios,
+    /// así que hay que refrescar la vista después.
+    /// </summary>
+    public void RellenarResumenDeLotes(IEnumerable<Producto> productos,
+                                       IReadOnlyList<LoteProducto>? lotes = null)
+    {
+        // Solo los que tienen existencia: un lote agotado no cuenta como lote del producto, igual
+        // que no suma a la existencia.
+        var porProducto = (lotes ?? Lotes())
+            .Where(l => l.Existencia > 0)
+            .GroupBy(l => l.ProductoId)
+            .ToDictionary(g => g.Key, g => g.ToList());
+
+        foreach (var producto in productos)
+        {
+            if (!porProducto.TryGetValue(producto.Id, out var suyos))
+            {
+                producto.LotesConExistencia = 0;
+                producto.ProximoVencimiento = null;
+                continue;
+            }
+
+            producto.LotesConExistencia = suyos.Count;
+
+            // El más próximo a vencer. Los que no vencen no compiten por este puesto: un lote sin
+            // fecha no es "el que hay que sacar primero" para quien mira la tarjeta.
+            producto.ProximoVencimiento = suyos
+                .Where(l => l.FechaVencimiento is not null)
+                .Min(l => l.FechaVencimiento);
+        }
+    }
+
     /// <summary>Productos activos con existencia, para elegir al iniciar un proceso o registrar
     /// un despacho.</summary>
     public IReadOnlyList<Producto> ActivosConExistencia()

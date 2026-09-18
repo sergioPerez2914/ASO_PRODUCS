@@ -443,6 +443,41 @@ queda en Pedidos — es donde se sabe qué falta entregar.
     proceso que produjo ese lote (recursivo, con memo). Si ese costo era incompleto, el derivado
     queda incompleto (`LineaCostoProceso.CostoParcial`). Por eso ahora pide
     `IProcesoProduccionDataSource`.
+- **Productos y Lotes, repaso de la pantalla** (2026-09-18). Era la pantalla del módulo que se
+  había quedado atrás del repaso de consistencia: tabla sin más, una pestaña sin buscador y dos
+  enlaces guardados que se pintaban como texto muerto.
+  - **El catálogo pasa de tabla a rejilla de tarjetas** (`RejillaDeTarjetasStyle` +
+    `TarjetaSeleccionableStyle` en `Styles/Theme.xaml`). Es un `ListBox` y no un `ItemsControl`
+    de botones porque la tarjeta tiene que poder quedar MARCADA: Editar y Eliminar de la barra
+    miran el `SelectedItem`, y atado al mismo `ItemsView` el buscador, el filtro y el contador
+    siguen funcionando sin tocar el ViewModel. El marcado es un borde de acento, no un relleno
+    teñido: el chip de estado vive DENTRO de la tarjeta y dos fondos de color compitiendo no se
+    leen. El doble clic abre el editor con un manejador propio en el code-behind, no con
+    `Controls/AbrirFila.cs`, que es un comportamiento adjunto de `DataGrid`.
+  - **Ocho columnas no caben en una tarjeta**: `Producto.FichaTexto` junta mínimo, precio y vida
+    útil y deja fuera los que no están configurados. En la tabla un "—" por columna decía "esto
+    no está puesto" sin estorbar; en una tarjeta, "mín. — · 0,00 por unidad · —" es una línea
+    entera de ruido, y en este catálogo la mayoría de los productos todavía no tienen ni precio
+    ni vida útil.
+  - **Resumen de lotes en la tarjeta** ("3 lotes · vence 01/10"): `Producto.LotesConExistencia`/
+    `ProximoVencimiento`, que rellena `ProductosService.RellenarResumenDeLotes` — mismo contrato
+    que `RellenarExistencias`, derivado y no persistido, con su `Ignore` en el `DbContext` (son
+    auto-propiedades: sin el `Ignore`, EF las tomaría por columnas y pediría una migración).
+    Acepta los lotes ya calculados para no recorrer procesos y despachos dos veces en la misma
+    recarga, que es lo que hace ahora `ProductosYLotesViewModel.Recargar`.
+  - **Los dos enlaces que faltaban**: el resumen de lotes de la tarjeta es un botón que conmuta a
+    la pestaña Lotes acotada a ese producto (`LotesViewModel.FiltrarPorProducto`, navegación
+    DENTRO de la pantalla), y "Ver proceso" abre Producción con el proceso que produjo el lote ya
+    marcado (un lote ES un proceso terminado). Este último obligó a que
+    `ProcesosProduccionViewModel` redefina `SeleccionarAlAbrir`: tiene dos pestañas, así que
+    además de pasarle el id al padrón hay que conmutar a la de Procesos, o el proceso quedaría
+    marcado en una tabla que no se ve.
+  - **La pestaña Lotes gana buscador, filtro por producto y contador** — era la única tabla de
+    listado de la aplicación sin buscador. El filtro por producto se puebla de los lotes
+    cargados (mismo patrón que Reportes · Ventas) y es lo que fija el botón de la tarjeta.
+  - **Cuatro indicadores de cabecera** (`KpiTile`): productos activos, bajo mínimo, lotes por
+    vencer y lotes vencidos. Van encima del conmutador porque hablan de las dos pestañas, y se
+    arman con lo que los dos padrones ya tienen en memoria — ninguna consulta extra.
 
 ## Persistencia
 

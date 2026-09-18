@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Windows.Input;
 using ASO_PRODUCS.Desktop.Configuration;
+using ASO_PRODUCS.Desktop.Controls;
 using ASO_PRODUCS.Desktop.Models;
 using ASO_PRODUCS.Desktop.Navigation;
 using ASO_PRODUCS.Desktop.Services;
@@ -44,9 +45,11 @@ public sealed class ProductosCrudViewModel : CrudViewModelBase<Producto, int>
         _dialogos = dialogos;
         _sesion = sesion;
 
-        // La base ya pobló Items en su constructor, pero sin existencias: sin esto la primera
-        // pintada saldría con todo en cero hasta la primera recarga.
+        // La base ya pobló Items en su constructor, pero solo con lo que está en su tabla: sin
+        // esto la primera pintada saldría con la existencia en cero y las tarjetas diciendo "sin
+        // lotes" aunque los haya, hasta que algo disparara una recarga.
         _servicio.RellenarExistencias(Items);
+        _servicio.RellenarResumenDeLotes(Items);
         ItemsView.Refresh();
 
         CambiarFiltroCommand = new RelayCommand<string>(filtro =>
@@ -91,16 +94,26 @@ public sealed class ProductosCrudViewModel : CrudViewModelBase<Producto, int>
                                     [.. _tipos.GetAll().OrderBy(t => t.Nombre)],
                                     [.. _articulos.GetAll().OrderBy(a => a.Nombre)]);
 
-    /// <summary>Relee el catálogo y le vuelve a pegar la existencia encima. El refresco va
-    /// después de rellenar: el filtro "sin existencia" depende justamente de ese número.</summary>
-    public override void Recargar()
+    /// <summary>
+    /// Relee el catálogo y le vuelve a pegar encima lo que no está en su tabla: la existencia y
+    /// el resumen de lotes que pinta la tarjeta. El refresco va después de rellenar: el filtro
+    /// "sin existencia" depende justamente de ese número.
+    ///
+    /// <paramref name="lotes"/> lo pasa el contenedor cuando ya los calculó para la otra pestaña,
+    /// para no recorrer procesos y despachos dos veces en la misma recarga.
+    /// </summary>
+    public void Recargar(IReadOnlyList<LoteProducto>? lotes)
     {
         base.Recargar();
 
         _servicio.RellenarExistencias(Items);
+        _servicio.RellenarResumenDeLotes(Items, lotes);
         ItemsView.Refresh();
         OnTodasLasPropiedadesCambiaron();
     }
+
+    /// <summary>La recarga que dispara el bus de cambios, sin lotes ya calculados a mano.</summary>
+    public override void Recargar() => Recargar(null);
 
     /// <summary>Precarga el catálogo sugerido para una planta láctea; no duplica lo que ya
     /// exista, así que se puede pulsar más de una vez sin riesgo.</summary>
@@ -358,17 +371,23 @@ public sealed class LotesViewModel : ViewModelBase
     private readonly IServicioDialogo _dialogos;
     private readonly ISesionActual _sesion;
     private readonly Action _alTransformar;
+    private readonly Action<LoteProducto> _alVerProceso;
     private IReadOnlyList<LoteProducto> _todos = [];
     private string _filtro = FiltroTodos;
 
     public LotesViewModel(ProductosService productos, TransformacionesService transformaciones,
-                          IServicioDialogo dialogos, ISesionActual sesion, Action alTransformar)
+                          IServicioDialogo dialogos, ISesionActual sesion, Action alTransformar,
+                          Action<LoteProducto> alVerProceso)
     {
         _productos = productos;
         _transformaciones = transformaciones;
         _dialogos = dialogos;
         _sesion = sesion;
         _alTransformar = alTransformar;
+
+        // Quién enruta es la pantalla contenedora, que sí es IPantalla; este padrón solo avisa.
+        // Mismo criterio que _alTransformar.
+        _alVerProceso = alVerProceso;
 
         CambiarFiltroCommand = new RelayCommand<string>(filtro =>
         {
@@ -381,13 +400,78 @@ public sealed class LotesViewModel : ViewModelBase
                   && _sesion.Puede(Permisos.ProcesosProduccion.Crear)
                   && _sesion.Puede(Permisos.ProcesosProduccion.Terminar));
 
+        VerProcesoCommand = new RelayCommand(
+            () => { if (SelectedItem is { } lote) _alVerProceso(lote); },
+            () => SelectedItem is not null);
+
         Recargar();
     }
 
     public ICommand CambiarFiltroCommand { get; }
     public ICommand TransformarCommand { get; }
 
+    /// <summary>
+    /// Abre Procesos · Producción con el proceso que produjo este lote ya marcado. Un lote ES un
+    /// proceso terminado (<see cref="LoteProducto.ProcesoId"/>); hasta ahora el número PRO-… se
+    /// pintaba como texto muerto y llegar al proceso era ir al menú y buscarlo a mano.
+    /// </summary>
+    public ICommand VerProcesoCommand { get; }
+
     public ObservableCollection<LoteProducto> Items { get; } = [];
+
+    /// <summary>
+    /// Todos los lotes con existencia, antes de filtrar. Lo lee el contenedor para armar los
+    /// indicadores y para pasárselo al catálogo, en vez de que cada uno vuelva a recorrer
+    /// procesos y despachos.
+    /// </summary>
+    public IReadOnlyList<LoteProducto> Todos => _todos;
+
+    /// <summary>
+    /// Acota por texto: número de lote o nombre del producto. Esta pestaña era la única tabla de
+    /// listado de la aplicación sin buscador.
+    /// </summary>
+    private string _textoBusqueda = string.Empty;
+    public string TextoBusqueda
+    {
+        get => _textoBusqueda;
+        set { if (SetProperty(ref _textoBusqueda, value)) Filtrar(); }
+    }
+
+    /// <summary>
+    /// Los nombres de producto que aparecen en los lotes cargados, con "Todos" al frente. Mismo
+    /// patrón que el filtro de producto de <c>ReporteVentasViewModel</c>: se compara por nombre y
+    /// no por Id porque es lo que se ve en el desplegable y lo que trae el lote.
+    /// </summary>
+    public ObservableCollection<string> Productos { get; } = [FiltroTodos];
+
+    private string _productoFiltro = FiltroTodos;
+    public string ProductoFiltro
+    {
+        get => _productoFiltro;
+        set { if (SetProperty(ref _productoFiltro, value ?? FiltroTodos)) Filtrar(); }
+    }
+
+    /// <summary>
+    /// Deja la pestaña mostrando solo los lotes de ese producto. Lo llama el botón "N lotes" de
+    /// la tarjeta del catálogo: es el puente entre las dos pestañas.
+    /// </summary>
+    public void FiltrarPorProducto(Producto producto)
+    {
+        _textoBusqueda = string.Empty;
+        _filtro = FiltroTodos;
+
+        // Se fija el producto aunque no tenga lotes: el desplegable solo lista los que aparecen
+        // en los lotes cargados, y un producto recién creado —o uno cuyo lote ya se agotó— no
+        // está ahí. Caer en silencio a "Todos" haría que el botón de la tarjeta pareciera roto;
+        // así se ve el filtro puesto y el estado vacío explica que no hay lotes.
+        if (!Productos.Contains(producto.Nombre))
+            Productos.Add(producto.Nombre);
+
+        _productoFiltro = producto.Nombre;
+
+        Filtrar();
+        OnTodasLasPropiedadesCambiaron();
+    }
 
     private LoteProducto? _selectedItem;
     public LoteProducto? SelectedItem
@@ -418,21 +502,66 @@ public sealed class LotesViewModel : ViewModelBase
     public void Recargar()
     {
         _todos = _productos.LotesConExistencia();
+        RefrescarProductos();
         Filtrar();
         OnPropertyChanged(nameof(Resumen));
+    }
+
+    /// <summary>
+    /// Repuebla el desplegable de productos con los que de verdad tienen lotes ahora. Conserva la
+    /// selección si el producto elegido sigue existiendo; si desapareció (se agotó su último
+    /// lote), vuelve a "Todos" en vez de dejar la tabla vacía sin explicación.
+    /// </summary>
+    private void RefrescarProductos()
+    {
+        var elegido = _productoFiltro;
+
+        Productos.Clear();
+        Productos.Add(FiltroTodos);
+
+        foreach (var nombre in _todos.Select(l => l.ProductoNombre).Distinct().OrderBy(n => n))
+            Productos.Add(nombre);
+
+        _productoFiltro = Productos.Contains(elegido) ? elegido : FiltroTodos;
+        OnPropertyChanged(nameof(ProductoFiltro));
     }
 
     private void Filtrar()
     {
         Items.Clear();
 
+        var texto = _textoBusqueda.Trim();
+
         foreach (var lote in _todos.Where(l => _filtro switch
                  {
                      "Por vencer" => l.Estado == EstadoVencimientoLote.PorVencer,
                      "Vencidos" => l.Estado == EstadoVencimientoLote.Vencido,
                      _ => true
-                 }))
+                 })
+                 .Where(l => _productoFiltro == FiltroTodos || l.ProductoNombre == _productoFiltro)
+                 .Where(l => texto.Length == 0
+                             || l.Numero.Contains(texto, StringComparison.OrdinalIgnoreCase)
+                             || l.ProductoNombre.Contains(texto, StringComparison.OrdinalIgnoreCase)))
             Items.Add(lote);
+
+        OnPropertyChanged(nameof(Conteo));
+    }
+
+    /// <summary>
+    /// "12 de 30" con filtro puesto, "30 lotes" sin él — mismo criterio y mismo texto que el
+    /// contador de <c>CrudViewModelBase.Conteo</c>, que esta pestaña no hereda por no ser un CRUD.
+    /// </summary>
+    public string Conteo
+    {
+        get
+        {
+            if (_todos.Count == 0)
+                return string.Empty;
+
+            return Items.Count == _todos.Count
+                ? $"{_todos.Count} {(_todos.Count == 1 ? "lote" : "lotes")}"
+                : $"{Items.Count} de {_todos.Count}";
+        }
     }
 }
 
@@ -477,20 +606,79 @@ public sealed class ProductosYLotesViewModel : PantallaViewModelBase
         var transformaciones = new TransformacionesService(procesosServicio, productosServicio, materiaPrima, inventario);
 
         Productos = new ProductosCrudViewModel(productosDs, productosServicio, tiposDs, articulosDs, dialogos, sesion);
-        Lotes = new LotesViewModel(productosServicio, transformaciones, dialogos, sesion, Recargar);
+        Lotes = new LotesViewModel(productosServicio, transformaciones, dialogos, sesion, Recargar, VerProceso);
 
         CambiarVistaCommand = new RelayCommand<string>(vista => VistaActual = vista);
+
+        VerLotesDeCommand = new RelayCommand<Producto>(VerLotesDe);
+
+        CalcularIndicadores();
     }
 
     public ProductosCrudViewModel Productos { get; }
     public LotesViewModel Lotes { get; }
 
+    /// <summary>
+    /// El botón "N lotes" de cada tarjeta del catálogo: conmuta a la pestaña Lotes ya acotada a
+    /// ese producto. Es navegación DENTRO de la pantalla, así que no pasa por el shell.
+    /// </summary>
+    public ICommand VerLotesDeCommand { get; }
+
+    private void VerLotesDe(Producto? producto)
+    {
+        if (producto is null)
+            return;
+
+        Lotes.FiltrarPorProducto(producto);
+        VistaActual = VistaLotes;
+    }
+
+    /// <summary>
+    /// Del lote a su proceso, que sí es otra pantalla: lo pide el padrón de Lotes y aquí se
+    /// traduce a la navegación del shell (ver <c>PantallaViewModelBase.SolicitarNavegacion</c>).
+    /// </summary>
+    private void VerProceso(LoteProducto lote)
+    {
+        if (ModuloCatalogo.BuscarModulo("Procesos") is { } modulo
+            && ModuloCatalogo.BuscarSubmodulo("Procesos.Produccion") is { } submodulo)
+            SolicitarNavegacion(modulo, submodulo, lote.ProcesoId);
+    }
+
     /// <summary>Las dos pestañas, aunque solo se vea una: un producto nuevo tiene que ofrecerse
     /// al despachar, y un despacho hecho desde Pedidos cambia la existencia por lote.</summary>
     public override void Recargar()
     {
-        Productos.Recargar();
+        // Los lotes primero, y se le pasan al catálogo: los dos los necesitan y calcularlos
+        // recorre procesos y despachos enteros. Sin esto, cada recarga los cuenta dos veces.
         Lotes.Recargar();
+        Productos.Recargar(Lotes.Todos);
+
+        CalcularIndicadores();
+    }
+
+    /// <summary>
+    /// Los cuatro indicadores de la cabecera. Se arman con lo que los dos padrones YA tienen en
+    /// memoria —no hay una sola consulta extra a la base—, así que se pueden recalcular en cada
+    /// recarga sin pensarlo.
+    /// </summary>
+    public ObservableCollection<Indicador> Indicadores { get; } = [];
+
+    private void CalcularIndicadores()
+    {
+        var activos = Productos.Items.Count(p => p.Activo);
+        var bajoMinimo = Productos.Items.Count(p => p.BajoMinimo);
+        var porVencer = Lotes.Todos.Count(l => l.Estado == EstadoVencimientoLote.PorVencer);
+        var vencidos = Lotes.Todos.Count(l => l.Estado == EstadoVencimientoLote.Vencido);
+
+        Indicadores.Clear();
+        Indicadores.Add(new Indicador("Productos activos", $"{activos}", "en el catálogo"));
+        Indicadores.Add(new Indicador("Bajo mínimo", $"{bajoMinimo}", "hay que producir",
+            bajoMinimo == 0 ? EstadoIndicador.Normal : EstadoIndicador.Atencion));
+        Indicadores.Add(new Indicador("Lotes por vencer", $"{porVencer}",
+            $"en {LoteProducto.DiasPorVencer} días o menos",
+            porVencer == 0 ? EstadoIndicador.Normal : EstadoIndicador.Atencion));
+        Indicadores.Add(new Indicador("Lotes vencidos", $"{vencidos}", "con existencia",
+            vencidos == 0 ? EstadoIndicador.Normal : EstadoIndicador.Critico));
     }
 
     private string _vistaActual = VistaProductos;

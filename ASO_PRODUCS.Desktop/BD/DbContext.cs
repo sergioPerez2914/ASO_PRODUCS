@@ -529,6 +529,13 @@ public class AsoProductoresDbContext : DbContext
             entity.Ignore(p => p.EsDerivado);
             entity.Ignore(p => p.OrigenTexto);
 
+            // El resumen de lotes tampoco: sale de ProductosService.Lotes(), que recorre procesos
+            // y despachos. Sin estos Ignore, EF los tomaría por columnas y pediría una migración.
+            entity.Ignore(p => p.LotesConExistencia);
+            entity.Ignore(p => p.ProximoVencimiento);
+            entity.Ignore(p => p.ResumenLotesTexto);
+            entity.Ignore(p => p.FichaTexto);
+
             entity.Property(p => p.ProductoBaseNombre).HasMaxLength(150);
             entity.Property(p => p.CantidadBasePorUnidad).HasColumnType("decimal(18,4)");
 
