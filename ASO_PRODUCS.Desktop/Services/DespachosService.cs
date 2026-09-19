@@ -96,26 +96,39 @@ public sealed class DespachosService
             return false;
         }
 
+        // Un mismo lote en dos líneas no es un reparto: es el mismo lote contado dos veces, con la
+        // misma existencia repetida en los dos renglones y sin forma de ver que se está pasando
+        // hasta sumarlos. El editor ya no lo ofrece —el desplegable de cada línea esconde los
+        // lotes que tomaron las demás, ver <c>DespachoEditorViewModel.LotesDisponiblesPara</c>—,
+        // pero la regla vive aquí, igual que la línea repetida de
+        // <see cref="ProcesosProduccionService.ValidarLineas"/>.
+        var repetido = despacho.Lineas
+            .GroupBy(l => l.ProcesoProduccionId!.Value)
+            .FirstOrDefault(g => g.Count() > 1);
+
+        if (repetido is not null)
+        {
+            var linea = repetido.First();
+            error = $"El lote {linea.ProcesoProduccionNumero} de {linea.ProductoNombre} está en más de una " +
+                    "línea; júntelas en una sola o reparta el resto en otro lote.";
+            return false;
+        }
+
         var lotes = _productos.Lotes().ToDictionary(l => l.ProcesoId);
 
-        // Se agrupa por lote antes de comparar: dos líneas del mismo lote que por separado caben,
-        // juntas pueden no caber.
-        foreach (var grupo in despacho.Lineas.GroupBy(l => l.ProcesoProduccionId!.Value))
+        foreach (var linea in despacho.Lineas)
         {
-            var linea = grupo.First();
-
-            if (!lotes.TryGetValue(grupo.Key, out var lote) || lote.ProductoId != linea.ProductoId)
+            if (!lotes.TryGetValue(linea.ProcesoProduccionId!.Value, out var lote)
+                || lote.ProductoId != linea.ProductoId)
             {
                 error = $"El lote elegido para {linea.ProductoNombre} no es un lote terminado de ese producto.";
                 return false;
             }
 
-            var pedido = grupo.Sum(l => l.Cantidad);
-
-            if (pedido > lote.Existencia)
+            if (linea.Cantidad > lote.Existencia)
             {
                 error = $"El lote {lote.Numero} de {linea.ProductoNombre} solo tiene {lote.ExistenciaTexto} " +
-                        $"y se piden {pedido:N2}.";
+                        $"y se piden {linea.Cantidad:N2}.";
                 return false;
             }
         }

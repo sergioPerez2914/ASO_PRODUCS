@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
@@ -107,7 +107,6 @@ public sealed class PedidosCrudViewModel : CrudViewModelBase<Pedido, int>
     protected override bool PasaFiltroExtra(Pedido item) => _filtro switch
     {
         "Pendientes" => item.Estado == EstadoPedido.Registrado && item.EstadoEntregaTexto == "Pendiente",
-        "Parciales" => item.Estado == EstadoPedido.Registrado && item.EstadoEntregaTexto == "Parcial",
         "Completados" => item.Estado == EstadoPedido.Registrado && item.EstadoEntregaTexto == "Completado",
         "Anulados" => item.Estado == EstadoPedido.Anulado,
         _ => true
@@ -460,7 +459,7 @@ public sealed class LineaPedidoEditorViewModel : ViewModelBase
     }
 }
 
-/// <summary>Ficha de solo lectura de un pedido: cabecera + líneas con Pedido/Despachado/Pendiente
+/// <summary>Ficha de solo lectura de un pedido: cabecera + líneas con Pedido/Despachado
 /// y el chip de <see cref="Pedido.EstadoMostrado"/>. Mismo criterio que
 /// <see cref="DespachoDetalleViewModel"/>.</summary>
 public sealed class PedidoDetalleViewModel : CrudEditorViewModelBase

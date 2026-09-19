@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using ASO_PRODUCS.Desktop.Models;
@@ -31,11 +31,18 @@ public sealed class PedidosService
 
     public bool PuedeAnular(Pedido pedido) => pedido.Estado == EstadoPedido.Registrado;
 
-    /// <summary>Solo mientras quede algo pendiente por entregar y el pedido siga vigente. Requiere
-    /// <see cref="RellenarDespachado"/> corrido antes, igual que <see cref="PuedeAnular"/> no lo
-    /// necesita pero éste sí.</summary>
+    /// <summary>
+    /// Solo si el pedido sigue vigente y todavía NO se despachó: un pedido se despacha una vez y
+    /// queda cerrado, salga completo o corto (ver <see cref="Pedido.EstadoEntregaTexto"/>).
+    /// Requiere <see cref="RellenarDespachado"/> corrido antes, igual que
+    /// <see cref="PuedeAnular"/> no lo necesita pero éste sí.
+    ///
+    /// <para>Anular el despacho vuelve a habilitarlo: <see cref="RellenarDespachado"/> solo suma
+    /// despachos que cuentan en existencia, así que un despacho anulado deja el pedido otra vez en
+    /// "Pendiente" — que es justo lo que hace falta para poder rehacerlo.</para>
+    /// </summary>
     public bool PuedeDespachar(Pedido pedido) =>
-        pedido.Estado == EstadoPedido.Registrado && pedido.EstadoEntregaTexto != "Completado";
+        pedido.Estado == EstadoPedido.Registrado && pedido.EstadoEntregaTexto == "Pendiente";
 
     // --- Validación ---
 

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -53,19 +53,20 @@ public class Pedido : IEntidad<int>, IDeOrganizacion
     public string TotalTexto => Total.ToString("N2");
 
     /// <summary>
-    /// "Completado"/"Parcial"/"Pendiente", derivado de <see cref="PedidoLinea.Despachado"/> —
-    /// requiere que <c>PedidosService.RellenarDespachado</c> haya corrido antes, igual que
+    /// "Completado"/"Pendiente", derivado de <see cref="PedidoLinea.Despachado"/> — requiere que
+    /// <c>PedidosService.RellenarDespachado</c> haya corrido antes, igual que
     /// <see cref="Producto.Existencia"/> necesita su propio relleno antes de leerse.
+    ///
+    /// <para>Un pedido se despacha UNA vez: en cuanto sale un despacho suyo queda "Completado",
+    /// aunque haya salido menos de lo que se pidió. No existe un "Parcial" que quede esperando un
+    /// segundo despacho que nadie va a hacer — lo que se pidió y lo que salió quedan los dos en la
+    /// ficha, y la diferencia entre ambos es el registro de lo que pasó, no algo por hacer.</para>
     /// </summary>
     public string EstadoEntregaTexto =>
-        Lineas.Count > 0 && Lineas.All(l => l.Pendiente <= 0)
-            ? "Completado"
-            : Lineas.Any(l => l.Despachado > 0)
-                ? "Parcial"
-                : "Pendiente";
+        Lineas.Any(l => l.Despachado > 0) ? "Completado" : "Pendiente";
 
     /// <summary>Una sola cadena para pintar el chip: "Anulado" gana sobre cualquier avance de
-    /// entrega — un pedido anulado no vuelve a mostrarse como Pendiente/Parcial.</summary>
+    /// entrega — un pedido anulado no vuelve a mostrarse como Pendiente.</summary>
     public string EstadoMostrado => Estado == EstadoPedido.Anulado ? "Anulado" : EstadoEntregaTexto;
 
     /// <summary>

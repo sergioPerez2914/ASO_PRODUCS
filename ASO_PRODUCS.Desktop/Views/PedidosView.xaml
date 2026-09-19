@@ -1,4 +1,4 @@
-<UserControl x:Class="ASO_PRODUCS.Desktop.Views.PedidosView"
+﻿<UserControl x:Class="ASO_PRODUCS.Desktop.Views.PedidosView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -47,7 +47,6 @@
                                      Command="{Binding CambiarFiltroCommand}">
               <ComboBoxItem Content="Todos" />
               <ComboBoxItem Content="Pendientes" />
-              <ComboBoxItem Content="Parciales" />
               <ComboBoxItem Content="Completados" />
               <ComboBoxItem Content="Anulados" />
             </controls:FiltroDropdown>
@@ -66,7 +65,7 @@
                     Command="{Binding AgregarCommand}" />
             <Button Content="Despachar pedido" Style="{StaticResource SecondaryButtonStyle}"
                     Command="{Binding DespacharCommand}"
-                    ToolTip="Abre el despacho ya lleno con lo que falta entregar de este pedido." />
+                    ToolTip="Abre el despacho ya lleno con lo pedido. Un pedido se despacha una sola vez: al guardarlo queda completado." />
             <Button Content="Imprimir" Style="{StaticResource SecondaryButtonStyle}"
                     Command="{Binding ImprimirCommand}"
                     ToolTip="Saca el documento por la impresora, tal como se ve aquí." />
@@ -112,7 +111,7 @@
 
           <controls:EmptyState Icono="{x:Static controls:Iconos.Pedidos}"
                                Titulo="No hay pedidos registrados"
-                               Detalle="Registra lo que pida un cliente; después usa &quot;Despachar pedido&quot; para entregarlo, en una vez o en partes."
+                               Detalle="Registra lo que pida un cliente; después usa &quot;Despachar pedido&quot; para entregarlo."
                                Visibility="{Binding HasItems, ElementName=TablaPedidos, Converter={StaticResource SinItemsAVis}}" />
         </Grid>
       </Border>

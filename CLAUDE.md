@@ -1,4 +1,4 @@
-# ASO Producs — gestión para productores locales
+﻿# ASO Producs — gestión para productores locales
 
 Aplicación de gestión de escritorio para **productores locales de distinta índole**: **WPF ·
 .NET 8** (`net8.0-windows`), instalación local en LAN, una sola organización por instalación.
@@ -397,7 +397,7 @@ queda en Pedidos — es donde se sabe qué falta entregar.
   `PedidoNumero` (mismo patrón opcional que ya tenía `ProcesoProduccionId` para el lote), y
   `PedidoLinea.Despachado` (NO persistido) se deriva sumando las líneas de despacho que citan ese
   pedido — `PedidosService.RellenarDespachado`. `Pedido.EstadoEntregaTexto`
-  ("Pendiente"/"Parcial"/"Completado") también se deriva, nunca se guarda; el único estado
+  ("Pendiente"/"Completado", ver más abajo) también se deriva, nunca se guarda; el único estado
   persistido es el binario `EstadoPedido` (Registrado/Anulado), igual que el resto de los
   documentos. El botón "Despachar pedido" (`PedidosViewModel.Despachar`) abre un
   `DespachoEditorViewModel` precargado con `PrecargarDesdePedido`: fija Venta, el cliente y una
@@ -529,6 +529,42 @@ queda en Pedidos — es donde se sabe qué falta entregar.
   escondería justo el rastro que se pedía, que es "cuál transformación se llevó este lote", el
   mismo problema que resolvió el filtro "Agotados" de arriba pero visto desde Reportes en vez de
   desde el lote.
+- **Despachar un pedido reparte entre varios lotes** (2026-09-19). "Despachar pedido" armaba UNA
+  línea por cada `PedidoLinea`, con el lote que vence primero: si pedían 10 y ese lote tenía 6, no
+  había forma de completar los 4 que faltaban. Agregar la segunda línea a mano tampoco servía —
+  nacía sin `PedidoOrigen` y `DespachosService.Validar` la rechazaba con "un despacho de Venta solo
+  puede registrarse despachando un pedido", un mensaje que no tenía nada que ver con lo que estaba
+  pasando. Ahora `PrecargarDesdePedido` recorre los lotes del producto en orden FEFO y abre una
+  línea por cada uno hasta cubrir lo pendiente, y el pedido queda guardado en el editor
+  (`_pedidoOrigen`) para que TODA línea nueva —incluidas las de "Agregar línea"— nazca ligada a él.
+  Que dos líneas del mismo despacho citen el mismo `(PedidoId, ProductoId)` ya estaba contemplado:
+  `PedidosService.RellenarDespachado` suma por esa clave, no por línea. Si entre todos los lotes
+  no alcanza, **no se arma una línea por lo que falta**: no habría lote que ponerle y el despacho
+  entero quedaría bloqueado —incluido lo que sí se puede entregar hoy— hasta que alguien borrara
+  esa línea a mano. Se despacha lo que hay, `DiferenciaTexto` avisa en rojo arriba de la grilla la
+  diferencia entre lo pedido y lo que se despacha ("se piden 10,00 y se despachan 6,00") y con
+  eso el pedido queda Completado.
+- **Un lote no se puede repetir en dos líneas del mismo despacho** (2026-09-19). El desplegable de
+  cada línea esconde los lotes que ya tomaron las demás
+  (`DespachoEditorViewModel.LotesDisponiblesPara`, que el editor le pasa a cada línea como
+  función porque la línea no ve a sus hermanas), y `DespachosService.Validar` lo rechaza además
+  como regla, calcado de la línea repetida de `ProcesosProduccionService.ValidarLineas`. El motivo
+  no es que no cuadre —el servicio agrupaba por lote y sumaba bien— sino que los dos renglones
+  muestran la MISMA existencia disponible, así que quien carga no ve que se está pasando hasta que
+  el despacho entero se rechaza. El lote propio nunca se filtra de su propia lista, o WPF borraría
+  la selección del `ComboBox`.
+- **Un pedido se despacha UNA vez** (2026-09-19). Antes `EstadoEntregaTexto` tenía tres valores y
+  un pedido al que se le había despachado de menos quedaba "Parcial" para siempre, esperando un
+  segundo despacho que nadie iba a hacer: el caso real es el cliente que a última hora se lleva
+  menos de lo que pidió, no una entrega en tandas. Ahora son dos valores —`"Completado"` en
+  cuanto alguna línea tiene algo despachado, `"Pendiente"` mientras no— y `PuedeDespachar` exige
+  `"Pendiente"`, así que el botón se apaga en cuanto el despacho está guardado. Lo que se pidió y
+  lo que salió siguen los dos en la ficha; el hueco entre ambos se lee comparando las columnas, y
+  por eso la ficha **ya no lleva columna "Pendiente"**: no es algo por entregar, es lo que pasó.
+  Con ello se van el filtro "Parciales" del listado y el `DataTrigger` ámbar de
+  `ChipEstadoPedidoStyle`. **Anular el despacho vuelve a habilitar el pedido**: como
+  `RellenarDespachado` solo suma despachos que cuentan en existencia, el pedido vuelve a
+  "Pendiente" y se puede rehacer — que es la salida cuando el despacho se cargó mal.
 
 ## Persistencia
 

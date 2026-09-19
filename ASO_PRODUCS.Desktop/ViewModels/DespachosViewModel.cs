@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
@@ -265,6 +265,14 @@ public sealed class DespachoEditorViewModel : CrudEditorViewModelBase<Despacho>
     /// <summary>Lotes con existencia en orden FEFO, leídos al abrir el modal.</summary>
     private readonly IReadOnlyList<LoteProducto> _lotes;
 
+    /// <summary>El pedido que se está despachando, fijado por <see cref="PrecargarDesdePedido"/>.
+    /// Lo llevan también las líneas que el operador agregue a mano después (<see cref="AgregarLineaCommand"/>):
+    /// sin esto, una línea agregada para completar con otro lote lo que el primero no alcanzó a
+    /// cubrir quedaba sin <see cref="LineaDespachoEditorViewModel.PedidoOrigen"/> y
+    /// <see cref="DespachosService.Validar"/> la rechazaba como si el despacho no viniera de un
+    /// pedido.</summary>
+    private Pedido? _pedidoOrigen;
+
     public DespachoEditorViewModel(Despacho original,
                                    TipoDespacho tipo,
                                    IReadOnlyList<Producto> productos,
@@ -301,34 +309,81 @@ public sealed class DespachoEditorViewModel : CrudEditorViewModelBase<Despacho>
 
     /// <summary>
     /// Llena el despacho con lo que falta entregar de <paramref name="pedido"/>: el cliente del
-    /// pedido, y una línea por cada <see cref="PedidoLinea"/> con <see cref="PedidoLinea.Pendiente"/>
-    /// positivo. Usa el <see cref="NuevaLinea"/> privado para que cada línea quede suscrita a
-    /// <see cref="LineaDespachoEditorViewModel.Cambio"/> — armarlas a mano desde afuera dejaría los
-    /// totales del editor sin refrescar. El <see cref="Tipo"/> ya viene fijado en Venta desde el
-    /// constructor, no lo toca este método.
+    /// pedido, y una o más líneas por cada <see cref="PedidoLinea"/> con
+    /// <see cref="PedidoLinea.Pendiente"/> positivo. Usa el <see cref="NuevaLinea"/> privado para
+    /// que cada línea quede suscrita a <see cref="LineaDespachoEditorViewModel.Cambio"/> — armarlas
+    /// a mano desde afuera dejaría los totales del editor sin refrescar. El <see cref="Tipo"/> ya
+    /// viene fijado en Venta desde el constructor, no lo toca este método.
     ///
     /// El producto se fija ANTES que el precio: el precio del catálogo solo se propone si el
     /// campo está vacío (ver <see cref="LineaDespachoEditorViewModel.ProductoSeleccionado"/>), así
     /// que asignarlo después es lo que deja el precio del pedido sin que nada lo pise.
+    ///
+    /// <para><b>Reparte en más de un lote cuando hace falta</b>: si lo pedido no cabe en el lote
+    /// que vence primero (p. ej. piden 10 y ese lote solo tiene 6), antes se armaba una sola línea
+    /// con el lote que no alcanzaba y no había forma de completar el resto — agregar una línea a
+    /// mano para el segundo lote la dejaba sin <see cref="LineaDespachoEditorViewModel.PedidoOrigen"/>
+    /// y <see cref="DespachosService.Validar"/> la rechazaba. Ahora se recorren los lotes del
+    /// producto en orden FEFO (<see cref="_lotes"/>) y se abre una línea por cada uno hasta cubrir
+    /// lo pendiente, cada una ya con el pedido enlazado.</para>
     /// </summary>
     public void PrecargarDesdePedido(Pedido pedido)
     {
+        _pedidoOrigen = pedido;
         ClienteSeleccionado = Clientes.FirstOrDefault(c => c.Id == pedido.ClienteId);
 
         Lineas.Clear();
 
+        var diferencias = new List<string>();
+
         foreach (var lineaPedido in pedido.Lineas.Where(l => l.Pendiente > 0))
         {
-            var linea = NuevaLinea();
-            linea.ProductoSeleccionado = Productos.FirstOrDefault(p => p.Id == lineaPedido.ProductoId);
-            linea.Cantidad = lineaPedido.Pendiente.ToString("0.####");
-            linea.PrecioUnitario = lineaPedido.PrecioUnitario.ToString("0.####");
-            linea.PedidoOrigen = pedido;
-            Lineas.Add(linea);
+            var restante = lineaPedido.Pendiente;
+
+            foreach (var lote in _lotes.Where(l => l.ProductoId == lineaPedido.ProductoId))
+            {
+                if (restante <= 0)
+                    break;
+
+                var tomar = Math.Min(restante, lote.Existencia);
+
+                var linea = NuevaLinea();
+                linea.ProductoSeleccionado = Productos.FirstOrDefault(p => p.Id == lineaPedido.ProductoId);
+                linea.LoteSeleccionado = lote;
+                linea.Cantidad = tomar.ToString("0.####");
+                linea.PrecioUnitario = lineaPedido.PrecioUnitario.ToString("0.####");
+                Lineas.Add(linea);
+
+                restante -= tomar;
+            }
+
+            // Entre todos los lotes no alcanza (o no hay ninguno). NO se arma una línea por lo que
+            // falta: no habría lote que ponerle, y esa línea bloquearía el despacho entero —
+            // incluido lo que sí se puede entregar hoy— hasta que alguien la borre a mano. Se
+            // despacha lo que hay y la diferencia se avisa arriba de la grilla, para que quien
+            // guarda sepa que el pedido va a quedar completado con menos de lo que pedía.
+            if (restante > 0)
+                diferencias.Add($"{lineaPedido.ProductoNombre}: se piden " +
+                                $"{lineaPedido.Pendiente:N2} y se despachan " +
+                                $"{lineaPedido.Pendiente - restante:N2}");
         }
+
+        DiferenciaTexto = diferencias.Count == 0
+            ? string.Empty
+            : "Diferencia entre lo pedido y lo que se despacha — " + string.Join(" · ", diferencias) +
+              ". Sale lo que hay y con eso el pedido queda completado.";
 
         if (Lineas.Count == 0)
             Lineas.Add(NuevaLinea());
+    }
+
+    /// <summary>En qué renglones lo que se va a despachar queda por debajo de lo pedido, porque
+    /// los lotes no alcanzan a cubrirlo. Vacío cuando alcanza para todo, que es lo normal.</summary>
+    private string _diferenciaTexto = string.Empty;
+    public string DiferenciaTexto
+    {
+        get => _diferenciaTexto;
+        private set => SetProperty(ref _diferenciaTexto, value);
     }
 
     public override string Titulo => Tipo == TipoDespacho.Venta ? "Despachar pedido" : "Registrar ajuste";
@@ -446,9 +501,38 @@ public sealed class DespachoEditorViewModel : CrudEditorViewModelBase<Despacho>
 
     private LineaDespachoEditorViewModel NuevaLinea()
     {
-        var linea = new LineaDespachoEditorViewModel(Productos, _lotes);
+        var linea = new LineaDespachoEditorViewModel(Productos, LotesDisponiblesPara);
         linea.Cambio += AlCambiarLinea;
+
+        // Toda línea nace ligada al pedido que se está despachando (si lo hay), incluida una que
+        // el operador agregue a mano con "Agregar línea" para completar con otro lote lo que el
+        // primero no alcanzó a cubrir — ver el comentario de <see cref="_pedidoOrigen"/>.
+        linea.PedidoOrigen = _pedidoOrigen;
+
         return linea;
+    }
+
+    /// <summary>
+    /// Los lotes que esta línea puede elegir: los del producto seleccionado, MENOS los que ya
+    /// tomó otra línea del mismo despacho.
+    ///
+    /// Un lote repetido en dos líneas no es un reparto, es el mismo lote contado dos veces: la
+    /// existencia que muestra cada renglón sería la misma y quien lo carga no tiene forma de ver
+    /// que se está pasando hasta que el servicio suma las dos y rechaza el despacho entero. Como
+    /// el lote propio nunca entra en la lista de "tomados", el <c>SelectedItem</c> del ComboBox de
+    /// esta línea siempre sigue estando entre sus ítems y WPF no lo borra solo.
+    /// </summary>
+    private IReadOnlyList<LoteProducto> LotesDisponiblesPara(LineaDespachoEditorViewModel linea)
+    {
+        if (linea.ProductoSeleccionado is not { } producto)
+            return [];
+
+        var tomados = Lineas
+            .Where(l => l != linea && l.LoteSeleccionado is not null)
+            .Select(l => l.LoteSeleccionado!.ProcesoId)
+            .ToHashSet();
+
+        return [.. _lotes.Where(l => l.ProductoId == producto.Id && !tomados.Contains(l.ProcesoId))];
     }
 
     private void AlCambiarLineas(object? remitente, NotifyCollectionChangedEventArgs e)
@@ -464,6 +548,12 @@ public sealed class DespachoEditorViewModel : CrudEditorViewModelBase<Despacho>
         OnPropertyChanged(nameof(TotalCantidad));
         OnPropertyChanged(nameof(Total));
         OnPropertyChanged(nameof(TotalTexto));
+
+        // Elegir un lote en una línea lo saca de la lista de las demás, y quitar una línea lo
+        // devuelve: sin esto el desplegable de las otras seguiría ofreciendo un lote ya tomado
+        // hasta que algo más las hiciera repintar.
+        foreach (var linea in Lineas)
+            linea.RefrescarLotes();
     }
 }
 
@@ -477,12 +567,15 @@ public sealed class LineaDespachoEditorViewModel : ViewModelBase
 {
     public event EventHandler? Cambio;
 
-    private readonly IReadOnlyList<LoteProducto> _lotes;
+    /// <summary>Lo resuelve el editor, que es el único que ve las demás líneas: ver
+    /// <see cref="DespachoEditorViewModel.LotesDisponiblesPara"/>.</summary>
+    private readonly Func<LineaDespachoEditorViewModel, IReadOnlyList<LoteProducto>> _lotesDisponibles;
 
-    public LineaDespachoEditorViewModel(IReadOnlyList<Producto> productos, IReadOnlyList<LoteProducto> lotes)
+    public LineaDespachoEditorViewModel(IReadOnlyList<Producto> productos,
+                                        Func<LineaDespachoEditorViewModel, IReadOnlyList<LoteProducto>> lotesDisponibles)
     {
         Productos = productos;
-        _lotes = lotes;
+        _lotesDisponibles = lotesDisponibles;
     }
 
     public IReadOnlyList<Producto> Productos { get; }
@@ -512,11 +605,14 @@ public sealed class LineaDespachoEditorViewModel : ViewModelBase
         }
     }
 
-    /// <summary>Lotes con existencia del producto elegido, en orden FEFO.</summary>
-    public IReadOnlyList<LoteProducto> LotesDelProducto =>
-        ProductoSeleccionado is null
-            ? []
-            : [.. _lotes.Where(l => l.ProductoId == ProductoSeleccionado.Id)];
+    /// <summary>Lotes con existencia del producto elegido, en orden FEFO y sin los que ya tomó
+    /// otra línea del mismo despacho.</summary>
+    public IReadOnlyList<LoteProducto> LotesDelProducto => _lotesDisponibles(this);
+
+    /// <summary>La llama el editor cuando otra línea toma o suelta un lote. Solo repinta el
+    /// desplegable: no toca la selección de esta línea, que nunca queda fuera de su propia
+    /// lista.</summary>
+    public void RefrescarLotes() => OnPropertyChanged(nameof(LotesDelProducto));
 
     /// <summary>El lote del que sale esta línea: obligatorio, descuenta su existencia.</summary>
     private LoteProducto? _loteSeleccionado;

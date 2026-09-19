@@ -1,4 +1,4 @@
-<UserControl x:Class="ASO_PRODUCS.Desktop.Views.PedidoDetalleView"
+﻿<UserControl x:Class="ASO_PRODUCS.Desktop.Views.PedidoDetalleView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -8,7 +8,9 @@
              d:DesignWidth="900">
 
   <!-- Ficha de solo lectura: encabezado con lo esencial y debajo el detalle de líneas, con lo
-       pedido/despachado/pendiente de cada una. -->
+       pedido y lo despachado de cada una. NO hay columna "Pendiente": un pedido se despacha una
+       sola vez (ver Pedido.EstadoEntregaTexto), así que el hueco entre lo pedido y lo que salió
+       no es algo por entregar — es lo que pasó, y se lee comparando las dos columnas. -->
   <StackPanel>
 
     <Border Style="{StaticResource SectionCardStyle}">
@@ -61,14 +63,12 @@
             <ColumnDefinition Width="*" SharedSizeGroup="ColProductoPedido" />
             <ColumnDefinition Width="Auto" SharedSizeGroup="ColPedidoPedido" />
             <ColumnDefinition Width="Auto" SharedSizeGroup="ColDespachadoPedido" />
-            <ColumnDefinition Width="Auto" SharedSizeGroup="ColPendientePedido" />
             <ColumnDefinition Width="Auto" SharedSizeGroup="ColSubtotalPedido" />
           </Grid.ColumnDefinitions>
           <TextBlock Grid.Column="0" Text="Producto" FontWeight="{StaticResource FwMedium}" Margin="0,0,16,0" />
           <TextBlock Grid.Column="1" Text="Pedido" FontWeight="{StaticResource FwMedium}" Margin="0,0,16,0" HorizontalAlignment="Right" />
           <TextBlock Grid.Column="2" Text="Despachado" FontWeight="{StaticResource FwMedium}" Margin="0,0,16,0" HorizontalAlignment="Right" />
-          <TextBlock Grid.Column="3" Text="Pendiente" FontWeight="{StaticResource FwMedium}" Margin="0,0,16,0" HorizontalAlignment="Right" />
-          <TextBlock Grid.Column="4" Text="Subtotal" FontWeight="{StaticResource FwMedium}" HorizontalAlignment="Right" />
+          <TextBlock Grid.Column="3" Text="Subtotal" FontWeight="{StaticResource FwMedium}" HorizontalAlignment="Right" />
         </Grid>
         <Border Height="1" Background="{DynamicResource BorderBrush}" Margin="0,0,0,4" />
         <ItemsControl ItemsSource="{Binding Pedido.Lineas}">
@@ -79,24 +79,12 @@
                   <ColumnDefinition Width="*" SharedSizeGroup="ColProductoPedido" />
                   <ColumnDefinition Width="Auto" SharedSizeGroup="ColPedidoPedido" />
                   <ColumnDefinition Width="Auto" SharedSizeGroup="ColDespachadoPedido" />
-                  <ColumnDefinition Width="Auto" SharedSizeGroup="ColPendientePedido" />
                   <ColumnDefinition Width="Auto" SharedSizeGroup="ColSubtotalPedido" />
                 </Grid.ColumnDefinitions>
                 <TextBlock Grid.Column="0" Text="{Binding ProductoNombre}" Margin="0,0,16,0" TextTrimming="CharacterEllipsis" />
                 <TextBlock Grid.Column="1" Text="{Binding CantidadPedidaTexto}" Margin="0,0,16,0" HorizontalAlignment="Right" />
                 <TextBlock Grid.Column="2" Text="{Binding DespachadoTexto}" Margin="0,0,16,0" HorizontalAlignment="Right" />
-                <TextBlock Grid.Column="3" Text="{Binding PendienteTexto}" Margin="0,0,16,0" HorizontalAlignment="Right">
-                  <TextBlock.Style>
-                    <Style TargetType="TextBlock">
-                      <Style.Triggers>
-                        <DataTrigger Binding="{Binding EstaCompleta}" Value="True">
-                          <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
-                        </DataTrigger>
-                      </Style.Triggers>
-                    </Style>
-                  </TextBlock.Style>
-                </TextBlock>
-                <TextBlock Grid.Column="4" Text="{Binding SubtotalTexto}" HorizontalAlignment="Right" />
+                <TextBlock Grid.Column="3" Text="{Binding SubtotalTexto}" HorizontalAlignment="Right" />
               </Grid>
             </DataTemplate>
           </ItemsControl.ItemTemplate>
