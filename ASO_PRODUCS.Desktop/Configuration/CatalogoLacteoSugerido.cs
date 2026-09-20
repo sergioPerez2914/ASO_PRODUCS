@@ -8,7 +8,8 @@ namespace ASO_PRODUCS.Desktop.Configuration;
 /// producción típicos de fabricar queso, queso amarillo, mantequilla, crema de leche y suero.
 ///
 /// Es contenido específico de ESTE negocio, no del scaffold genérico — si la planta real trabaja
-/// otros productos o pasos, este es el único archivo que hay que editar. Lo consumen los botones
+/// otros productos o pasos, este es el único archivo que hay que editar. Las unidades salen del
+/// vocabulario de <see cref="UnidadesSugeridas"/>, que es lo que proponen los formularios. Lo consumen los botones
 /// "Cargar sugeridos" de Inventario · Almacén, Materia Prima · Existencias, Procesos · Producción
 /// (pestaña Etapas) y Procesos · Productos y Lotes (pestaña Productos).
 /// </summary>
@@ -16,40 +17,39 @@ public static class CatalogoLacteoSugerido
 {
     public static IReadOnlyList<(string Nombre, string UnidadMedida)> Productos { get; } =
     [
-        ("Queso", "Kg"),
-        ("Queso Amarillo", "Kg"),
-        ("Mantequilla", "Kg"),
-        ("Crema de Leche", "Litros"),
-        ("Suero", "Litros"),
+        ("Queso", "kg"),
+        ("Queso Amarillo", "kg"),
+        ("Mantequilla", "kg"),
+        ("Crema de Leche", "L"),
+        ("Suero", "L"),
     ];
 
     /// <summary>
     /// Insumos de almacén: lo que no se transforma en el producto pero hace falta para
-    /// despacharlo. A diferencia de las otras tres listas, esta lleva categoría y unidad
-    /// tipada, porque <c>Articulo</c> las tiene y son lo que ordena la grilla del almacén.
+    /// despacharlo.
     ///
     /// El código NO va aquí: lo genera <c>InventarioService.GenerarCodigo()</c> al crear cada
     /// uno, igual que cuando se da de alta a mano dejando el campo vacío.
     /// </summary>
-    public static IReadOnlyList<(string Nombre, string Categoria, UnidadMedida Unidad)> Articulos { get; } =
+    public static IReadOnlyList<(string Nombre, string UnidadMedida)> Articulos { get; } =
     [
-        ("Bolsa de empaque", "Empaque", UnidadMedida.Pieza),
-        ("Etiqueta de producto", "Empaque", UnidadMedida.Pieza),
-        ("Molde para queso", "Utensilio", UnidadMedida.Pieza),
-        ("Caja de cartón", "Empaque", UnidadMedida.Caja),
-        ("Detergente alcalino", "Limpieza", UnidadMedida.Litro),
-        ("Desinfectante de superficies", "Limpieza", UnidadMedida.Litro),
-        ("Guantes desechables", "Higiene", UnidadMedida.Caja),
-        ("Gorro desechable", "Higiene", UnidadMedida.Caja),
+        ("Bolsa de empaque", "Pieza"),
+        ("Etiqueta de producto", "Pieza"),
+        ("Molde para queso", "Pieza"),
+        ("Caja de cartón", "Caja"),
+        ("Detergente alcalino", "L"),
+        ("Desinfectante de superficies", "L"),
+        ("Guantes desechables", "Caja"),
+        ("Gorro desechable", "Caja"),
     ];
 
     public static IReadOnlyList<(string Nombre, string UnidadMedida)> TiposMateriaPrima { get; } =
     [
-        ("Leche cruda", "Litros"),
-        ("Fermento láctico", "Gramos"),
-        ("Cuajo", "Mililitros"),
-        ("Sal", "Kilogramos"),
-        ("Cloruro de calcio", "Mililitros"),
+        ("Leche cruda", "L"),
+        ("Fermento láctico", "g"),
+        ("Cuajo", "mL"),
+        ("Sal", "kg"),
+        ("Cloruro de calcio", "mL"),
     ];
 
     /// <summary>

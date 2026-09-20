@@ -402,9 +402,11 @@
 
                         <!-- Solo se le quita fondo y borde propios: el resto (PART_ContentHost,
                              caret, seleccion) lo resuelve el estilo implicito de TextBox. -->
+                        <!-- Sin CharacterCasing: lo usa el campo de unidad de medida de los dos
+                             catalogos de materiales, y "kg"/"mL" en mayusculas no son la misma
+                             unidad escrita de otra forma, son otra cosa. -->
                         <TextBox x:Name="PART_EditableTextBox"
                                  Background="Transparent" BorderThickness="0"
-                                 CharacterCasing="Upper"
                                  IsReadOnly="{TemplateBinding IsReadOnly}"
                                  Margin="{TemplateBinding Padding}" Padding="0"
                                  VerticalContentAlignment="Center" />

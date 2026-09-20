@@ -266,8 +266,8 @@ específico de esa planta:
 - **`Custodia` → `Existencias`, `Despachos` → `Salidas`** (los nombres que pidió este proyecto);
   `Recepciones` se conservó igual.
 - **`TipoBotella` (del módulo Catálogo de ASO_RTR, no traído) se reemplazó por
-  `Models/TipoMateriaPrima.cs`**, un catálogo simple (Id, Nombre, UnidadMedida, Activo) que vive
-  DENTRO de este módulo — no hay módulo Catálogo aparte. Es la misma idea que `Articulo`, pero sin
+  `Models/TipoMateriaPrima.cs`**, un catálogo simple (Id, Código, Nombre, UnidadMedida, Mínimo,
+  Activo — ver "Un solo formulario de material" abajo) que vive DENTRO de este módulo — no hay módulo Catálogo aparte. Es la misma idea que `Articulo`, pero sin
   la especificidad de paletas y patrón de paletizado.
 - **Se fueron las columnas de paletizado y el acoplamiento con Operaciones**
   (`BotellasPorPaletaSnapshot`, `CantidadPaletas`, la dependencia con `CustodiaProduccionService`
@@ -304,6 +304,108 @@ específico de esa planta:
   como red.
 - **Reutiliza `Controls/PuenteDeDatos.cs`** para las dos grillas de líneas (Recepciones, Salidas),
   igual que Inventario.
+
+## Un solo formulario de material (2026-09-20)
+
+Dar de alta un artículo de almacén y dar de alta un tipo de materia prima son la misma operación,
+y hasta ahora eran dos formularios que no se parecían en nada: uno con código, categoría,
+ubicación y notas sobre un **enum cerrado** de unidades; el otro con nombre, unidad de texto y
+mínimo. Ahora los dos son **el mismo formulario**, con cinco campos: **Código · Nombre · Unidad ·
+Mínimo · Activo**.
+
+- **`Models/IMaterialMaestro.cs`** es lo que tienen en común `Articulo` y `TipoMateriaPrima`, y lo
+  que deja que `ViewModels/MaterialEditorViewModel.cs` (abstracto, genérico) lea y escriba los
+  cinco campos sin conocer la entidad. Es genérico porque `CrudViewModelBase.CrearEditor` devuelve
+  `CrudEditorViewModelBase<T>`. `ArticuloEditorViewModel` y `TipoMateriaPrimaEditorViewModel`
+  quedan como cáscaras de cinco líneas: título, clon, generador de código y validador de su
+  módulo. `Producto` NO implementa la interfaz a propósito: su formulario lleva además precio,
+  vida útil, presentación y componentes.
+- **Una sola vista, `Views/MaterialEditorView.xaml`** (se borraron `ArticuloEditorView` y
+  `TipoMateriaPrimaEditorView`). En `Styles/EditorTemplates.xaml` son **dos** `DataTemplate`
+  apuntando a la misma vista, porque un `DataTemplate` no puede apuntar a un genérico abierto.
+- **La unidad pasó de enum a texto en `Articulo`.** El enum `UnidadMedida` (Pieza, Caja, Paleta,
+  Kilogramo, Litro, Metro, Rollo, Saco, Par) era vocabulario de ASO_RTR —paletas, rollos y pares
+  en una planta láctea— y era el único de los tres catálogos que no usaba texto:
+  `TipoMateriaPrima.UnidadMedida` y `Producto.UnidadMedida` ya lo eran. Con él se van
+  `Articulo.UnidadTexto`/`UnidadCorta`, que existían solo para traducirlo; quien las usaba
+  (Entradas, Salidas, Procesos, la ficha) lee `UnidadMedida` directo.
+- **`Configuration/UnidadesSugeridas.cs`** es el vocabulario que proponen los desplegables (`kg`,
+  `g`, `L`, `mL`, `Unidad`, `Caja`, `Saco`, `Bolsa`, `Pieza`). Es una SUGERENCIA, no un catálogo
+  cerrado: el campo sigue siendo texto y el desplegable se escribe. Existe porque el vocabulario ya
+  se había dispersado — el propio `CatalogoLacteoSugerido` sembraba "Kg" en Productos y
+  "Kilogramos" en Materia Prima para la misma unidad (ya normalizado). Lo que estaba guardado se
+  respeta: un tipo que diga "Litros" sigue diciéndolo, solo deja de proponerse.
+  **Lo usan los TRES catálogos**: además de los dos formularios de material, el editor de
+  `Procesos · Productos` (`Views/ProductoEditorView.xaml`) cambió su caja de texto por el mismo
+  desplegable editable. El editor de Producto no se unificó —lleva precio, vida útil, presentación
+  y componentes, no es el mismo formulario—, pero la unidad sí es la misma pregunta en los tres.
+- **El control editable ya existía sin usar**: `EditableComboBoxStyle` (`Styles/Controles.xaml`),
+  la plantilla de "elegir uno existente o escribir uno nuevo" heredada del scaffold. Se le quitó el
+  `CharacterCasing="Upper"`, que convertía "kg" en "KG" y "mL" en "ML" — no lo usaba ninguna vista.
+- **`Categoria`, `Ubicacion` y `Notas` se fueron de `Articulo`.** `Ubicacion` ("pasillo, estante,
+  zona") era de ASO_RTR; las otras dos se van para que los dos formularios queden idénticos, no
+  porque estorbaran. La grilla del almacén pierde su columna Categoría y su búsqueda queda en
+  código + nombre, igual que la de Existencias (que antes solo buscaba por nombre).
+- **`TipoMateriaPrima` gana `Codigo`** (`MAT-K7P2Q`), con su índice único
+  `(OrganizacionId, Codigo)` y su columna en la grilla, calcado de `Articulo`. El generador se
+  extrajo a **`Services/Codigos.cs`**: el alfabeto sin `0/O/1/I/L` y el reintento son uno solo para
+  los dos módulos, y `MateriaPrimaService.Validar` gana las dos reglas de código (obligatorio, no
+  repetido) que ya tenía `InventarioService.Validar`.
+- **Migración `UnificaCatalogosDeMateriales`, escrita a mano.** El andamiaje de EF dejaba el `DROP`
+  de `Unidad` ANTES del `ADD` de `UnidadMedida` (imposible convertir nada) y el índice único de
+  `Codigo` ANTES de rellenarlo (todas las filas chocarían con la cadena vacía). El orden correcto
+  está en el archivo, con el `UPDATE` que mapea cada ordinal a su palabra ("Paleta", "Metro",
+  "Rollo" y "Par" sobreviven como texto aunque dejen de ofrecerse) y el relleno de códigos, que
+  codifica en base 31 el número de fila sobre el alfabeto legible: determinista, sin colisiones y
+  con la misma forma que los que genera la aplicación. `Down()` devuelve el esquema pero no el
+  contenido de las tres columnas borradas.
+
+## Precio promedio y ficha de material (2026-09-20)
+
+Desde el catálogo no se veía cuánto cuesta un artículo. El promedio ponderado ya existía, pero
+enterrado en `CostosProduccionService` y asomando solo como la columna "Costo unitario" de la ficha
+de un proceso: ni Almacén ni Existencias tenían columna de precio, y no había forma de ver de qué
+compras salía ese número ni cuánto debería quedar de cada una.
+
+- **El promedio se mudó a `Services/CostosMaterialesService.cs`, que es ahora su único dueño.**
+  `CostosProduccionService` conserva su constructor y su API, pero por dentro le pide a éste
+  `ComprasConPrecio()` y `Promedio(...)` — la regla no cambió al mudarse (solo cuentan las compras
+  de documentos que suman existencia y con `PrecioUnitario > 0 && Cantidad > 0`). Si esa regla
+  cambia, tiene que cambiar a la vez para el costo de un proceso y para la ficha de un material, o
+  los dos números dirían cosas distintas de lo mismo.
+- **`Articulo.PrecioPromedio` y `TipoMateriaPrima.PrecioPromedio` son `Ignore()`-adas**, igual que
+  `Existencia`, y las rellena `CostosMaterialesService.RellenarPrecios(...)` antes de pintar (hay
+  que refrescar la vista después: los modelos no notifican). **No hubo migración de EF.** Cero
+  significa "no hay ninguna compra con precio", no "sale gratis", y por eso la columna
+  "Precio prom." pinta "—" y no "0,00": un artículo cargado solo con entradas de `Ajuste`, o un
+  tipo que solo entró por recepciones `OtroOrigen`, no tiene precio que mostrar.
+- **`RellenarPrecios` vive en `CostosMaterialesService` y no en `InventarioService`/
+  `MateriaPrimaService`** (que son quienes rellenan la existencia): el promedio de un artículo y el
+  de un tipo salen de la misma regla y del mismo recorrido, y partirlo obligaría a darle a cada
+  servicio de módulo las fuentes de datos del otro.
+- **Doble clic sobre la fila abre la ficha, ya no el editor**, en las dos pantallas — el mismo
+  gesto que en Entradas, Salidas y Recepciones. Editar sigue en el botón de la barra, y la ficha
+  lleva el suyo, que cierra y encadena el editor (`FichaMaterialViewModel.QuiereEditar`, que la
+  pantalla mira al volver de `MostrarEditor`); la ficha no puede abrirlo ella misma porque no
+  conoce la entidad, solo el `FichaMaterial` derivado.
+- **Una sola ficha para los dos módulos** (`FichaMaterialViewModel` + `Views/FichaMaterialView.xaml`,
+  con su `DataTemplate` en `Styles/EditorTemplates.xaml`): el contenido es idéntico y de qué tablas
+  sale lo resuelve `OrigenMaterial` dentro del servicio.
+- **Lo que debería quedar de cada compra se reparte FIFO.** Una salida no dice de qué compra salió,
+  así que lo consumido se imputa a la más vieja primero — calco de cómo `ProductosService.Lotes()`
+  reparte los despachos que no citan lote. Se reparte el total consumido de una vez, sin ir salida
+  por salida: en FIFO puro da lo mismo, y hacerlo documento a documento solo abriría la puerta a un
+  negativo intermedio si una salida quedó fechada antes que la compra que la surtió.
+- **La ficha lista también las entradas sin precio** (ajustes, `OtroOrigen`), marcadas con "—" y
+  con una nota al pie. No son un adorno: suman a la existencia, así que sin ellas la suma de los
+  saldos no cuadraría con el número de la cabecera. Por lo mismo, la existencia de la ficha se
+  deriva de lo que la propia ficha juntó (entradas − salidas) en vez de recibirse ya calculada.
+- **`FichaMaterial` no se persiste** (`Models/FichaMaterial.cs`), como `CostoProceso` y
+  `LoteProducto`. `CompraMaterial.Subtotal` se calcula cantidad × precio en vez de leer el
+  `Subtotal` guardado del documento, para que el promedio de la ficha y el costo de un proceso no
+  puedan diferir por un redondeo.
+- **No hizo falta permiso nuevo**: la ficha es una ampliación de dos pantallas que ya existen, y
+  `Ver.Inventario.Almacen` / `Ver.MateriaPrima.Existencias` ya los tiene hasta el Operador.
 
 ## Procesos (2026-09-11)
 
@@ -367,7 +469,8 @@ queda en Pedidos — es donde se sabe qué falta entregar.
 - **El costo de producción se deriva, no se guarda** (`CostosProduccionService`, 2026-09-16). Cada
   salida registrada enlazada a un proceso se valora al promedio ponderado de las compras con
   precio > 0 de ese material hasta la fecha de la salida (recepciones de Materia Prima, entradas
-  de Inventario). Las entradas a precio 0 (`OtroOrigen`, `Ajuste`) no cuentan; un material sin
+  de Inventario) — desde 2026-09-20 ese promedio lo calcula `CostosMaterialesService`, ver
+  "Precio promedio y ficha de material" arriba. Las entradas a precio 0 (`OtroOrigen`, `Ajuste`) no cuentan; un material sin
   compras con precio queda "sin costo" y marca el proceso como incompleto. La merma suma al costo.
   El margen usa el precio ACTUAL del producto, no uno histórico. Solo materiales: no hay mano de
   obra ni costos indirectos. Se ve en la ficha de detalle del proceso y en Reporte de Procesos ·
@@ -586,7 +689,10 @@ Las entidades de dominio persisten en **SQL Server vía EF Core Migrations**.
   `FechaVencimiento`/`RecibidoPor`/`Total`/`FacturaProveedorId` en `RecepcionMateriaPrima`,
   `PrecioUnitario`/`Subtotal` en `RecepcionMateriaPrimaLinea` — con un `UPDATE` de datos que migra
   a `OtroOrigen` todas las recepciones que ya existían, para no etiquetarlas como compra a
-  proveedor por el valor por defecto de la columna nueva).
+  proveedor por el valor por defecto de la columna nueva). La última es
+  `UnificaCatalogosDeMateriales` (`Articulo` pierde `Categoria`/`Ubicacion`/`Notas` y cambia
+  `Unidad` de enum a texto; `TipoMateriaPrima` gana `Codigo` con su índice único) — está escrita a
+  mano, ver "Un solo formulario de material" arriba.
 - **La cadena de conexión vive solo en `appsettings.local.json`** (por máquina, en `.gitignore`);
   la de `appsettings.json` (clave `ConnectionStrings:AsoProductoresDb`) apunta a LocalDB con un
   `.mdf` en `App_Data`.

@@ -285,9 +285,7 @@ public class AsoProductoresDbContext : DbContext
             entity.HasKey(a => a.Id);
             entity.Property(a => a.Codigo).IsRequired().HasMaxLength(20);
             entity.Property(a => a.Nombre).IsRequired().HasMaxLength(150);
-            entity.Property(a => a.Categoria).HasMaxLength(60);
-            entity.Property(a => a.Ubicacion).HasMaxLength(60);
-            entity.Property(a => a.Notas).HasMaxLength(500);
+            entity.Property(a => a.UnidadMedida).HasMaxLength(30);
             entity.Property(a => a.Minimo).HasColumnType("decimal(18,2)").IsRequired();
 
             // Respalda el código aleatorio: si dos altas simultáneas generan el mismo candidato,
@@ -295,12 +293,13 @@ public class AsoProductoresDbContext : DbContext
             entity.HasIndex(a => new { a.OrganizacionId, a.Codigo }).IsUnique();
 
             // Existencia NO se persiste: es la suma del kardex, la rellena InventarioService.
+            // PrecioPromedio tampoco: sale del historial de entradas, lo rellena el mismo servicio.
             entity.Ignore(a => a.Existencia);
+            entity.Ignore(a => a.PrecioPromedio);
+            entity.Ignore(a => a.PrecioPromedioTexto);
             entity.Ignore(a => a.BajoMinimo);
             entity.Ignore(a => a.SinExistencia);
             entity.Ignore(a => a.EstadoTexto);
-            entity.Ignore(a => a.UnidadTexto);
-            entity.Ignore(a => a.UnidadCorta);
             entity.Ignore(a => a.ExistenciaTexto);
             entity.Ignore(a => a.MinimoTexto);
             entity.Ignore(a => a.Etiqueta);
@@ -399,18 +398,26 @@ public class AsoProductoresDbContext : DbContext
         modelBuilder.Entity<TipoMateriaPrima>(entity =>
         {
             entity.HasKey(t => t.Id);
+            entity.Property(t => t.Codigo).IsRequired().HasMaxLength(20);
             entity.Property(t => t.Nombre).IsRequired().HasMaxLength(150);
             entity.Property(t => t.UnidadMedida).HasMaxLength(30);
             entity.Property(t => t.Minimo).HasColumnType("decimal(18,2)").IsRequired();
 
+            // Misma red que en Articulo: si dos puestos generan el mismo candidato a la vez, el
+            // segundo choca contra el índice en vez de duplicar el tipo.
+            entity.HasIndex(t => new { t.OrganizacionId, t.Codigo }).IsUnique();
+
             // Existencia NO se persiste: es la suma de recepciones menos salidas, la rellena
-            // MateriaPrimaService.
+            // MateriaPrimaService. PrecioPromedio tampoco: sale del historial de recepciones.
             entity.Ignore(t => t.Existencia);
+            entity.Ignore(t => t.PrecioPromedio);
+            entity.Ignore(t => t.PrecioPromedioTexto);
             entity.Ignore(t => t.BajoMinimo);
             entity.Ignore(t => t.SinExistencia);
             entity.Ignore(t => t.EstadoTexto);
             entity.Ignore(t => t.ExistenciaTexto);
             entity.Ignore(t => t.MinimoTexto);
+            entity.Ignore(t => t.Etiqueta);
         });
 
         modelBuilder.Entity<RecepcionMateriaPrima>(entity =>

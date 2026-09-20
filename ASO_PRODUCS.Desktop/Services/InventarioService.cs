@@ -14,12 +14,6 @@ namespace ASO_PRODUCS.Desktop.Services;
 /// </summary>
 public sealed class InventarioService
 {
-    /// <summary>
-    /// Alfabeto del código generado, sin los caracteres que se confunden al dictar o al leer un
-    /// papel: no lleva 0/O ni 1/I/L.
-    /// </summary>
-    private const string Alfabeto = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
-
     private const string Prefijo = "ART-";
 
     private readonly IArticuloDataSource _articulos;
@@ -37,33 +31,10 @@ public sealed class InventarioService
 
     // --- Código ---
 
-    /// <summary>
-    /// Código aleatorio y legible, tipo "ART-K7P2Q", para cuando quien da de alta el artículo no
-    /// escribe uno propio.
-    ///
-    /// Comprueba contra los que ya existen, pero la garantía de verdad es el índice único
-    /// <c>(OrganizacionId, Codigo)</c>: si dos puestos generasen el mismo candidato a la vez, el
-    /// segundo choca contra la base en vez de duplicar el artículo.
-    /// </summary>
-    public string GenerarCodigo()
-    {
-        var usados = _articulos.GetAll()
-            .Select(a => a.Codigo)
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
-
-        for (var intento = 0; intento < 20; intento++)
-        {
-            var candidato = Prefijo + new string(Enumerable.Range(0, 5)
-                .Select(_ => Alfabeto[Random.Shared.Next(Alfabeto.Length)])
-                .ToArray());
-
-            if (!usados.Contains(candidato))
-                return candidato;
-        }
-
-        throw new InvalidOperationException(
-            "No se pudo generar un código libre para el artículo; escriba uno a mano.");
-    }
+    /// <summary>Código aleatorio y legible, tipo "ART-K7P2Q", para cuando quien da de alta el
+    /// artículo no escribe uno propio. Ver <see cref="Codigos.Generar"/>.</summary>
+    public string GenerarCodigo() =>
+        Codigos.Generar(Prefijo, _articulos.GetAll().Select(a => a.Codigo), "el artículo");
 
     // --- Validación del maestro ---
 
@@ -115,7 +86,7 @@ public sealed class InventarioService
     /// <c>ProductosService.CargarSugeridos</c>; Almacén era el único de los tres catálogos que
     /// no tenía con qué arrancar.
     /// </summary>
-    public int CargarSugeridos(IEnumerable<(string Nombre, string Categoria, UnidadMedida Unidad)> sugeridos)
+    public int CargarSugeridos(IEnumerable<(string Nombre, string UnidadMedida)> sugeridos)
     {
         var existentes = _articulos.GetAll()
             .Select(a => a.Nombre.Trim())
@@ -123,7 +94,7 @@ public sealed class InventarioService
 
         var creados = 0;
 
-        foreach (var (nombre, categoria, unidad) in sugeridos)
+        foreach (var (nombre, unidadMedida) in sugeridos)
         {
             if (!existentes.Add(nombre.Trim()))
                 continue;
@@ -132,8 +103,7 @@ public sealed class InventarioService
             {
                 Codigo = GenerarCodigo(),
                 Nombre = nombre,
-                Categoria = categoria,
-                Unidad = unidad,
+                UnidadMedida = unidadMedida,
                 Activo = true
             });
 

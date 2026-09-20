@@ -416,12 +416,12 @@ public sealed class LineaSalidaEditorViewModel : ViewModelBase
 
     public decimal CantidadValor => decimal.TryParse(Cantidad, out var valor) ? valor : 0m;
 
-    public string UnidadTexto => ArticuloSeleccionado?.UnidadCorta ?? string.Empty;
+    public string UnidadTexto => ArticuloSeleccionado?.UnidadMedida ?? string.Empty;
 
     public decimal Disponible => ArticuloSeleccionado?.Existencia ?? 0m;
 
     public string DisponibleTexto => ArticuloSeleccionado is { } articulo
-        ? $"{articulo.Existencia:N2} {articulo.UnidadCorta}"
+        ? $"{articulo.Existencia:N2} {articulo.UnidadMedida}"
         : string.Empty;
 
     /// <summary>Se pinta en rojo en la grilla; la comprobación de verdad la hace el servicio.</summary>
@@ -432,7 +432,7 @@ public sealed class LineaSalidaEditorViewModel : ViewModelBase
         ArticuloId = ArticuloSeleccionado!.Id,
         ArticuloCodigo = ArticuloSeleccionado.Codigo,
         ArticuloNombre = ArticuloSeleccionado.Nombre,
-        UnidadTexto = ArticuloSeleccionado.UnidadCorta,
+        UnidadTexto = ArticuloSeleccionado.UnidadMedida,
         Cantidad = CantidadValor
     };
 

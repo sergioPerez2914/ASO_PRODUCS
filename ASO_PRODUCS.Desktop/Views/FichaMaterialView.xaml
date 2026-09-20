@@ -1,0 +1,266 @@
+<UserControl x:Class="ASO_PRODUCS.Desktop.Views.FichaMaterialView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:controls="clr-namespace:ASO_PRODUCS.Desktop.Controls"
+             mc:Ignorable="d"
+             d:DesignWidth="900">
+
+  <!-- Ficha de solo lectura de un material: qué vale, de qué compras sale ese precio, qué debería
+       quedar de cada una y qué salió. Todo derivado por CostosMaterialesService, nada guardado. -->
+  <StackPanel>
+
+    <Border Style="{StaticResource SectionCardStyle}">
+      <StackPanel>
+        <Grid>
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="Auto" />
+          </Grid.ColumnDefinitions>
+
+          <StackPanel Grid.Column="0">
+            <TextBlock Text="{Binding Ficha.Nombre}" Style="{StaticResource CardTitleStyle}"
+                       TextWrapping="Wrap" />
+            <TextBlock Text="{Binding Ficha.Subtitulo}" FontSize="{StaticResource FsCaption}"
+                       Margin="0,4,0,0" Foreground="{DynamicResource TextSecondaryBrush}"
+                       Visibility="{Binding Ficha.Subtitulo, Converter={StaticResource TextoAVis}}" />
+          </StackPanel>
+
+          <Border Grid.Column="1" Style="{StaticResource ChipExistenciaStyle}"
+                  DataContext="{Binding Ficha}" VerticalAlignment="Top" Margin="0,0,8,0">
+            <TextBlock Text="{Binding EstadoTexto}" FontSize="{StaticResource FsCaption}" />
+          </Border>
+
+          <!-- El doble clic en la grilla abre esta ficha, no el editor: sin este botón no
+               quedaría camino corto hacia la edición del artículo. -->
+          <Button Grid.Column="2" Content="Editar" VerticalAlignment="Top"
+                  Command="{Binding EditarCommand}">
+            <Button.Style>
+              <!-- El botón se apaga solo (CanExecute mira el permiso) y dice por qué: el estilo
+                   implícito de Button ya trae ToolTipService.ShowOnDisabled. -->
+              <Style TargetType="Button" BasedOn="{StaticResource SecondaryButtonStyle}">
+                <Style.Triggers>
+                  <Trigger Property="IsEnabled" Value="False">
+                    <Setter Property="ToolTip" Value="No tiene permiso para editar este registro." />
+                  </Trigger>
+                </Style.Triggers>
+              </Style>
+            </Button.Style>
+          </Button>
+        </Grid>
+
+        <Grid Margin="0,16,0,0">
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="*" />
+          </Grid.ColumnDefinitions>
+
+          <controls:KpiTile Grid.Column="0" Margin="0,0,12,0"
+                            Etiqueta="Existencia"
+                            Valor="{Binding Ficha.ExistenciaTexto}"
+                            Nota="{Binding ExistenciaNota}"
+                            Estado="{Binding EstadoExistencia}" />
+
+          <controls:KpiTile Grid.Column="1" Margin="0,0,12,0"
+                            Etiqueta="Precio promedio"
+                            Valor="{Binding Ficha.PrecioPromedioTexto}"
+                            Nota="{Binding Ficha.PromedioNota}"
+                            Estado="{Binding EstadoPrecio}" />
+
+          <controls:KpiTile Grid.Column="2" Margin="0,0,12,0"
+                            Etiqueta="Valor de la existencia"
+                            Valor="{Binding Ficha.ValorInventarioTexto}"
+                            Nota="{Binding ValorNota}" />
+
+          <controls:KpiTile Grid.Column="3"
+                            Etiqueta="Último precio de compra"
+                            Valor="{Binding Ficha.UltimoPrecioTexto}"
+                            Nota="{Binding Ficha.UltimoPrecioNota}" />
+        </Grid>
+
+        <Border Style="{StaticResource AlertBoxStyle}" Margin="0,16,0,0"
+                Background="{DynamicResource WarningSoftBrush}"
+                BorderBrush="{DynamicResource WarningBordeBrush}"
+                Visibility="{Binding Ficha.SinPrecio, Converter={StaticResource BoolToVis}}">
+          <TextBlock Text="{Binding AvisoSinPrecio}" TextWrapping="Wrap"
+                     FontSize="{StaticResource FsBody}"
+                     Foreground="{DynamicResource WarningTextBrush}" />
+        </Border>
+      </StackPanel>
+    </Border>
+
+    <!-- Compras: de aquí sale el promedio, y el reparto FIFO dice qué debería quedar de cada una. -->
+    <TextBlock Text="Compras" Style="{StaticResource CardTitleStyle}"
+               Margin="{StaticResource TkTituloDeBloque}" />
+
+    <Border Style="{StaticResource SectionCardStyle}">
+      <StackPanel>
+        <Grid Margin="0,0,0,4">
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="12*" />
+            <ColumnDefinition Width="14*" />
+            <ColumnDefinition Width="26*" />
+            <ColumnDefinition Width="14*" />
+            <ColumnDefinition Width="12*" />
+            <ColumnDefinition Width="14*" />
+            <ColumnDefinition Width="14*" />
+            <ColumnDefinition Width="14*" />
+          </Grid.ColumnDefinitions>
+          <TextBlock Grid.Column="0" Text="Fecha" FontWeight="{StaticResource FwMedium}" FontSize="{StaticResource FsCaption}" Margin="0,0,8,0" />
+          <TextBlock Grid.Column="1" Text="Documento" FontWeight="{StaticResource FwMedium}" FontSize="{StaticResource FsCaption}" Margin="0,0,8,0" />
+          <TextBlock Grid.Column="2" Text="Origen" FontWeight="{StaticResource FwMedium}" FontSize="{StaticResource FsCaption}" Margin="0,0,8,0" />
+          <TextBlock Grid.Column="3" Text="Cantidad" FontWeight="{StaticResource FwMedium}" FontSize="{StaticResource FsCaption}" Margin="0,0,8,0" HorizontalAlignment="Right" />
+          <TextBlock Grid.Column="4" Text="Precio" FontWeight="{StaticResource FwMedium}" FontSize="{StaticResource FsCaption}" Margin="0,0,8,0" HorizontalAlignment="Right" />
+          <TextBlock Grid.Column="5" Text="Subtotal" FontWeight="{StaticResource FwMedium}" FontSize="{StaticResource FsCaption}" Margin="0,0,8,0" HorizontalAlignment="Right" />
+          <TextBlock Grid.Column="6" Text="Consumido" FontWeight="{StaticResource FwMedium}" FontSize="{StaticResource FsCaption}" Margin="0,0,8,0" HorizontalAlignment="Right" />
+          <TextBlock Grid.Column="7" Text="Debería quedar" FontWeight="{StaticResource FwMedium}" FontSize="{StaticResource FsCaption}" HorizontalAlignment="Right" TextWrapping="Wrap" />
+        </Grid>
+
+        <Border Height="1" Background="{DynamicResource BorderBrush}" Margin="0,0,0,4" />
+
+        <ItemsControl x:Name="ListaCompras" ItemsSource="{Binding Ficha.Compras}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate>
+              <Grid Margin="0,4,0,4">
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="12*" />
+                  <ColumnDefinition Width="14*" />
+                  <ColumnDefinition Width="26*" />
+                  <ColumnDefinition Width="14*" />
+                  <ColumnDefinition Width="12*" />
+                  <ColumnDefinition Width="14*" />
+                  <ColumnDefinition Width="14*" />
+                  <ColumnDefinition Width="14*" />
+                </Grid.ColumnDefinitions>
+
+                <TextBlock Grid.Column="0" Text="{Binding FechaTexto}" FontSize="{StaticResource FsCaption}" Margin="0,0,8,0" />
+                <TextBlock Grid.Column="1" FontSize="{StaticResource FsCaption}" Margin="0,0,8,0" TextTrimming="CharacterEllipsis">
+                  <Run Text="{Binding Numero, Mode=OneWay}" />
+                </TextBlock>
+                <TextBlock Grid.Column="2" Text="{Binding DetalleTexto}" FontSize="{StaticResource FsCaption}"
+                           Margin="0,0,8,0" TextTrimming="CharacterEllipsis"
+                           ToolTip="{Binding DetalleTexto}"
+                           Foreground="{DynamicResource TextSecondaryBrush}" />
+                <TextBlock Grid.Column="3" Text="{Binding CantidadTexto}" FontSize="{StaticResource FsCaption}" Margin="0,0,8,0" HorizontalAlignment="Right" />
+                <TextBlock Grid.Column="4" Text="{Binding PrecioUnitarioTexto}" FontSize="{StaticResource FsCaption}" Margin="0,0,8,0" HorizontalAlignment="Right" />
+                <TextBlock Grid.Column="5" Text="{Binding SubtotalTexto}" FontSize="{StaticResource FsCaption}" Margin="0,0,8,0" HorizontalAlignment="Right"
+                           Foreground="{DynamicResource TextMutedBrush}" />
+                <TextBlock Grid.Column="6" Text="{Binding ConsumidoTexto}" FontSize="{StaticResource FsCaption}" Margin="0,0,8,0" HorizontalAlignment="Right"
+                           Foreground="{DynamicResource TextMutedBrush}" />
+
+                <!-- Lo que debería quedar. Una compra ya agotada se apaga: la fila sigue ahí
+                     porque alimenta el promedio, pero no tiene nada que dar. -->
+                <TextBlock Grid.Column="7" Text="{Binding RestanteTexto}" FontSize="{StaticResource FsCaption}" HorizontalAlignment="Right">
+                  <TextBlock.Style>
+                    <Style TargetType="TextBlock">
+                      <Setter Property="FontWeight" Value="{StaticResource FwMedium}" />
+                      <Style.Triggers>
+                        <DataTrigger Binding="{Binding Agotada}" Value="True">
+                          <Setter Property="FontWeight" Value="Normal" />
+                          <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
+                        </DataTrigger>
+                      </Style.Triggers>
+                    </Style>
+                  </TextBlock.Style>
+                </TextBlock>
+              </Grid>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <controls:EmptyState Compacto="True"
+                             Icono="{x:Static controls:Iconos.Entradas}"
+                             Titulo="Sin entradas registradas"
+                             Detalle="Nada ha entrado todavía de este material, así que no hay precio con el que valorarlo."
+                             Visibility="{Binding HasItems, ElementName=ListaCompras,
+                                                  Converter={StaticResource SinItemsAVis}}" />
+
+        <Border Height="1" Background="{DynamicResource BorderBrush}" Margin="0,4,0,4"
+                Visibility="{Binding HasItems, ElementName=ListaCompras, Converter={StaticResource BoolToVis}}" />
+
+        <Grid Visibility="{Binding HasItems, ElementName=ListaCompras, Converter={StaticResource BoolToVis}}">
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="Auto" />
+          </Grid.ColumnDefinitions>
+
+          <TextBlock Grid.Column="0" Text="{Binding NotaEntradasSinPrecio}" TextWrapping="Wrap"
+                     FontSize="{StaticResource FsCaption}" Margin="0,0,16,0"
+                     Foreground="{DynamicResource TextMutedBrush}"
+                     Visibility="{Binding Ficha.HayEntradasSinPrecio, Converter={StaticResource BoolToVis}}" />
+
+          <TextBlock Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                     FontWeight="{StaticResource FwMedium}" FontSize="{StaticResource FsBody}">
+            <Run Text="Precio promedio:" />
+            <Run Text="{Binding Ficha.PrecioPromedioTexto, Mode=OneWay}" />
+          </TextBlock>
+        </Grid>
+      </StackPanel>
+    </Border>
+
+    <!-- Salidas: lo que se consumió, que es lo que el reparto FIFO descuenta de las compras. -->
+    <TextBlock Text="Salidas" Style="{StaticResource CardTitleStyle}"
+               Margin="{StaticResource TkTituloDeBloque}" />
+
+    <Border Style="{StaticResource SectionCardStyle}">
+      <StackPanel>
+        <Grid Margin="0,0,0,4">
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="12*" />
+            <ColumnDefinition Width="14*" />
+            <ColumnDefinition Width="46*" />
+            <ColumnDefinition Width="14*" />
+          </Grid.ColumnDefinitions>
+          <TextBlock Grid.Column="0" Text="Fecha" FontWeight="{StaticResource FwMedium}" FontSize="{StaticResource FsCaption}" Margin="0,0,8,0" />
+          <TextBlock Grid.Column="1" Text="Documento" FontWeight="{StaticResource FwMedium}" FontSize="{StaticResource FsCaption}" Margin="0,0,8,0" />
+          <TextBlock Grid.Column="2" Text="Motivo" FontWeight="{StaticResource FwMedium}" FontSize="{StaticResource FsCaption}" Margin="0,0,8,0" />
+          <TextBlock Grid.Column="3" Text="Cantidad" FontWeight="{StaticResource FwMedium}" FontSize="{StaticResource FsCaption}" HorizontalAlignment="Right" />
+        </Grid>
+
+        <Border Height="1" Background="{DynamicResource BorderBrush}" Margin="0,0,0,4" />
+
+        <ItemsControl x:Name="ListaSalidas" ItemsSource="{Binding Ficha.Salidas}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate>
+              <Grid Margin="0,4,0,4">
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="12*" />
+                  <ColumnDefinition Width="14*" />
+                  <ColumnDefinition Width="46*" />
+                  <ColumnDefinition Width="14*" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0" Text="{Binding FechaTexto}" FontSize="{StaticResource FsCaption}" Margin="0,0,8,0" />
+                <TextBlock Grid.Column="1" Text="{Binding Numero}" FontSize="{StaticResource FsCaption}" Margin="0,0,8,0" TextTrimming="CharacterEllipsis" />
+                <TextBlock Grid.Column="2" Text="{Binding MotivoTexto}" FontSize="{StaticResource FsCaption}" Margin="0,0,8,0"
+                           TextTrimming="CharacterEllipsis" ToolTip="{Binding MotivoTexto}"
+                           Foreground="{DynamicResource TextSecondaryBrush}" />
+                <TextBlock Grid.Column="3" Text="{Binding CantidadTexto}" FontSize="{StaticResource FsCaption}" HorizontalAlignment="Right" />
+              </Grid>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <controls:EmptyState Compacto="True"
+                             Icono="{x:Static controls:Iconos.Salidas}"
+                             Titulo="Sin salidas registradas"
+                             Detalle="Todavía no ha salido nada: cada compra conserva su cantidad completa."
+                             Visibility="{Binding HasItems, ElementName=ListaSalidas,
+                                                  Converter={StaticResource SinItemsAVis}}" />
+
+        <Border Height="1" Background="{DynamicResource BorderBrush}" Margin="0,4,0,4"
+                Visibility="{Binding HasItems, ElementName=ListaSalidas, Converter={StaticResource BoolToVis}}" />
+
+        <TextBlock HorizontalAlignment="Right" FontWeight="{StaticResource FwMedium}"
+                   FontSize="{StaticResource FsBody}"
+                   Visibility="{Binding HasItems, ElementName=ListaSalidas, Converter={StaticResource BoolToVis}}">
+          <Run Text="Total consumido:" />
+          <Run Text="{Binding Ficha.TotalConsumidoTexto, Mode=OneWay}" />
+        </TextBlock>
+      </StackPanel>
+    </Border>
+  </StackPanel>
+</UserControl>

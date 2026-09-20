@@ -1,31 +1,17 @@
 namespace ASO_PRODUCS.Desktop.Models;
 
 /// <summary>
-/// Unidad en que se cuenta un artículo. Se persiste como ORDINAL, así que los miembros nuevos
-/// se añaden SIEMPRE al final.
-/// </summary>
-public enum UnidadMedida
-{
-    Pieza,
-    Caja,
-    Paleta,
-    Kilogramo,
-    Litro,
-    Metro,
-    Rollo,
-    Saco,
-    Par
-}
-
-/// <summary>
 /// Artículo del almacén: tapas, etiquetas, detergente, cajas, insumos de la línea.
 /// Dato maestro de la organización.
+///
+/// Es uno de los dos <see cref="IMaterialMaestro"/> del proyecto —el otro es
+/// <see cref="TipoMateriaPrima"/>— y los dos se dan de alta con el MISMO formulario.
 ///
 /// No guarda su existencia. La existencia se DERIVA del kardex (lo que entró menos lo que
 /// salió, sin contar documentos anulados) porque un número editable a mano se desincroniza del
 /// historial y no deja rastro de por qué cambió. Ver <see cref="Existencia"/>.
 /// </summary>
-public class Articulo : IEntidad<int>, IDeOrganizacion
+public class Articulo : IEntidad<int>, IDeOrganizacion, IMaterialMaestro
 {
     /// <summary>Organizacion duenna de la fila; lo estampa AsoProductoresDbContext.SaveChanges.</summary>
     public int OrganizacionId { get; set; }
@@ -41,20 +27,21 @@ public class Articulo : IEntidad<int>, IDeOrganizacion
 
     public string Nombre { get; set; } = string.Empty;
 
-    /// <summary>Agrupación libre (Envases, Etiquetas, Químicos…); no es un catálogo aparte
-    /// mientras no haya una necesidad real de mantenerlo.</summary>
-    public string Categoria { get; set; } = string.Empty;
-
-    public UnidadMedida Unidad { get; set; }
+    /// <summary>
+    /// Unidad en que se cuenta el artículo (kg, L, Caja…). Texto libre con una lista sugerida
+    /// (<see cref="Configuration.UnidadesSugeridas"/>), igual que
+    /// <see cref="TipoMateriaPrima.UnidadMedida"/> y <see cref="Producto.UnidadMedida"/>.
+    ///
+    /// Antes era un enum cerrado heredado de ASO_RTR (Pieza, Caja, Paleta, Kilogramo, Litro,
+    /// Metro, Rollo, Saco, Par): paletas, rollos y pares no son vocabulario de esta planta, y era
+    /// el único de los tres catálogos que no usaba texto.
+    /// </summary>
+    public string UnidadMedida { get; set; } = string.Empty;
 
     /// <summary>Existencia por debajo de la cual el artículo se marca en el almacén. Cero
     /// significa "no vigilar".</summary>
     public decimal Minimo { get; set; }
 
-    /// <summary>Dónde está físicamente: pasillo, estante, zona.</summary>
-    public string Ubicacion { get; set; } = string.Empty;
-
-    public string Notas { get; set; } = string.Empty;
     public bool Activo { get; set; } = true;
 
     /// <summary>
@@ -63,6 +50,18 @@ public class Articulo : IEntidad<int>, IDeOrganizacion
     /// antes de mostrar la lista, igual que <see cref="CuentaBancaria.SaldoActual"/>.
     /// </summary>
     public decimal Existencia { get; set; }
+
+    /// <summary>
+    /// Precio promedio ponderado de las compras de este artículo. Tampoco se persiste, y por el
+    /// mismo motivo que <see cref="Existencia"/>: sale del historial de entradas. La rellena
+    /// <c>CostosMaterialesService.RellenarPrecios</c> antes de mostrar la lista.
+    ///
+    /// Cero significa "no hay ninguna compra con precio" (un artículo cargado solo con entradas de
+    /// Ajuste), no "sale gratis": por eso <see cref="PrecioPromedioTexto"/> lo pinta como "—".
+    /// </summary>
+    public decimal PrecioPromedio { get; set; }
+
+    public string PrecioPromedioTexto => PrecioPromedio > 0 ? PrecioPromedio.ToString("N2") : "—";
 
     public bool BajoMinimo => Activo && Minimo > 0 && Existencia < Minimo;
 
@@ -75,33 +74,6 @@ public class Articulo : IEntidad<int>, IDeOrganizacion
             : BajoMinimo
                 ? "Bajo mínimo"
                 : "Disponible";
-
-    public string UnidadTexto => Unidad switch
-    {
-        UnidadMedida.Pieza => "Pieza",
-        UnidadMedida.Caja => "Caja",
-        UnidadMedida.Paleta => "Paleta",
-        UnidadMedida.Kilogramo => "Kilogramo",
-        UnidadMedida.Litro => "Litro",
-        UnidadMedida.Metro => "Metro",
-        UnidadMedida.Rollo => "Rollo",
-        UnidadMedida.Saco => "Saco",
-        _ => "Par"
-    };
-
-    /// <summary>Abreviatura para las grillas de líneas, donde no cabe el nombre completo.</summary>
-    public string UnidadCorta => Unidad switch
-    {
-        UnidadMedida.Pieza => "pza",
-        UnidadMedida.Caja => "caja",
-        UnidadMedida.Paleta => "pal",
-        UnidadMedida.Kilogramo => "kg",
-        UnidadMedida.Litro => "L",
-        UnidadMedida.Metro => "m",
-        UnidadMedida.Rollo => "rollo",
-        UnidadMedida.Saco => "saco",
-        _ => "par"
-    };
 
     public string ExistenciaTexto => Existencia.ToString("N2");
 

@@ -589,11 +589,11 @@ public sealed class LineaEntradaEditorViewModel : ViewModelBase
 
     public string SubtotalTexto => Subtotal.ToString("N2");
 
-    public string UnidadTexto => ArticuloSeleccionado?.UnidadCorta ?? string.Empty;
+    public string UnidadTexto => ArticuloSeleccionado?.UnidadMedida ?? string.Empty;
 
     /// <summary>Lo que hay hoy en el almacén de ese artículo; se muestra como referencia.</summary>
     public string ExistenciaTexto => ArticuloSeleccionado is { } articulo
-        ? $"{articulo.Existencia:N2} {articulo.UnidadCorta}"
+        ? $"{articulo.Existencia:N2} {articulo.UnidadMedida}"
         : string.Empty;
 
     public EntradaInventarioLinea Construir(bool conPrecios) => new()
@@ -601,7 +601,7 @@ public sealed class LineaEntradaEditorViewModel : ViewModelBase
         ArticuloId = ArticuloSeleccionado!.Id,
         ArticuloCodigo = ArticuloSeleccionado.Codigo,
         ArticuloNombre = ArticuloSeleccionado.Nombre,
-        UnidadTexto = ArticuloSeleccionado.UnidadCorta,
+        UnidadTexto = ArticuloSeleccionado.UnidadMedida,
         Cantidad = CantidadValor,
         PrecioUnitario = conPrecios ? PrecioValor : 0m,
         Subtotal = conPrecios ? Subtotal : 0m

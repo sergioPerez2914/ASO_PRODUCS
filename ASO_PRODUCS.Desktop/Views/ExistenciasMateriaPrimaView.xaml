@@ -78,9 +78,10 @@
           <DataGrid x:Name="TablaTipos" Style="{StaticResource DataGridStyle}"
                     ItemsSource="{Binding ItemsView}"
                     SelectedItem="{Binding SelectedItem}"
-                    controls:AbrirFila.Comando="{Binding EditarCommand}">
+                    controls:AbrirFila.Comando="{Binding VerFichaCommand}">
             <DataGrid.Columns>
-              <controls:ColumnaTexto Header="Tipo de materia prima" Binding="{Binding Nombre}" Width="34*" MinWidth="180" />
+              <controls:ColumnaTexto Header="Código" Binding="{Binding Codigo}" Width="12*" MinWidth="88" />
+              <controls:ColumnaTexto Header="Tipo de materia prima" Binding="{Binding Nombre}" Width="28*" MinWidth="160" />
               <controls:ColumnaTexto Header="Unidad" Binding="{Binding UnidadMedida}" Width="16*" MinWidth="90" />
               <controls:ColumnaNumero Header="Mínimo" Binding="{Binding MinimoTexto}" Width="16*" MinWidth="100" />
               <controls:ColumnaNumero Header="Existencia" Binding="{Binding ExistenciaTexto}" Width="18*" MinWidth="110">
@@ -90,6 +91,9 @@
                   </Style>
                 </controls:ColumnaNumero.ElementStyle>
               </controls:ColumnaNumero>
+              <!-- Promedio ponderado de las compras. "—" cuando el tipo solo entró por recepciones
+                   de otro origen: ahí no hay precio, no es que salga gratis. Abrir la fila lo desglosa. -->
+              <controls:ColumnaNumero Header="Precio prom." Binding="{Binding PrecioPromedioTexto}" Width="16*" MinWidth="100" />
               <DataGridTemplateColumn Header="Estado" Width="110">
                 <DataGridTemplateColumn.CellTemplate>
                   <DataTemplate>

@@ -2,9 +2,9 @@ using System.Windows.Controls;
 
 namespace ASO_PRODUCS.Desktop.Views;
 
-public partial class TipoMateriaPrimaEditorView : UserControl
+public partial class FichaMaterialView : UserControl
 {
-    public TipoMateriaPrimaEditorView()
+    public FichaMaterialView()
     {
         InitializeComponent();
     }

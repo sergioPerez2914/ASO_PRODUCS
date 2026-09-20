@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using ASO_PRODUCS.Desktop.Models;
@@ -13,6 +14,8 @@ namespace ASO_PRODUCS.Desktop.Services;
 /// </summary>
 public sealed class MateriaPrimaService
 {
+    private const string Prefijo = "MAT-";
+
     private readonly ITipoMateriaPrimaDataSource _tipos;
     private readonly IRecepcionMateriaPrimaDataSource _recepciones;
     private readonly ISalidaMateriaPrimaDataSource _salidas;
@@ -26,6 +29,13 @@ public sealed class MateriaPrimaService
         _salidas = salidas;
     }
 
+    // --- Código ---
+
+    /// <summary>Código aleatorio y legible, tipo "MAT-K7P2Q", para cuando quien da de alta el tipo
+    /// no escribe uno propio. Calco de <see cref="InventarioService.GenerarCodigo"/>.</summary>
+    public string GenerarCodigo() =>
+        Codigos.Generar(Prefijo, _tipos.GetAll().Select(t => t.Codigo), "el tipo de materia prima");
+
     // --- Validación del maestro ---
 
     public bool Validar(TipoMateriaPrima tipo, out string? error)
@@ -36,13 +46,29 @@ public sealed class MateriaPrimaService
             return false;
         }
 
-        var repetido = _tipos.GetAll()
-            .Where(t => t.Id != tipo.Id)
-            .Any(t => string.Equals(t.Nombre.Trim(), tipo.Nombre.Trim(), System.StringComparison.OrdinalIgnoreCase));
+        if (string.IsNullOrWhiteSpace(tipo.Codigo))
+        {
+            error = "Indique el código del tipo de materia prima o deje el campo vacío para generarlo.";
+            return false;
+        }
 
-        if (repetido)
+        var nombreRepetido = _tipos.GetAll()
+            .Where(t => t.Id != tipo.Id)
+            .Any(t => string.Equals(t.Nombre.Trim(), tipo.Nombre.Trim(), StringComparison.OrdinalIgnoreCase));
+
+        if (nombreRepetido)
         {
             error = $"Ya hay un tipo de materia prima llamado {tipo.Nombre.Trim()}.";
+            return false;
+        }
+
+        var codigoRepetido = _tipos.GetAll()
+            .Where(t => t.Id != tipo.Id)
+            .Any(t => string.Equals(t.Codigo.Trim(), tipo.Codigo.Trim(), StringComparison.OrdinalIgnoreCase));
+
+        if (codigoRepetido)
+        {
+            error = $"Ya hay un tipo de materia prima con el código {tipo.Codigo.Trim()}.";
             return false;
         }
 
@@ -76,7 +102,13 @@ public sealed class MateriaPrimaService
 
         foreach (var (nombre, unidadMedida) in sugeridos)
         {
-            var candidato = new TipoMateriaPrima { Nombre = nombre, UnidadMedida = unidadMedida, Activo = true };
+            var candidato = new TipoMateriaPrima
+            {
+                Codigo = GenerarCodigo(),
+                Nombre = nombre,
+                UnidadMedida = unidadMedida,
+                Activo = true
+            };
 
             if (!Validar(candidato, out _))
                 continue;

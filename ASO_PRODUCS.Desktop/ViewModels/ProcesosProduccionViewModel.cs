@@ -884,7 +884,7 @@ public sealed class LineaConsumoEditorViewModel : ViewModelBase
     public string UnidadTexto => OrigenSeleccionado switch
     {
         OrigenMaterial.MateriaPrima => TipoSeleccionado?.UnidadMedida ?? string.Empty,
-        OrigenMaterial.Articulo => ArticuloSeleccionado?.UnidadCorta ?? string.Empty,
+        OrigenMaterial.Articulo => ArticuloSeleccionado?.UnidadMedida ?? string.Empty,
         _ => LoteSeleccionado?.Unidad ?? string.Empty
     };
 

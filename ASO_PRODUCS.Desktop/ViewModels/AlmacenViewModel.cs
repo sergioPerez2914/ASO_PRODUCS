@@ -21,6 +21,8 @@ public sealed class AlmacenViewModel : PantallaCrudViewModel<Articulo, int>
     private const string FiltroTodos = "Todos";
 
     private readonly InventarioService _servicio;
+    private readonly CostosMaterialesService _costos;
+    private readonly IServicioDialogo _dialogos;
 
     private string _filtro = FiltroTodos;
 
@@ -41,9 +43,17 @@ public sealed class AlmacenViewModel : PantallaCrudViewModel<Articulo, int>
                                           DataSourceFactory.CrearEntradasInventario(),
                                           DataSourceFactory.CrearSalidasInventario());
 
-        // La base ya pobló Items en su constructor, pero sin existencias: sin esto la primera
-        // pintada saldría con todo en cero hasta la primera recarga.
+        _costos = new CostosMaterialesService(DataSourceFactory.CrearRecepcionesMateriaPrima(),
+                                              DataSourceFactory.CrearEntradasInventario(),
+                                              DataSourceFactory.CrearSalidasMateriaPrima(),
+                                              DataSourceFactory.CrearSalidasInventario());
+
+        _dialogos = dialogos;
+
+        // La base ya pobló Items en su constructor, pero sin existencias ni precios: sin esto la
+        // primera pintada saldría con todo en cero hasta la primera recarga.
         _servicio.RellenarExistencias(Items);
+        _costos.RellenarPrecios(Items);
         ItemsView.Refresh();
 
         CambiarFiltroCommand = new RelayCommand<string>(filtro =>
@@ -53,10 +63,29 @@ public sealed class AlmacenViewModel : PantallaCrudViewModel<Articulo, int>
         });
 
         CargarSugeridosCommand = new RelayCommand(CargarSugeridos, () => sesion.Puede($"{ModuloPermiso}.Crear"));
+
+        VerFichaCommand = new RelayCommand(VerFicha, () => SelectedItem is not null);
     }
 
     public ICommand CambiarFiltroCommand { get; }
     public ICommand CargarSugeridosCommand { get; }
+    public ICommand VerFichaCommand { get; }
+
+    /// <summary>
+    /// Abre la ficha del artículo: su precio promedio, las compras de las que sale y lo que
+    /// debería quedar de cada una. Es lo que hace el doble clic sobre la fila, como en Entradas y
+    /// Salidas; editar sigue estando en la barra y en el botón de la propia ficha.
+    /// </summary>
+    private void VerFicha()
+    {
+        if (SelectedItem is not { } articulo)
+            return;
+
+        var ficha = new FichaMaterialViewModel(_costos.Ficha(articulo), EditarCommand.CanExecute(null));
+
+        if (_dialogos.MostrarEditor(ficha) && ficha.QuiereEditar)
+            Editar();
+    }
 
     /// <summary>
     /// Precarga el almacén con los insumos sugeridos. Almacén era el único de los tres catálogos
@@ -86,9 +115,7 @@ public sealed class AlmacenViewModel : PantallaCrudViewModel<Articulo, int>
 
     protected override bool CoincideBusqueda(Articulo item, string texto) =>
         item.Codigo.Contains(texto, StringComparison.OrdinalIgnoreCase)
-        || item.Nombre.Contains(texto, StringComparison.OrdinalIgnoreCase)
-        || item.Categoria.Contains(texto, StringComparison.OrdinalIgnoreCase)
-        || item.Ubicacion.Contains(texto, StringComparison.OrdinalIgnoreCase);
+        || item.Nombre.Contains(texto, StringComparison.OrdinalIgnoreCase);
 
     protected override bool PasaFiltroExtra(Articulo item) => _filtro switch
     {
@@ -115,138 +142,25 @@ public sealed class AlmacenViewModel : PantallaCrudViewModel<Articulo, int>
         base.Recargar();
 
         _servicio.RellenarExistencias(Items);
+        _costos.RellenarPrecios(Items);
         ItemsView.Refresh();
         OnTodasLasPropiedadesCambiaron();
     }
 }
 
 /// <summary>
-/// Alta/edición de un artículo.
-///
-/// El código puede escribirse a mano o dejarse en blanco: si se deja, lo genera
-/// <see cref="InventarioService.GenerarCodigo"/> al validar y se escribe en el campo, para que
-/// quien lo dio de alta lo vea antes de que la ventana se cierre.
+/// Alta/edición de un artículo del almacén. Todo el formulario está en
+/// <see cref="MaterialEditorViewModel{T}"/>, que comparte con el de materia prima.
 /// </summary>
-public sealed class ArticuloEditorViewModel : CrudEditorViewModelBase<Articulo>
+public sealed class ArticuloEditorViewModel(Articulo original, InventarioService servicio)
+    : MaterialEditorViewModel<Articulo>(original)
 {
-    private readonly Articulo _original;
-    private readonly InventarioService _servicio;
+    protected override string QueEs => "artículo";
 
-    public ArticuloEditorViewModel(Articulo original, InventarioService servicio)
-    {
-        _original = original;
-        _servicio = servicio;
+    protected override string GenerarCodigo() => servicio.GenerarCodigo();
 
-        Codigo = original.Codigo;
-        Nombre = original.Nombre;
-        Categoria = original.Categoria;
-        Ubicacion = original.Ubicacion;
-        Notas = original.Notas;
-        Activo = original.Id == 0 || original.Activo;
-        Minimo = original.Minimo == 0 ? string.Empty : original.Minimo.ToString("0.##");
-        UnidadSeleccionada = original.Unidad;
+    protected override bool ValidarEnServicio(Articulo articulo, out string? error) =>
+        servicio.Validar(articulo, out error);
 
-        GenerarCodigoCommand = new RelayCommand(() => Codigo = _servicio.GenerarCodigo());
-    }
-
-    public override string Titulo =>
-        _original.Id == 0 ? "Nuevo artículo" : $"Editar {_original.Nombre}";
-
-    public override double AnchoEditor => Ancho.Estandar;
-
-    public ICommand GenerarCodigoCommand { get; }
-
-    public IReadOnlyList<UnidadMedida> Unidades { get; } =
-    [
-        UnidadMedida.Pieza, UnidadMedida.Caja, UnidadMedida.Paleta, UnidadMedida.Kilogramo,
-        UnidadMedida.Litro, UnidadMedida.Metro, UnidadMedida.Rollo, UnidadMedida.Saco,
-        UnidadMedida.Par
-    ];
-
-    private UnidadMedida _unidadSeleccionada;
-    public UnidadMedida UnidadSeleccionada
-    {
-        get => _unidadSeleccionada;
-        set => SetProperty(ref _unidadSeleccionada, value);
-    }
-
-    private string _codigo = string.Empty;
-    public string Codigo
-    {
-        get => _codigo;
-        set => SetProperty(ref _codigo, value);
-    }
-
-    private string _nombre = string.Empty;
-    public string Nombre
-    {
-        get => _nombre;
-        set => SetProperty(ref _nombre, value);
-    }
-
-    private string _categoria = string.Empty;
-    public string Categoria
-    {
-        get => _categoria;
-        set => SetProperty(ref _categoria, value);
-    }
-
-    private string _minimo = string.Empty;
-    public string Minimo
-    {
-        get => _minimo;
-        set => SetProperty(ref _minimo, value);
-    }
-
-    private string _ubicacion = string.Empty;
-    public string Ubicacion
-    {
-        get => _ubicacion;
-        set => SetProperty(ref _ubicacion, value);
-    }
-
-    private string _notas = string.Empty;
-    public string Notas
-    {
-        get => _notas;
-        set => SetProperty(ref _notas, value);
-    }
-
-    private bool _activo = true;
-    public bool Activo
-    {
-        get => _activo;
-        set => SetProperty(ref _activo, value);
-    }
-
-    protected override bool Validar(out string? error)
-    {
-        if (!string.IsNullOrWhiteSpace(Minimo)
-            && (!decimal.TryParse(Minimo, out var minimo) || minimo < 0))
-        {
-            error = "El mínimo debe ser un número mayor o igual a cero.";
-            return false;
-        }
-
-        // Se genera ANTES de validar y se deja escrito en el campo: así el usuario ve con qué
-        // código se guardó, en vez de enterarse al volver al listado.
-        if (string.IsNullOrWhiteSpace(Codigo))
-            Codigo = _servicio.GenerarCodigo();
-
-        return _servicio.Validar(ObtenerResultado(), out error);
-    }
-
-    public override Articulo ObtenerResultado()
-    {
-        var articulo = _original.Clonar();
-        articulo.Codigo = Codigo.Trim();
-        articulo.Nombre = Nombre.Trim();
-        articulo.Categoria = Categoria.Trim();
-        articulo.Unidad = UnidadSeleccionada;
-        articulo.Minimo = decimal.TryParse(Minimo, out var minimo) ? minimo : 0m;
-        articulo.Ubicacion = Ubicacion.Trim();
-        articulo.Notas = Notas.Trim();
-        articulo.Activo = Activo;
-        return articulo;
-    }
+    protected override Articulo Clonar(Articulo original) => original.Clonar();
 }

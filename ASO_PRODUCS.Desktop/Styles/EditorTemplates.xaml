@@ -58,10 +58,19 @@
     <views:TransferenciaEditorView />
   </DataTemplate>
 
+  <!-- La ficha de un material la comparten Inventario · Almacén y Materia Prima · Existencias:
+       el contenido es el mismo y de qué tablas sale lo resuelve CostosMaterialesService. -->
+  <DataTemplate DataType="{x:Type vm:FichaMaterialViewModel}">
+    <views:FichaMaterialView />
+  </DataTemplate>
+
   <!-- Inventario -->
 
+  <!-- Los dos catálogos de materiales comparten formulario (MaterialEditorViewModel). Son dos
+       entradas y no una porque un DataTemplate no puede apuntar a un genérico abierto; la vista
+       que pintan sí es la misma. -->
   <DataTemplate DataType="{x:Type vm:ArticuloEditorViewModel}">
-    <views:ArticuloEditorView />
+    <views:MaterialEditorView />
   </DataTemplate>
 
   <DataTemplate DataType="{x:Type vm:EntradaEditorViewModel}">
@@ -83,7 +92,7 @@
   <!-- Materia Prima -->
 
   <DataTemplate DataType="{x:Type vm:TipoMateriaPrimaEditorViewModel}">
-    <views:TipoMateriaPrimaEditorView />
+    <views:MaterialEditorView />
   </DataTemplate>
 
   <DataTemplate DataType="{x:Type vm:RecepcionMateriaPrimaEditorViewModel}">

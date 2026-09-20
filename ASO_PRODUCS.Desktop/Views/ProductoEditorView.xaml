@@ -27,9 +27,14 @@
                    Text="{Binding Nombre, UpdateSourceTrigger=PropertyChanged}" />
         </controls:FormField>
 
-        <controls:FormField Etiqueta="Unidad de medida" Ayuda="Kg, unidades, cajas… lo que use la organización.">
-          <TextBox Style="{StaticResource FormTextBoxStyle}"
-                   Text="{Binding UnidadMedida, UpdateSourceTrigger=PropertyChanged}" />
+        <controls:FormField Etiqueta="Unidad de medida"
+                            Ayuda="Elige una de la lista o escribe la que use la organización.">
+          <!-- Mismo desplegable editable y misma lista que los catálogos de materiales, para que
+               el vocabulario de unidades no se disperse entre los tres. -->
+          <ComboBox Style="{StaticResource EditableComboBoxStyle}"
+                    IsEditable="True"
+                    ItemsSource="{Binding Unidades}"
+                    Text="{Binding UnidadMedida, UpdateSourceTrigger=PropertyChanged}" />
         </controls:FormField>
 
         <controls:FormField Etiqueta="Precio por unidad"

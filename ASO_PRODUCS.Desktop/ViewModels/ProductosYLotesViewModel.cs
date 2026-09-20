@@ -178,6 +178,10 @@ public sealed class ProductoEditorViewModel : CrudEditorViewModelBase<Producto>
     public IReadOnlyList<TipoMateriaPrima> TiposMateriaPrima { get; }
     public IReadOnlyList<Articulo> Articulos { get; }
 
+    /// <summary>La misma lista sugerida que proponen Almacén y Materia Prima. Es una sugerencia,
+    /// no un catálogo cerrado: el desplegable se puede escribir.</summary>
+    public IReadOnlyList<string> Unidades { get; } = UnidadesSugeridas.Todas;
+
     private string _nombre = string.Empty;
     public string Nombre
     {

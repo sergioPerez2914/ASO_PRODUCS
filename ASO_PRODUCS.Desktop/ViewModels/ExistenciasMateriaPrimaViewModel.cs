@@ -21,6 +21,7 @@ public sealed class ExistenciasMateriaPrimaViewModel : PantallaCrudViewModel<Tip
     private const string FiltroTodos = "Todos";
 
     private readonly MateriaPrimaService _servicio;
+    private readonly CostosMaterialesService _costos;
     private readonly IServicioDialogo _dialogos;
     private readonly ISesionActual _sesion;
 
@@ -42,12 +43,17 @@ public sealed class ExistenciasMateriaPrimaViewModel : PantallaCrudViewModel<Tip
         _servicio = new MateriaPrimaService(tipos,
                                             DataSourceFactory.CrearRecepcionesMateriaPrima(),
                                             DataSourceFactory.CrearSalidasMateriaPrima());
+        _costos = new CostosMaterialesService(DataSourceFactory.CrearRecepcionesMateriaPrima(),
+                                              DataSourceFactory.CrearEntradasInventario(),
+                                              DataSourceFactory.CrearSalidasMateriaPrima(),
+                                              DataSourceFactory.CrearSalidasInventario());
         _dialogos = dialogos;
         _sesion = sesion;
 
-        // La base ya pobló Items en su constructor, pero sin existencias: sin esto la primera
-        // pintada saldría con todo en cero hasta la primera recarga.
+        // La base ya pobló Items en su constructor, pero sin existencias ni precios: sin esto la
+        // primera pintada saldría con todo en cero hasta la primera recarga.
         _servicio.RellenarExistencias(Items);
+        _costos.RellenarPrecios(Items);
         ItemsView.Refresh();
 
         CambiarFiltroCommand = new RelayCommand<string>(filtro =>
@@ -57,10 +63,29 @@ public sealed class ExistenciasMateriaPrimaViewModel : PantallaCrudViewModel<Tip
         });
 
         CargarSugeridosCommand = new RelayCommand(CargarSugeridos, () => _sesion.Puede($"{ModuloPermiso}.Crear"));
+
+        VerFichaCommand = new RelayCommand(VerFicha, () => SelectedItem is not null);
     }
 
     public ICommand CambiarFiltroCommand { get; }
     public ICommand CargarSugeridosCommand { get; }
+    public ICommand VerFichaCommand { get; }
+
+    /// <summary>
+    /// Abre la ficha del tipo: su precio promedio, las recepciones de las que sale y lo que
+    /// debería quedar de cada una. Calco de <see cref="AlmacenViewModel"/> — el doble clic sobre
+    /// la fila abre la ficha, no el editor.
+    /// </summary>
+    private void VerFicha()
+    {
+        if (SelectedItem is not { } tipo)
+            return;
+
+        var ficha = new FichaMaterialViewModel(_costos.Ficha(tipo), EditarCommand.CanExecute(null));
+
+        if (_dialogos.MostrarEditor(ficha) && ficha.QuiereEditar)
+            Editar();
+    }
 
     public string Resumen =>
         $"{Items.Count(t => t.Activo)} tipos activos · {Items.Count(t => t.SinExistencia)} sin existencia · " +
@@ -73,7 +98,8 @@ public sealed class ExistenciasMateriaPrimaViewModel : PantallaCrudViewModel<Tip
     protected override string NombreDelTipo => "Tipo de materia prima";
 
     protected override bool CoincideBusqueda(TipoMateriaPrima item, string texto) =>
-        item.Nombre.Contains(texto, StringComparison.OrdinalIgnoreCase);
+        item.Codigo.Contains(texto, StringComparison.OrdinalIgnoreCase)
+        || item.Nombre.Contains(texto, StringComparison.OrdinalIgnoreCase);
 
     protected override bool PasaFiltroExtra(TipoMateriaPrima item) => _filtro switch
     {
@@ -100,6 +126,7 @@ public sealed class ExistenciasMateriaPrimaViewModel : PantallaCrudViewModel<Tip
         base.Recargar();
 
         _servicio.RellenarExistencias(Items);
+        _costos.RellenarPrecios(Items);
         ItemsView.Refresh();
         OnTodasLasPropiedadesCambiaron();
     }
@@ -117,75 +144,19 @@ public sealed class ExistenciasMateriaPrimaViewModel : PantallaCrudViewModel<Tip
     }
 }
 
-/// <summary>Alta/edición de un tipo de materia prima.</summary>
-public sealed class TipoMateriaPrimaEditorViewModel : CrudEditorViewModelBase<TipoMateriaPrima>
+/// <summary>
+/// Alta/edición de un tipo de materia prima. Todo el formulario está en
+/// <see cref="MaterialEditorViewModel{T}"/>, el mismo que usa el almacén.
+/// </summary>
+public sealed class TipoMateriaPrimaEditorViewModel(TipoMateriaPrima original, MateriaPrimaService servicio)
+    : MaterialEditorViewModel<TipoMateriaPrima>(original)
 {
-    private readonly TipoMateriaPrima _original;
-    private readonly MateriaPrimaService _servicio;
+    protected override string QueEs => "tipo de materia prima";
 
-    public TipoMateriaPrimaEditorViewModel(TipoMateriaPrima original, MateriaPrimaService servicio)
-    {
-        _original = original;
-        _servicio = servicio;
+    protected override string GenerarCodigo() => servicio.GenerarCodigo();
 
-        Nombre = original.Nombre;
-        UnidadMedida = original.UnidadMedida;
-        Minimo = original.Minimo == 0 ? string.Empty : original.Minimo.ToString("0.##");
-        Activo = original.Id == 0 || original.Activo;
-    }
+    protected override bool ValidarEnServicio(TipoMateriaPrima tipo, out string? error) =>
+        servicio.Validar(tipo, out error);
 
-    public override string Titulo =>
-        _original.Id == 0 ? "Nuevo tipo de materia prima" : $"Editar {_original.Nombre}";
-
-    public override double AnchoEditor => Ancho.Estandar;
-
-    private string _nombre = string.Empty;
-    public string Nombre
-    {
-        get => _nombre;
-        set => SetProperty(ref _nombre, value);
-    }
-
-    private string _unidadMedida = string.Empty;
-    public string UnidadMedida
-    {
-        get => _unidadMedida;
-        set => SetProperty(ref _unidadMedida, value);
-    }
-
-    private string _minimo = string.Empty;
-    public string Minimo
-    {
-        get => _minimo;
-        set => SetProperty(ref _minimo, value);
-    }
-
-    private bool _activo = true;
-    public bool Activo
-    {
-        get => _activo;
-        set => SetProperty(ref _activo, value);
-    }
-
-    protected override bool Validar(out string? error)
-    {
-        if (!string.IsNullOrWhiteSpace(Minimo)
-            && (!decimal.TryParse(Minimo, out var minimo) || minimo < 0))
-        {
-            error = "El mínimo debe ser un número mayor o igual a cero.";
-            return false;
-        }
-
-        return _servicio.Validar(ObtenerResultado(), out error);
-    }
-
-    public override TipoMateriaPrima ObtenerResultado()
-    {
-        var tipo = _original.Clonar();
-        tipo.Nombre = Nombre.Trim();
-        tipo.UnidadMedida = UnidadMedida.Trim();
-        tipo.Minimo = decimal.TryParse(Minimo, out var minimo) ? minimo : 0m;
-        tipo.Activo = Activo;
-        return tipo;
-    }
+    protected override TipoMateriaPrima Clonar(TipoMateriaPrima original) => original.Clonar();
 }
